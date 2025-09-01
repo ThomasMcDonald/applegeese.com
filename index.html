@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coming Soon</title>
+    <!-- Google Fonts for Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --background-light: #f3f4f6;
+            --text-light: #1a1a1a;
+            --background-dark: #1a1a1a;
+            --text-dark: #f3f4f6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.light-mode {
+            background-color: var(--background-light);
+            color: var(--text-light);
+        }
+
+        body.dark-mode {
+            background-color: var(--background-dark);
+            color: var(--text-dark);
+        }
+
+        .content-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+
+        .emoji-container {
+            font-size: 5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main Content Section -->
+    <main class="content-container">
+        <div class="emoji-container">
+            <span class="mr-4">🍎</span>
+            <span>🦢🦢🦢</span>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const body = document.body;
+
+            function updateTheme() {
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    body.classList.remove('light-mode');
+                    body.classList.add('dark-mode');
+                } else {
+                    body.classList.remove('dark-mode');
+                    body.classList.add('light-mode');
+                }
+            }
+
+            // Set initial theme based on system preference
+            updateTheme();
+
+            // Listen for changes in the system color scheme
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateTheme);
+        });
+    </script>
+
+</body>
+</html>
