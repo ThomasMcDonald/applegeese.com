@@ -269,10 +269,8 @@
             }
 
             .control-pad {
-                display: grid;
-                grid-template-columns: 60px 60px 60px;
-                grid-template-rows: 60px 60px 60px;
-                gap: 5px;
+                display: flex;
+                justify-content: center;
                 margin-bottom: 10px;
             }
 
@@ -298,27 +296,9 @@
                 transform: scale(0.95);
             }
 
-            .control-btn.up {
-                grid-column: 2;
-                grid-row: 1;
-            }
-            .control-btn.left {
-                grid-column: 1;
-                grid-row: 2;
-            }
             .control-btn.pause {
-                grid-column: 2;
-                grid-row: 2;
                 background: rgba(178, 34, 34, 0.8);
                 border-color: #b22222;
-            }
-            .control-btn.right {
-                grid-column: 3;
-                grid-row: 2;
-            }
-            .control-btn.down {
-                grid-column: 2;
-                grid-row: 3;
             }
 
             .control-btn.pause:active {
@@ -413,8 +393,7 @@
                 }
 
                 .control-pad {
-                    grid-template-columns: 50px 50px 50px;
-                    grid-template-rows: 50px 50px 50px;
+                    /* Keep flex layout for single button */
                 }
 
                 .control-btn {
@@ -552,11 +531,7 @@
 
         <div class="mobile-controls" id="mobileControls">
             <div class="control-pad">
-                <button class="control-btn up" id="upBtn">↑</button>
-                <button class="control-btn left" id="leftBtn">←</button>
                 <button class="control-btn pause" id="pauseBtn">⏸</button>
-                <button class="control-btn right" id="rightBtn">→</button>
-                <button class="control-btn down" id="downBtn">↓</button>
             </div>
         </div>
 
@@ -1228,35 +1203,7 @@
                 }
             }
 
-            // Mobile control buttons
-            document
-                .getElementById("upBtn")
-                .addEventListener("touchstart", (e) => {
-                    e.preventDefault();
-                    changeDirection("up");
-                });
-
-            document
-                .getElementById("downBtn")
-                .addEventListener("touchstart", (e) => {
-                    e.preventDefault();
-                    changeDirection("down");
-                });
-
-            document
-                .getElementById("leftBtn")
-                .addEventListener("touchstart", (e) => {
-                    e.preventDefault();
-                    changeDirection("left");
-                });
-
-            document
-                .getElementById("rightBtn")
-                .addEventListener("touchstart", (e) => {
-                    e.preventDefault();
-                    changeDirection("right");
-                });
-
+            // Mobile pause button
             document
                 .getElementById("pauseBtn")
                 .addEventListener("touchstart", (e) => {
@@ -1268,19 +1215,7 @@
                     }
                 });
 
-            // Also add click events for desktop testing
-            document
-                .getElementById("upBtn")
-                .addEventListener("click", () => changeDirection("up"));
-            document
-                .getElementById("downBtn")
-                .addEventListener("click", () => changeDirection("down"));
-            document
-                .getElementById("leftBtn")
-                .addEventListener("click", () => changeDirection("left"));
-            document
-                .getElementById("rightBtn")
-                .addEventListener("click", () => changeDirection("right"));
+            // Also add click event for desktop testing
             document
                 .getElementById("pauseBtn")
                 .addEventListener("click", () => {
