@@ -450,30 +450,125 @@
                 color: #1a1a2e;
             }
 
-            @media (max-width: 768px) {
-                .music-toggle {
-                    top: 20px;
-                    right: 10px;
-                    padding: 16px 20px;
-                    font-size: 18px;
-                    min-height: 48px;
-                    min-width: 100px;
-                }
-
-                .theme-toggle {
-                    bottom: 350px;
-                }
+            .settings-toggle {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: transparent;
+                border: 2px solid #2f4f2f;
+                color: #2f4f2f;
+                padding: 12px;
+                font-size: 20px;
+                border-radius: 50%;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                z-index: 1001;
+                min-height: 48px;
+                min-width: 48px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
 
-            @media (max-width: 480px) {
-                .music-toggle {
-                    padding: 12px 16px;
-                    font-size: 16px;
-                    min-width: 90px;
+            .settings-toggle:hover {
+                background: #2f4f2f;
+                color: white;
+                transform: scale(1.1) rotate(90deg);
+            }
+
+            body.dark-mode .settings-toggle {
+                border-color: #e6e6e6;
+                color: #e6e6e6;
+            }
+
+            body.dark-mode .settings-toggle:hover {
+                background: #e6e6e6;
+                color: #1a1a2e;
+            }
+
+            .settings-menu {
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                background: rgba(255, 255, 255, 0.95);
+                border: 2px solid #2f4f2f;
+                border-radius: 12px;
+                padding: 20px;
+                min-width: 200px;
+                z-index: 1000;
+                display: none;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            }
+
+            body.dark-mode .settings-menu {
+                background: rgba(30, 30, 50, 0.95);
+                border-color: #e6e6e6;
+                color: #e6e6e6;
+            }
+
+            .settings-menu h3 {
+                margin: 0 0 15px 0;
+                font-size: 18px;
+                text-align: center;
+                border-bottom: 1px solid #ccc;
+                padding-bottom: 10px;
+            }
+
+            body.dark-mode .settings-menu h3 {
+                border-bottom-color: #666;
+            }
+
+            .setting-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+            }
+
+            .setting-item:last-child {
+                margin-bottom: 0;
+            }
+
+            .setting-label {
+                font-size: 16px;
+                font-weight: 500;
+            }
+
+            .setting-button {
+                background: #32cd32;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                min-width: 80px;
+                transition: all 0.2s ease;
+            }
+
+            .setting-button:hover {
+                background: #228b22;
+                transform: scale(1.05);
+            }
+
+            .setting-button:active {
+                transform: scale(0.95);
+            }
+
+            @media (max-width: 768px) {
+                .settings-toggle {
+                    top: 15px;
+                    right: 15px;
+                    min-height: 52px;
+                    min-width: 52px;
+                    font-size: 22px;
                 }
 
-                .theme-toggle {
-                    bottom: 320px;
+                .settings-menu {
+                    top: 75px;
+                    right: 15px;
+                    min-width: 180px;
                 }
             }
         </style>
@@ -541,13 +636,39 @@
             <source src="assets/goose/arcade.mp3" type="audio/mpeg" />
         </audio>
 
-        <!-- Theme toggle cycles through: System → Light → Dark → System... -->
-        <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
-
-        <!-- Music toggle button -->
-        <button class="music-toggle" onclick="toggleMusic()" id="musicToggle">
-            🎵 Music
+        <!-- Settings button -->
+        <button
+            class="settings-toggle"
+            onclick="toggleSettings()"
+            id="settingsToggle"
+        >
+            ⚙️
         </button>
+
+        <!-- Settings menu -->
+        <div class="settings-menu" id="settingsMenu">
+            <h3>⚙️ Settings</h3>
+            <div class="setting-item">
+                <span class="setting-label">Music</span>
+                <button
+                    class="setting-button"
+                    onclick="toggleMusic()"
+                    id="musicToggle"
+                >
+                    🎵 On
+                </button>
+            </div>
+            <div class="setting-item">
+                <span class="setting-label">Theme</span>
+                <button
+                    class="setting-button"
+                    onclick="toggleTheme()"
+                    id="themeToggle"
+                >
+                    🌙 Dark
+                </button>
+            </div>
+        </div>
 
         <script>
             // Game constants - Calculate dynamic canvas size
@@ -1862,7 +1983,7 @@
             // Theme toggle functionality
             function toggleTheme() {
                 const body = document.body;
-                const themeButton = document.querySelector(".theme-toggle");
+                const themeButton = document.getElementById("themeToggle");
                 const savedTheme = localStorage.getItem("gooseGameTheme");
 
                 // Check system preference
@@ -1879,28 +2000,27 @@
                     // Currently using system, switch to opposite of system (or light if no system support)
                     if (supportsColorScheme && prefersDark) {
                         body.classList.remove("dark-mode");
-                        themeButton.textContent = "🌙 Dark";
                         localStorage.setItem("gooseGameTheme", "light");
                     } else {
                         body.classList.add("dark-mode");
-                        themeButton.textContent = "☀️ Light";
                         localStorage.setItem("gooseGameTheme", "dark");
                     }
                 } else if (savedTheme === "light") {
                     // Switch to dark
                     body.classList.add("dark-mode");
-                    themeButton.textContent = "🌿 System";
                     localStorage.setItem("gooseGameTheme", "dark");
                 } else if (savedTheme === "dark") {
-                    // Switch to system (or light if no system support)
+                    // Switch to system
                     localStorage.removeItem("gooseGameTheme");
                     if (supportsColorScheme && prefersDark) {
                         body.classList.add("dark-mode");
                     } else {
                         body.classList.remove("dark-mode");
                     }
-                    updateThemeButtonText();
                 }
+
+                // Update button text after theme change
+                updateThemeButtonText();
 
                 // Re-render the game with new theme
                 if (gameState !== "playing") {
@@ -1909,7 +2029,8 @@
             }
 
             function updateThemeButtonText() {
-                const themeButton = document.querySelector(".theme-toggle");
+                const themeButton = document.getElementById("themeToggle");
+                if (!themeButton) return; // Safety check
                 const savedTheme = localStorage.getItem("gooseGameTheme");
                 const supportsColorScheme =
                     window.matchMedia &&
@@ -2010,12 +2131,38 @@
             let musicEnabled =
                 localStorage.getItem("gooseGameMusic") !== "false";
 
+            function toggleSettings() {
+                const settingsMenu = document.getElementById("settingsMenu");
+                if (
+                    settingsMenu.style.display === "none" ||
+                    settingsMenu.style.display === ""
+                ) {
+                    settingsMenu.style.display = "block";
+                } else {
+                    settingsMenu.style.display = "none";
+                }
+            }
+
+            // Close settings menu when clicking outside
+            document.addEventListener("click", function (e) {
+                const settingsMenu = document.getElementById("settingsMenu");
+                const settingsToggle =
+                    document.getElementById("settingsToggle");
+
+                if (
+                    !settingsMenu.contains(e.target) &&
+                    !settingsToggle.contains(e.target)
+                ) {
+                    settingsMenu.style.display = "none";
+                }
+            });
+
             function toggleMusic() {
                 const musicToggle = document.getElementById("musicToggle");
 
                 if (musicEnabled) {
                     backgroundMusic.pause();
-                    musicToggle.textContent = "🔇 Music";
+                    musicToggle.textContent = "🔇 Off";
                     musicEnabled = false;
                     localStorage.setItem("gooseGameMusic", "false");
                 } else {
@@ -2025,7 +2172,7 @@
                             .play()
                             .catch((e) => console.log("Audio play failed:", e));
                     }
-                    musicToggle.textContent = "🎵 Music";
+                    musicToggle.textContent = "🎵 On";
                     musicEnabled = true;
                     localStorage.setItem("gooseGameMusic", "true");
                 }
@@ -2049,9 +2196,9 @@
                 });
 
                 if (musicEnabled) {
-                    musicToggle.textContent = "🎵 Music";
+                    musicToggle.textContent = "🎵 On";
                 } else {
-                    musicToggle.textContent = "🔇 Music";
+                    musicToggle.textContent = "🔇 Off";
                 }
             }
 
@@ -2175,10 +2322,22 @@
                 }
             }
 
-            // Initialize the game and load theme
-            loadTheme();
-            initMusic();
-            render();
+            // Initialize the game and load theme when DOM is ready
+            document.addEventListener("DOMContentLoaded", () => {
+                loadTheme();
+                initMusic();
+                render();
+            });
+
+            // Also initialize immediately in case DOM is already loaded
+            if (document.readyState === "loading") {
+                // DOM is still loading, wait for DOMContentLoaded
+            } else {
+                // DOM is already loaded
+                loadTheme();
+                initMusic();
+                render();
+            }
         </script>
     </body>
 </html>
