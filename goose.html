@@ -1230,12 +1230,16 @@
                         const lastValidY =
                             goose[0].y * GRID_SIZE + GRID_SIZE / 2;
 
+                        // Capture game state before clearing
+                        const finalScore = score;
+                        const finalNeckLength = goose.length;
+
                         // Clear goose immediately so it doesn't show during explosion
                         goose = [];
 
                         // Create explosion at last valid position
                         createGooseExplosion(lastValidX, lastValidY);
-                        gameOver();
+                        gameOver(finalScore, finalNeckLength);
                         return;
                     }
 
@@ -1250,12 +1254,16 @@
                         const collisionX = head.x * GRID_SIZE + GRID_SIZE / 2;
                         const collisionY = head.y * GRID_SIZE + GRID_SIZE / 2;
 
+                        // Capture game state before clearing
+                        const finalScore = score;
+                        const finalNeckLength = goose.length;
+
                         // Clear goose immediately so it doesn't show during explosion
                         goose = [];
 
                         // Create explosion at collision position
                         createGooseExplosion(collisionX, collisionY);
-                        gameOver();
+                        gameOver(finalScore, finalNeckLength);
                         return;
                     }
 
@@ -1554,12 +1562,12 @@
                 }
             }
 
-            function gameOver() {
+            function gameOver(finalScore, finalNeckLength) {
                 gameState = "gameOver";
 
                 // Update high score
-                if (score > highScore) {
-                    highScore = score;
+                if (finalScore > highScore) {
+                    highScore = finalScore;
                     localStorage.setItem(
                         "gooseGameHighScore",
                         highScore.toString(),
@@ -1572,9 +1580,9 @@
                         "none";
                 }
 
-                document.getElementById("finalScore").textContent = score;
+                document.getElementById("finalScore").textContent = finalScore;
                 document.getElementById("finalNeckLength").textContent =
-                    goose.length;
+                    finalNeckLength;
 
                 playGameOverSound();
 
