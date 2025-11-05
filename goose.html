@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Goose Game</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: "Arial", sans-serif;
+                background: linear-gradient(135deg, #87ceeb 0%, #98fb98 100%);
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: #2f4f2f;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+                transition:
+                    background 0.3s ease,
+                    color 0.3s ease;
+            }
+
+            body.dark-mode {
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                color: #e6e6e6;
+            }
+
+            .game-container {
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 0;
+                box-shadow: none;
+                padding: 15px;
+                text-align: center;
+                width: 100vw;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                transition: background 0.3s ease;
+            }
+
+            body.dark-mode .game-container {
+                background: rgba(30, 30, 50, 0.95);
+            }
+
+            .game-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+                font-size: 24px;
+                font-weight: bold;
+                color: #2f4f2f;
+                padding: 0 20px;
+                position: relative;
+                transition: color 0.3s ease;
+            }
+
+            body.dark-mode .game-header {
+                color: #e6e6e6;
+            }
+
+            .theme-toggle {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: transparent;
+                border: 2px solid #2f4f2f;
+                color: #2f4f2f;
+                padding: 8px 12px;
+                font-size: 14px;
+                border-radius: 20px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                z-index: 1000;
+            }
+
+            .theme-toggle:hover {
+                background: #2f4f2f;
+                color: white;
+                transform: scale(1.05);
+            }
+
+            body.dark-mode .theme-toggle {
+                border-color: #e6e6e6;
+                color: #e6e6e6;
+            }
+
+            body.dark-mode .theme-toggle:hover {
+                background: #e6e6e6;
+                color: #1a1a2e;
+            }
+
+            #gameCanvas {
+                border: 4px solid #8b4513;
+                border-radius: 8px;
+                background: #90ee90;
+                display: block;
+                margin: 0 auto;
+                max-width: 95vw;
+                max-height: calc(100vh - 150px);
+                transition: border-color 0.3s ease;
+            }
+
+            body.dark-mode #gameCanvas {
+                border-color: #4a4a6a;
+            }
+
+            .game-footer {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 15px;
+                font-size: 20px;
+                color: #2f4f2f;
+                padding: 0 20px;
+                transition: color 0.3s ease;
+            }
+
+            body.dark-mode .game-footer {
+                color: #e6e6e6;
+            }
+
+            .game-over-screen {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(255, 255, 255, 0.95);
+                padding: 40px;
+                border-radius: 15px;
+                text-align: center;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                display: none;
+                transition:
+                    background 0.3s ease,
+                    color 0.3s ease;
+            }
+
+            body.dark-mode .game-over-screen {
+                background: rgba(30, 30, 50, 0.95);
+                color: #e6e6e6;
+            }
+
+            .game-over-screen h2 {
+                color: #b22222;
+                margin-bottom: 20px;
+                font-size: 28px;
+            }
+
+            .game-over-screen p {
+                margin: 10px 0;
+                font-size: 18px;
+            }
+
+            .start-screen {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(255, 255, 255, 0.95);
+                padding: 40px;
+                border-radius: 15px;
+                text-align: center;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                transition:
+                    background 0.3s ease,
+                    color 0.3s ease;
+            }
+
+            body.dark-mode .start-screen {
+                background: rgba(30, 30, 50, 0.95);
+                color: #e6e6e6;
+            }
+
+            .start-screen h1 {
+                color: #2f4f2f;
+                margin-bottom: 20px;
+                font-size: 32px;
+                transition: color 0.3s ease;
+            }
+
+            body.dark-mode .start-screen h1 {
+                color: #e6e6e6;
+            }
+
+            .start-screen .goose-emoji {
+                font-size: 48px;
+                margin: 20px 0;
+            }
+
+            .controls {
+                margin: 20px 0;
+                font-size: 14px;
+                color: #555;
+            }
+
+            button {
+                background: #32cd32;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                font-size: 16px;
+                border-radius: 8px;
+                cursor: pointer;
+                margin: 10px;
+                transition: background 0.3s ease;
+            }
+
+            button:hover {
+                background: #228b22;
+            }
+
+            button:active {
+                transform: scale(0.95);
+            }
+
+            .pause-overlay {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 0, 0, 0.8);
+                color: white;
+                padding: 30px;
+                border-radius: 15px;
+                text-align: center;
+                font-size: 24px;
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="game-container">
+            <div class="game-header">
+                <span>Score: <span id="score">0</span></span>
+                <span>🦢 Goose Game 🍎</span>
+                <span>High: <span id="highScore">0</span></span>
+            </div>
+
+            <canvas id="gameCanvas" width="600" height="400"></canvas>
+
+            <div class="game-footer">
+                <span>Neck Length: <span id="neckLength">1</span></span>
+                <span>Speed: <span id="speed">1.0</span>x</span>
+            </div>
+
+            <div class="start-screen" id="startScreen">
+                <h1>🦢 Goose Game</h1>
+                <div class="goose-emoji">🦢</div>
+                <p>Help the goose eat apples and grow its neck!</p>
+                <div class="controls">
+                    <p><strong>Controls:</strong></p>
+                    <p>Arrow Keys or WASD to move</p>
+                    <p>Spacebar to pause</p>
+                    <p>Enter to restart</p>
+                </div>
+                <button onclick="startGame()">Start Game</button>
+            </div>
+
+            <div class="game-over-screen" id="gameOverScreen">
+                <h2>Game Over! 🦢</h2>
+                <p>Final Score: <span id="finalScore">0</span></p>
+                <p>Neck Length: <span id="finalNeckLength">1</span></p>
+                <p
+                    id="newHighScore"
+                    style="display: none; color: #32cd32; font-weight: bold"
+                >
+                    🎉 New High Score! 🎉
+                </p>
+                <button onclick="restartGame()">Play Again</button>
+                <button onclick="showStartScreen()">Main Menu</button>
+            </div>
+
+            <div class="pause-overlay" id="pauseOverlay">
+                <p>Game Paused</p>
+                <p style="font-size: 16px; margin-top: 10px">
+                    Press Spacebar to resume
+                </p>
+            </div>
+        </div>
+
+        <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
+
+        <script>
+            // Game constants - Calculate dynamic canvas size
+            const calculateCanvasSize = () => {
+                const maxWidth = window.innerWidth * 0.95;
+                const maxHeight = (window.innerHeight - 150) * 0.95;
+                const GRID_SIZE = 30; // Larger grid squares
+
+                const gridWidth = Math.floor(maxWidth / GRID_SIZE);
+                const gridHeight = Math.floor(maxHeight / GRID_SIZE);
+
+                return {
+                    GRID_SIZE: GRID_SIZE,
+                    GRID_WIDTH: gridWidth,
+                    GRID_HEIGHT: gridHeight,
+                    CANVAS_WIDTH: gridWidth * GRID_SIZE,
+                    CANVAS_HEIGHT: gridHeight * GRID_SIZE,
+                };
+            };
+
+            let gameSize = calculateCanvasSize();
+            let GRID_SIZE = gameSize.GRID_SIZE;
+            let GRID_WIDTH = gameSize.GRID_WIDTH;
+            let GRID_HEIGHT = gameSize.GRID_HEIGHT;
+            let CANVAS_WIDTH = gameSize.CANVAS_WIDTH;
+            let CANVAS_HEIGHT = gameSize.CANVAS_HEIGHT;
+
+            // Game elements
+            const canvas = document.getElementById("gameCanvas");
+            const ctx = canvas.getContext("2d");
+            const scoreElement = document.getElementById("score");
+            const highScoreElement = document.getElementById("highScore");
+            const neckLengthElement = document.getElementById("neckLength");
+            const speedElement = document.getElementById("speed");
+
+            // Game state
+            let gameState = "start"; // 'start', 'playing', 'paused', 'gameOver'
+            let gameLoop = null;
+            let lastUpdateTime = 0;
+            let updateInterval = 100; // milliseconds between updates
+
+            // Game objects
+            let goose = [];
+            let apple = {};
+            let direction = { x: 1, y: 0 };
+            let nextDirection = { x: 1, y: 0 };
+            let score = 0;
+            let highScore = parseInt(
+                localStorage.getItem("gooseGameHighScore") || "0",
+            );
+            let speed = 1.0;
+
+            // Initialize high score display
+            highScoreElement.textContent = highScore;
+
+            // Set initial canvas size
+            function setCanvasSize() {
+                gameSize = calculateCanvasSize();
+                GRID_SIZE = gameSize.GRID_SIZE;
+                GRID_WIDTH = gameSize.GRID_WIDTH;
+                GRID_HEIGHT = gameSize.GRID_HEIGHT;
+                CANVAS_WIDTH = gameSize.CANVAS_WIDTH;
+                CANVAS_HEIGHT = gameSize.CANVAS_HEIGHT;
+
+                canvas.width = CANVAS_WIDTH;
+                canvas.height = CANVAS_HEIGHT;
+            }
+
+            // Handle window resize
+            window.addEventListener("resize", () => {
+                if (gameState === "start") {
+                    setCanvasSize();
+                    render();
+                }
+            });
+
+            // Set initial size
+            setCanvasSize();
+
+            // Game initialization
+            function initializeGame() {
+                setCanvasSize(); // Ensure canvas is properly sized
+                goose = [
+                    {
+                        x: Math.floor(GRID_WIDTH / 4),
+                        y: Math.floor(GRID_HEIGHT / 2),
+                    },
+                ]; // Start goose head at position
+                direction = { x: 1, y: 0 };
+                nextDirection = { x: 1, y: 0 };
+                score = 0;
+                speed = 1.0;
+                updateInterval = 100;
+                spawnApple();
+                updateUI();
+            }
+
+            // Spawn apple at random location
+            function spawnApple() {
+                let validPosition = false;
+                while (!validPosition) {
+                    apple = {
+                        x: Math.floor(Math.random() * GRID_WIDTH),
+                        y: Math.floor(Math.random() * GRID_HEIGHT),
+                        isGolden: Math.random() < 0.1, // 10% chance for golden apple
+                    };
+
+                    // Check if apple spawns on goose
+                    validPosition = !goose.some(
+                        (segment) =>
+                            segment.x === apple.x && segment.y === apple.y,
+                    );
+                }
+            }
+
+            // Update game UI
+            function updateUI() {
+                scoreElement.textContent = score;
+                neckLengthElement.textContent = goose.length;
+                speedElement.textContent = speed.toFixed(1);
+            }
+
+            // Input handling
+            document.addEventListener("keydown", (event) => {
+                if (gameState === "playing") {
+                    switch (event.key) {
+                        case "ArrowUp":
+                        case "w":
+                        case "W":
+                            if (direction.y !== 1) {
+                                nextDirection = { x: 0, y: -1 };
+                            }
+                            event.preventDefault();
+                            break;
+                        case "ArrowDown":
+                        case "s":
+                        case "S":
+                            if (direction.y !== -1) {
+                                nextDirection = { x: 0, y: 1 };
+                            }
+                            event.preventDefault();
+                            break;
+                        case "ArrowLeft":
+                        case "a":
+                        case "A":
+                            if (direction.x !== 1) {
+                                nextDirection = { x: -1, y: 0 };
+                            }
+                            event.preventDefault();
+                            break;
+                        case "ArrowRight":
+                        case "d":
+                        case "D":
+                            if (direction.x !== -1) {
+                                nextDirection = { x: 1, y: 0 };
+                            }
+                            event.preventDefault();
+                            break;
+                        case " ":
+                            pauseGame();
+                            event.preventDefault();
+                            break;
+                    }
+                } else if (gameState === "paused") {
+                    if (event.key === " ") {
+                        resumeGame();
+                        event.preventDefault();
+                    }
+                } else if (gameState === "gameOver" || gameState === "start") {
+                    if (event.key === "Enter") {
+                        if (gameState === "gameOver") {
+                            restartGame();
+                        } else {
+                            startGame();
+                        }
+                        event.preventDefault();
+                    }
+                }
+            });
+
+            // Game loop
+            function gameUpdate(currentTime) {
+                if (gameState !== "playing") return;
+
+                if (currentTime - lastUpdateTime >= updateInterval) {
+                    direction = { ...nextDirection };
+
+                    // Move goose
+                    const head = { ...goose[0] };
+                    head.x += direction.x;
+                    head.y += direction.y;
+
+                    // Check wall collisions
+                    if (
+                        head.x < 0 ||
+                        head.x >= GRID_WIDTH ||
+                        head.y < 0 ||
+                        head.y >= GRID_HEIGHT
+                    ) {
+                        gameOver();
+                        return;
+                    }
+
+                    // Check self collision
+                    if (
+                        goose.some(
+                            (segment) =>
+                                segment.x === head.x && segment.y === head.y,
+                        )
+                    ) {
+                        gameOver();
+                        return;
+                    }
+
+                    goose.unshift(head);
+
+                    // Check apple collision
+                    if (head.x === apple.x && head.y === apple.y) {
+                        // Apple eaten - don't remove tail, goose grows
+                        if (apple.isGolden) {
+                            score += 25;
+                        } else {
+                            score += 10;
+                        }
+
+                        // Length bonus
+                        score += goose.length * 5;
+
+                        // Increase speed every 100 points
+                        const newSpeed = 1.0 + Math.floor(score / 100) * 0.5;
+                        if (newSpeed <= 5.0) {
+                            speed = newSpeed;
+                            updateInterval = Math.max(
+                                50,
+                                100 - Math.floor(score / 100) * 10,
+                            );
+                        }
+
+                        spawnApple();
+                        playEatSound();
+                    } else {
+                        // Remove tail if no apple eaten
+                        goose.pop();
+                    }
+
+                    updateUI();
+                    lastUpdateTime = currentTime;
+                }
+
+                render();
+            }
+
+            // Rendering
+            function render() {
+                // Clear canvas with theme-appropriate background
+                const isDarkMode =
+                    document.body.classList.contains("dark-mode");
+                ctx.fillStyle = isDarkMode ? "#2d3748" : "#90EE90";
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                // Draw subtle grid pattern
+                ctx.strokeStyle = isDarkMode
+                    ? "rgba(255, 255, 255, 0.1)"
+                    : "rgba(0, 0, 0, 0.1)";
+                ctx.lineWidth = 1;
+                for (let x = 0; x <= GRID_WIDTH; x++) {
+                    ctx.beginPath();
+                    ctx.moveTo(x * GRID_SIZE, 0);
+                    ctx.lineTo(x * GRID_SIZE, CANVAS_HEIGHT);
+                    ctx.stroke();
+                }
+                for (let y = 0; y <= GRID_HEIGHT; y++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y * GRID_SIZE);
+                    ctx.lineTo(CANVAS_WIDTH, y * GRID_SIZE);
+                    ctx.stroke();
+                }
+
+                // Draw goose
+                goose.forEach((segment, index) => {
+                    const x = segment.x * GRID_SIZE;
+                    const y = segment.y * GRID_SIZE;
+
+                    if (index === 0) {
+                        // Draw goose head
+                        ctx.fillStyle = "#FFFAF0";
+                        ctx.fillRect(
+                            x + 2,
+                            y + 2,
+                            GRID_SIZE - 4,
+                            GRID_SIZE - 4,
+                        );
+                        ctx.strokeStyle = "#DDD";
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(
+                            x + 2,
+                            y + 2,
+                            GRID_SIZE - 4,
+                            GRID_SIZE - 4,
+                        );
+
+                        // Draw beak
+                        ctx.fillStyle = "#FF8C00";
+                        const beakX = x + GRID_SIZE / 2;
+                        const beakY = y + GRID_SIZE / 2;
+                        ctx.beginPath();
+                        if (direction.x === 1) {
+                            // Right
+                            ctx.moveTo(beakX + 3, beakY);
+                            ctx.lineTo(beakX + 8, beakY - 3);
+                            ctx.lineTo(beakX + 8, beakY + 3);
+                        } else if (direction.x === -1) {
+                            // Left
+                            ctx.moveTo(beakX - 3, beakY);
+                            ctx.lineTo(beakX - 8, beakY - 3);
+                            ctx.lineTo(beakX - 8, beakY + 3);
+                        } else if (direction.y === -1) {
+                            // Up
+                            ctx.moveTo(beakX, beakY - 3);
+                            ctx.lineTo(beakX - 3, beakY - 8);
+                            ctx.lineTo(beakX + 3, beakY - 8);
+                        } else {
+                            // Down
+                            ctx.moveTo(beakX, beakY + 3);
+                            ctx.lineTo(beakX - 3, beakY + 8);
+                            ctx.lineTo(beakX + 3, beakY + 8);
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+
+                        // Draw eyes
+                        ctx.fillStyle = "#000";
+                        ctx.fillRect(x + 6, y + 5, 2, 2);
+                        ctx.fillRect(x + 12, y + 5, 2, 2);
+                    } else {
+                        // Draw neck segment
+                        ctx.fillStyle = "#F5F5DC";
+                        ctx.fillRect(
+                            x + 3,
+                            y + 3,
+                            GRID_SIZE - 6,
+                            GRID_SIZE - 6,
+                        );
+                        ctx.strokeStyle = "#DDD";
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(
+                            x + 3,
+                            y + 3,
+                            GRID_SIZE - 6,
+                            GRID_SIZE - 6,
+                        );
+                    }
+                });
+
+                // Draw apple
+                const appleX = apple.x * GRID_SIZE;
+                const appleY = apple.y * GRID_SIZE;
+
+                ctx.fillStyle = apple.isGolden ? "#FFD700" : "#DC143C";
+                ctx.beginPath();
+                ctx.arc(
+                    appleX + GRID_SIZE / 2,
+                    appleY + GRID_SIZE / 2,
+                    GRID_SIZE / 2 - 2,
+                    0,
+                    Math.PI * 2,
+                );
+                ctx.fill();
+
+                // Draw apple highlight
+                ctx.fillStyle = apple.isGolden ? "#FFF8DC" : "#FF6B6B";
+                ctx.beginPath();
+                ctx.arc(
+                    appleX + GRID_SIZE / 2 - 3,
+                    appleY + GRID_SIZE / 2 - 3,
+                    3,
+                    0,
+                    Math.PI * 2,
+                );
+                ctx.fill();
+
+                // Draw apple stem
+                ctx.strokeStyle = "#228B22";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(appleX + GRID_SIZE / 2, appleY + 3);
+                ctx.lineTo(appleX + GRID_SIZE / 2, appleY + 1);
+                ctx.stroke();
+            }
+
+            // Game state functions
+            function startGame() {
+                gameState = "playing";
+                document.getElementById("startScreen").style.display = "none";
+                initializeGame();
+                lastUpdateTime = performance.now();
+                gameLoop = requestAnimationFrame(function loop(time) {
+                    gameUpdate(time);
+                    if (gameState === "playing" || gameState === "paused") {
+                        gameLoop = requestAnimationFrame(loop);
+                    }
+                });
+            }
+
+            function pauseGame() {
+                if (gameState === "playing") {
+                    gameState = "paused";
+                    document.getElementById("pauseOverlay").style.display =
+                        "block";
+                }
+            }
+
+            function resumeGame() {
+                if (gameState === "paused") {
+                    gameState = "playing";
+                    document.getElementById("pauseOverlay").style.display =
+                        "none";
+                    lastUpdateTime = performance.now();
+                }
+            }
+
+            function gameOver() {
+                gameState = "gameOver";
+
+                // Update high score
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem(
+                        "gooseGameHighScore",
+                        highScore.toString(),
+                    );
+                    highScoreElement.textContent = highScore;
+                    document.getElementById("newHighScore").style.display =
+                        "block";
+                } else {
+                    document.getElementById("newHighScore").style.display =
+                        "none";
+                }
+
+                document.getElementById("finalScore").textContent = score;
+                document.getElementById("finalNeckLength").textContent =
+                    goose.length;
+                document.getElementById("gameOverScreen").style.display =
+                    "block";
+
+                playGameOverSound();
+            }
+
+            function restartGame() {
+                document.getElementById("gameOverScreen").style.display =
+                    "none";
+                startGame();
+            }
+
+            function showStartScreen() {
+                gameState = "start";
+                document.getElementById("gameOverScreen").style.display =
+                    "none";
+                document.getElementById("startScreen").style.display = "block";
+
+                // Reset the board
+                initializeGame();
+                render();
+            }
+
+            // Audio functions (simplified)
+            function playEatSound() {
+                // Simple audio feedback using Web Audio API
+                try {
+                    const audioContext = new (window.AudioContext ||
+                        window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+
+                    oscillator.frequency.value = apple.isGolden ? 800 : 600;
+                    oscillator.type = "sine";
+
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(
+                        0.01,
+                        audioContext.currentTime + 0.1,
+                    );
+
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.1);
+                } catch (e) {
+                    // Audio not supported or blocked
+                }
+            }
+
+            function playGameOverSound() {
+                try {
+                    const audioContext = new (window.AudioContext ||
+                        window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+
+                    oscillator.frequency.value = 200;
+                    oscillator.type = "sawtooth";
+
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(
+                        0.01,
+                        audioContext.currentTime + 0.5,
+                    );
+
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.5);
+                } catch (e) {
+                    // Audio not supported or blocked
+                }
+            }
+
+            // Theme toggle functionality
+            function toggleTheme() {
+                const body = document.body;
+                const themeButton = document.querySelector(".theme-toggle");
+
+                body.classList.toggle("dark-mode");
+
+                if (body.classList.contains("dark-mode")) {
+                    themeButton.textContent = "☀️ Light";
+                    localStorage.setItem("gooseGameTheme", "dark");
+                } else {
+                    themeButton.textContent = "🌙 Dark";
+                    localStorage.setItem("gooseGameTheme", "light");
+                }
+
+                // Re-render the game with new theme
+                if (gameState !== "playing") {
+                    render();
+                }
+            }
+
+            // Load saved theme on page load
+            function loadTheme() {
+                const savedTheme = localStorage.getItem("gooseGameTheme");
+                const themeButton = document.querySelector(".theme-toggle");
+
+                if (savedTheme === "dark") {
+                    document.body.classList.add("dark-mode");
+                    themeButton.textContent = "☀️ Light";
+                } else {
+                    themeButton.textContent = "🌙 Dark";
+                }
+            }
+
+            // Initialize the game and load theme
+            loadTheme();
+            render();
+        </script>
+    </body>
+</html>
