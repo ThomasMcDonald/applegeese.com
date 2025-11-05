@@ -21,6 +21,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Preload arcade soundtrack for the game -->
+    <link rel="preload" href="assets/goose/arcade.mp3" as="audio" type="audio/mpeg">
     <style>
         :root {
             --background-light: #f3f4f6;
@@ -167,9 +169,9 @@
                     // Remove the animation class after it completes
                     setTimeout(() => {
                         playableGoose.classList.remove('wiggle-animation');
-                    }, 600);
+                    }, 1600);
                 }
-            }, 3000);
+            }, 2000);
         });
     </script>
 

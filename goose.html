@@ -497,7 +497,7 @@
         <div class="game-container">
             <div class="game-header">
                 <span>Score: <span id="score">0</span></span>
-                <span>🦢 Goose Game 🍎</span>
+                <span>🪿 Goose Game 🍎</span>
                 <span>High: <span id="highScore">0</span></span>
             </div>
 
@@ -509,8 +509,8 @@
             </div>
 
             <div class="start-screen" id="startScreen">
-                <h1>🦢 Goose Game</h1>
-                <div class="goose-emoji">🦢</div>
+                <h1>🪿 Goose Game</h1>
+                <div class="goose-emoji">🪿</div>
                 <p>Help the goose eat apples and grow its neck!</p>
                 <div class="controls">
                     <p><strong>Controls:</strong></p>
@@ -523,7 +523,7 @@
             </div>
 
             <div class="game-over-screen" id="gameOverScreen">
-                <h2>Game Over! 🦢</h2>
+                <h2>Game Over! 🪿</h2>
                 <p>Final Score: <span id="finalScore">0</span></p>
                 <p>Neck Length: <span id="finalNeckLength">1</span></p>
                 <p
@@ -556,11 +556,8 @@
 
         <!-- Background music -->
         <audio id="backgroundMusic" loop preload="auto">
-            <!-- Replace with your Suno soundtrack URL -->
-            <source src="soundtrack.mp3" type="audio/mpeg" />
-            <!-- Add multiple formats for better browser support -->
-            <source src="soundtrack.ogg" type="audio/ogg" />
-            <source src="soundtrack.wav" type="audio/wav" />
+            <!-- Arcade soundtrack -->
+            <source src="assets/goose/arcade.mp3" type="audio/mpeg" />
         </audio>
 
         <!-- Theme toggle cycles through: System → Light → Dark → System... -->
@@ -1084,6 +1081,65 @@
                         ctx.fillStyle = "#000";
                         ctx.fillRect(x + 6, y + 5, 2, 2);
                         ctx.fillRect(x + 12, y + 5, 2, 2);
+                    } else if (index === goose.length - 1) {
+                        // Draw tail segment with feet
+                        ctx.fillStyle = "#F5F5DC";
+                        ctx.fillRect(
+                            x + 3,
+                            y + 3,
+                            GRID_SIZE - 6,
+                            GRID_SIZE - 6,
+                        );
+                        ctx.strokeStyle = "#DDD";
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(
+                            x + 3,
+                            y + 3,
+                            GRID_SIZE - 6,
+                            GRID_SIZE - 6,
+                        );
+
+                        // Draw little feet
+                        ctx.fillStyle = "#FF8C00";
+                        const footX = x + GRID_SIZE / 2;
+                        const footY = y + GRID_SIZE - 2;
+
+                        // Left foot
+                        ctx.beginPath();
+                        ctx.ellipse(
+                            footX - 4,
+                            footY + 2,
+                            3,
+                            2,
+                            0,
+                            0,
+                            2 * Math.PI,
+                        );
+                        ctx.fill();
+
+                        // Right foot
+                        ctx.beginPath();
+                        ctx.ellipse(
+                            footX + 4,
+                            footY + 2,
+                            3,
+                            2,
+                            0,
+                            0,
+                            2 * Math.PI,
+                        );
+                        ctx.fill();
+
+                        // Tiny toes (left foot)
+                        ctx.fillStyle = "#E6740A";
+                        ctx.fillRect(footX - 7, footY + 3, 1, 1);
+                        ctx.fillRect(footX - 5, footY + 4, 1, 1);
+                        ctx.fillRect(footX - 3, footY + 3, 1, 1);
+
+                        // Tiny toes (right foot)
+                        ctx.fillRect(footX + 1, footY + 3, 1, 1);
+                        ctx.fillRect(footX + 3, footY + 4, 1, 1);
+                        ctx.fillRect(footX + 5, footY + 3, 1, 1);
                     } else {
                         // Draw neck segment
                         ctx.fillStyle = "#F5F5DC";
@@ -1149,6 +1205,7 @@
 
                 // Start background music if enabled
                 if (musicEnabled) {
+                    backgroundMusic.currentTime = 0;
                     backgroundMusic
                         .play()
                         .catch((e) => console.log("Audio play failed:", e));
@@ -1453,9 +1510,12 @@
                     musicEnabled = false;
                     localStorage.setItem("gooseGameMusic", "false");
                 } else {
-                    backgroundMusic
-                        .play()
-                        .catch((e) => console.log("Audio play failed:", e));
+                    if (gameState === "playing") {
+                        backgroundMusic.currentTime = 0;
+                        backgroundMusic
+                            .play()
+                            .catch((e) => console.log("Audio play failed:", e));
+                    }
                     musicToggle.textContent = "🎵 Music";
                     musicEnabled = true;
                     localStorage.setItem("gooseGameMusic", "true");
@@ -1465,6 +1525,7 @@
             function initMusic() {
                 const musicToggle = document.getElementById("musicToggle");
                 backgroundMusic.volume = 0.2; // Set volume to 20%
+                backgroundMusic.loop = true; // Ensure audio loops
 
                 // Handle audio loading errors
                 backgroundMusic.addEventListener("error", () => {
