@@ -625,7 +625,8 @@
 
             // Game objects
             let goose = [];
-            let apple = {};
+            let apples = [];
+            let powerups = [];
             let direction = { x: 1, y: 0 };
             let nextDirection = { x: 1, y: 0 };
             let score = 0;
@@ -633,6 +634,8 @@
                 localStorage.getItem("gooseGameHighScore") || "0",
             );
             let speed = 1.0;
+            let powerupTimer = 0;
+            let appleSpawnTimer = 0;
 
             // Initialize high score display
             highScoreElement.textContent = highScore;
@@ -752,6 +755,87 @@
                 }
             }
 
+            // Powerup system
+            class Powerup {
+                constructor(x, y, type) {
+                    this.x = x;
+                    this.y = y;
+                    this.type = type;
+                    this.active = true;
+                    this.life = 1.0;
+                    this.pulse = 0;
+                    this.sparkleTimer = 0;
+
+                    switch (type) {
+                        case "speed":
+                            this.color = "#FFD700";
+                            this.icon = "⚡";
+                            this.duration = 300; // 5 seconds at 60fps
+                            break;
+                        case "shield":
+                            this.color = "#00BFFF";
+                            this.icon = "🛡️";
+                            this.duration = 600; // 10 seconds
+                            break;
+                        case "rainbow":
+                            this.color = "#FF1493";
+                            this.icon = "🌈";
+                            this.duration = 240; // 4 seconds
+                            break;
+                    }
+                }
+
+                update() {
+                    this.pulse += 0.1;
+                    this.sparkleTimer++;
+
+                    // Create sparkle effect around powerup
+                    if (this.sparkleTimer > 10 && Math.random() < 0.3) {
+                        const sparkleX =
+                            this.x * GRID_SIZE +
+                            GRID_SIZE / 2 +
+                            (Math.random() - 0.5) * GRID_SIZE;
+                        const sparkleY =
+                            this.y * GRID_SIZE +
+                            GRID_SIZE / 2 +
+                            (Math.random() - 0.5) * GRID_SIZE;
+                        particles.push(
+                            new Particle(sparkleX, sparkleY, "sparkle"),
+                        );
+                        this.sparkleTimer = 0;
+                    }
+
+                    return this.active;
+                }
+
+                draw(ctx) {
+                    const x = this.x * GRID_SIZE;
+                    const y = this.y * GRID_SIZE;
+                    const centerX = x + GRID_SIZE / 2;
+                    const centerY = y + GRID_SIZE / 2;
+
+                    // Draw pulsing background
+                    const pulseSize = 1 + Math.sin(this.pulse) * 0.2;
+                    ctx.fillStyle = this.color + "40"; // Semi-transparent
+                    ctx.beginPath();
+                    ctx.arc(
+                        centerX,
+                        centerY,
+                        (GRID_SIZE / 2 - 2) * pulseSize,
+                        0,
+                        Math.PI * 2,
+                    );
+                    ctx.fill();
+
+                    // Draw powerup icon
+                    ctx.font = `${GRID_SIZE * 0.7}px Arial`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillStyle = this.color;
+                    ctx.fillText(this.icon, centerX, centerY);
+                }
+            }
+
             function createAppleEatEffect(x, y) {
                 for (let i = 0; i < 12; i++) {
                     particles.push(
@@ -863,6 +947,18 @@
                 }
             }
 
+            function updatePowerups() {
+                powerups = powerups.filter((powerup) => powerup.update());
+
+                // Spawn powerups occasionally
+                powerupTimer++;
+                if (powerupTimer > 1800 && Math.random() < 0.03) {
+                    // Every 30 seconds roughly
+                    spawnPowerup();
+                    powerupTimer = 0;
+                }
+            }
+
             function drawParticles(ctx) {
                 particles.forEach((particle) => particle.draw(ctx));
             }
@@ -953,25 +1049,83 @@
                 score = 0;
                 speed = 1.0;
                 updateInterval = 100;
+
+                // Clear arrays and reset timers
+                apples = [];
+                powerups = [];
+                activePowerups = {};
+                powerupTimer = 0;
+                appleSpawnTimer = 0;
+
                 spawnApple();
                 updateUI();
             }
 
             // Spawn apple at random location
             function spawnApple() {
+                if (apples.length >= 3) return; // Max 3 apples
+
                 let validPosition = false;
-                while (!validPosition) {
-                    apple = {
+                let attempts = 0;
+                let newApple;
+
+                while (!validPosition && attempts < 50) {
+                    newApple = {
                         x: Math.floor(Math.random() * GRID_WIDTH),
                         y: Math.floor(Math.random() * GRID_HEIGHT),
-                        isGolden: Math.random() < 0.1, // 10% chance for golden apple
+                        isGolden: Math.random() < 0.15,
                     };
 
-                    // Check if apple spawns on goose
-                    validPosition = !goose.some(
-                        (segment) =>
-                            segment.x === apple.x && segment.y === apple.y,
-                    );
+                    validPosition =
+                        !goose.some(
+                            (segment) =>
+                                segment.x === newApple.x &&
+                                segment.y === newApple.y,
+                        ) &&
+                        !powerups.some(
+                            (powerup) =>
+                                powerup.x === newApple.x &&
+                                powerup.y === newApple.y,
+                        ) &&
+                        !apples.some(
+                            (apple) =>
+                                apple.x === newApple.x &&
+                                apple.y === newApple.y,
+                        );
+
+                    attempts++;
+                }
+
+                if (validPosition) {
+                    apples.push(newApple);
+                }
+            }
+
+            function spawnPowerup() {
+                if (powerups.length >= 2) return; // Max 2 powerups at once
+
+                const types = ["speed", "shield", "rainbow"];
+                const type = types[Math.floor(Math.random() * types.length)];
+
+                let validPosition = false;
+                let attempts = 0;
+                while (!validPosition && attempts < 50) {
+                    const x = Math.floor(Math.random() * GRID_WIDTH);
+                    const y = Math.floor(Math.random() * GRID_HEIGHT);
+
+                    validPosition =
+                        !goose.some(
+                            (segment) => segment.x === x && segment.y === y,
+                        ) &&
+                        !powerups.some(
+                            (powerup) => powerup.x === x && powerup.y === y,
+                        ) &&
+                        !apples.some((apple) => apple.x === x && apple.y === y);
+
+                    if (validPosition) {
+                        powerups.push(new Powerup(x, y, type));
+                    }
+                    attempts++;
                 }
             }
 
@@ -1209,6 +1363,24 @@
                 // Update particles regardless of game update interval
                 updateParticles();
 
+                // Update powerups
+                if (gameState === "playing") {
+                    updatePowerups();
+                    updateActivePowerups();
+
+                    // Spawn additional apples over time
+                    appleSpawnTimer++;
+                    if (apples.length === 0) {
+                        // Always ensure at least one apple
+                        spawnApple();
+                        appleSpawnTimer = 0;
+                    } else if (appleSpawnTimer > 90 && apples.length < 3) {
+                        // Every 1.5 seconds if we have apples
+                        spawnApple();
+                        appleSpawnTimer = 0;
+                    }
+                }
+
                 if (currentTime - lastUpdateTime >= updateInterval) {
                     direction = { ...nextDirection };
 
@@ -1224,23 +1396,35 @@
                         head.y < 0 ||
                         head.y >= GRID_HEIGHT
                     ) {
-                        // Store the last valid goose head position BEFORE clearing
-                        const lastValidX =
-                            goose[0].x * GRID_SIZE + GRID_SIZE / 2;
-                        const lastValidY =
-                            goose[0].y * GRID_SIZE + GRID_SIZE / 2;
+                        // Shield powerup prevents death
+                        if (
+                            activePowerups.shield &&
+                            activePowerups.shield.active
+                        ) {
+                            // Consume shield and wrap around
+                            delete activePowerups.shield;
+                            head.x = (head.x + GRID_WIDTH) % GRID_WIDTH;
+                            head.y = (head.y + GRID_HEIGHT) % GRID_HEIGHT;
+                            createScreenShake(3);
+                        } else {
+                            // Store the last valid goose head position BEFORE clearing
+                            const lastValidX =
+                                goose[0].x * GRID_SIZE + GRID_SIZE / 2;
+                            const lastValidY =
+                                goose[0].y * GRID_SIZE + GRID_SIZE / 2;
 
-                        // Capture game state before clearing
-                        const finalScore = score;
-                        const finalNeckLength = goose.length;
+                            // Capture game state before clearing
+                            const finalScore = score;
+                            const finalNeckLength = goose.length;
 
-                        // Clear goose immediately so it doesn't show during explosion
-                        goose = [];
+                            // Clear goose immediately so it doesn't show during explosion
+                            goose = [];
 
-                        // Create explosion at last valid position
-                        createGooseExplosion(lastValidX, lastValidY);
-                        gameOver(finalScore, finalNeckLength);
-                        return;
+                            // Create explosion at last valid position
+                            createGooseExplosion(lastValidX, lastValidY);
+                            gameOver(finalScore, finalNeckLength);
+                            return;
+                        }
                     }
 
                     // Check self collision
@@ -1250,61 +1434,121 @@
                                 segment.x === head.x && segment.y === head.y,
                         )
                     ) {
-                        // Store collision position BEFORE clearing goose
-                        const collisionX = head.x * GRID_SIZE + GRID_SIZE / 2;
-                        const collisionY = head.y * GRID_SIZE + GRID_SIZE / 2;
+                        // Shield powerup prevents death
+                        if (
+                            activePowerups.shield &&
+                            activePowerups.shield.active
+                        ) {
+                            // Consume shield and bounce off
+                            delete activePowerups.shield;
+                            // Reverse direction
+                            nextDirection = {
+                                x: -direction.x,
+                                y: -direction.y,
+                            };
+                            createScreenShake(3);
+                        } else {
+                            // Store collision position BEFORE clearing goose
+                            const collisionX =
+                                head.x * GRID_SIZE + GRID_SIZE / 2;
+                            const collisionY =
+                                head.y * GRID_SIZE + GRID_SIZE / 2;
 
-                        // Capture game state before clearing
-                        const finalScore = score;
-                        const finalNeckLength = goose.length;
+                            // Capture game state before clearing
+                            const finalScore = score;
+                            const finalNeckLength = goose.length;
 
-                        // Clear goose immediately so it doesn't show during explosion
-                        goose = [];
+                            // Clear goose immediately so it doesn't show during explosion
+                            goose = [];
 
-                        // Create explosion at collision position
-                        createGooseExplosion(collisionX, collisionY);
-                        gameOver(finalScore, finalNeckLength);
-                        return;
+                            // Create explosion at collision position
+                            createGooseExplosion(collisionX, collisionY);
+                            gameOver(finalScore, finalNeckLength);
+                            return;
+                        }
                     }
 
                     goose.unshift(head);
 
-                    // Check apple collision
-                    if (head.x === apple.x && head.y === apple.y) {
-                        // Create apple eating particle effect
-                        createAppleEatEffect(
-                            apple.x * GRID_SIZE,
-                            apple.y * GRID_SIZE,
-                        );
-
-                        // Create screen shake effect
-                        createScreenShake(3);
-
-                        // Apple eaten - don't remove tail, goose grows
-                        if (apple.isGolden) {
-                            score += 25;
-                        } else {
-                            score += 10;
-                        }
-
-                        // Length bonus
-                        score += goose.length * 5;
-
-                        // Increase speed every 100 points
-                        const newSpeed = 1.0 + Math.floor(score / 100) * 0.5;
-                        if (newSpeed <= 5.0) {
-                            speed = newSpeed;
-                            updateInterval = Math.max(
-                                50,
-                                100 - Math.floor(score / 100) * 10,
+                    // Check apple collisions
+                    let appleEaten = false;
+                    for (let i = apples.length - 1; i >= 0; i--) {
+                        const apple = apples[i];
+                        if (head.x === apple.x && head.y === apple.y) {
+                            // Create apple eating particle effect
+                            createAppleEatEffect(
+                                apple.x * GRID_SIZE,
+                                apple.y * GRID_SIZE,
                             );
-                        }
 
-                        spawnApple();
-                        playEatSound();
-                    } else {
+                            // Create screen shake effect
+                            createScreenShake(3);
+
+                            // Apple eaten - don't remove tail, goose grows
+                            let applePoints = apple.isGolden ? 25 : 10;
+
+                            // Rainbow powerup doubles points
+                            if (
+                                activePowerups.rainbow &&
+                                activePowerups.rainbow.active
+                            ) {
+                                applePoints *= 2;
+                            }
+
+                            score += applePoints;
+
+                            // Length bonus
+                            score += goose.length * 5;
+
+                            // Increase speed every 100 points
+                            let baseSpeed = 1.0 + Math.floor(score / 100) * 0.5;
+
+                            // Speed powerup effect
+                            if (
+                                activePowerups.speed &&
+                                activePowerups.speed.active
+                            ) {
+                                baseSpeed *= 1.5;
+                            }
+
+                            if (baseSpeed <= 5.0) {
+                                speed = baseSpeed;
+                                updateInterval = Math.max(
+                                    50,
+                                    100 / Math.pow(speed, 0.5),
+                                );
+                            }
+
+                            // Remove eaten apple and spawn new one
+                            apples.splice(i, 1);
+                            appleEaten = true;
+                            playEatSound();
+                            break;
+                        }
+                    }
+
+                    if (!appleEaten) {
                         // Remove tail if no apple eaten
                         goose.pop();
+                    }
+
+                    // Check powerup collisions
+                    for (let i = powerups.length - 1; i >= 0; i--) {
+                        const powerup = powerups[i];
+                        if (head.x === powerup.x && head.y === powerup.y) {
+                            // Consume powerup
+                            activatePowerup(powerup.type);
+                            powerups.splice(i, 1);
+
+                            // Create collection effect
+                            createPowerupEffect(
+                                powerup.x * GRID_SIZE + GRID_SIZE / 2,
+                                powerup.y * GRID_SIZE + GRID_SIZE / 2,
+                                powerup.type,
+                            );
+                            score += 50; // Bonus points for powerup
+                            break;
+                        }
                     }
 
                     updateUI();
@@ -1465,43 +1709,51 @@
                 // Draw particles
                 drawParticles(ctx);
 
+                // Draw powerups
+                powerups.forEach((powerup) => powerup.draw(ctx));
+
                 // Restore context after screen shake
                 ctx.restore();
 
-                // Draw apple (simplified)
-                const appleX = apple.x * GRID_SIZE;
-                const appleY = apple.y * GRID_SIZE;
+                // Draw powerup status indicators
+                drawPowerupIndicators(ctx);
 
-                ctx.fillStyle = apple.isGolden ? "#FFD700" : "#DC143C";
-                ctx.beginPath();
-                ctx.arc(
-                    appleX + GRID_SIZE / 2,
-                    appleY + GRID_SIZE / 2,
-                    GRID_SIZE / 2 - 2,
-                    0,
-                    Math.PI * 2,
-                );
-                ctx.fill();
+                // Draw all apples
+                apples.forEach((apple) => {
+                    const appleX = apple.x * GRID_SIZE;
+                    const appleY = apple.y * GRID_SIZE;
 
-                // Draw apple highlight
-                ctx.fillStyle = apple.isGolden ? "#FFF8DC" : "#FF6B6B";
-                ctx.beginPath();
-                ctx.arc(
-                    appleX + GRID_SIZE / 2 - 3,
-                    appleY + GRID_SIZE / 2 - 3,
-                    3,
-                    0,
-                    Math.PI * 2,
-                );
-                ctx.fill();
+                    ctx.fillStyle = apple.isGolden ? "#FFD700" : "#DC143C";
+                    ctx.beginPath();
+                    ctx.arc(
+                        appleX + GRID_SIZE / 2,
+                        appleY + GRID_SIZE / 2,
+                        GRID_SIZE / 2 - 2,
+                        0,
+                        Math.PI * 2,
+                    );
+                    ctx.fill();
 
-                // Draw apple stem
-                ctx.strokeStyle = "#228B22";
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(appleX + GRID_SIZE / 2, appleY + 3);
-                ctx.lineTo(appleX + GRID_SIZE / 2, appleY + 1);
-                ctx.stroke();
+                    // Draw apple highlight
+                    ctx.fillStyle = apple.isGolden ? "#FFF8DC" : "#FF6B6B";
+                    ctx.beginPath();
+                    ctx.arc(
+                        appleX + GRID_SIZE / 2 - 3,
+                        appleY + GRID_SIZE / 2 - 3,
+                        3,
+                        0,
+                        Math.PI * 2,
+                    );
+                    ctx.fill();
+
+                    // Draw apple stem
+                    ctx.strokeStyle = "#228B22";
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(appleX + GRID_SIZE / 2, appleY + 3);
+                    ctx.lineTo(appleX + GRID_SIZE / 2, appleY + 1);
+                    ctx.stroke();
+                });
             }
 
             // Game state functions
@@ -1599,8 +1851,11 @@
             function restartGame() {
                 document.getElementById("gameOverScreen").style.display =
                     "none";
-                // Clear particles when restarting
+                // Clear particles, powerups, and apples when restarting
                 particles = [];
+                powerups = [];
+                activePowerups = {};
+                apples = [];
                 startGame();
             }
 
@@ -1862,6 +2117,126 @@
                     musicToggle.textContent = "🎵 Music";
                 } else {
                     musicToggle.textContent = "🔇 Music";
+                }
+            }
+
+            // Powerup system variables
+            let activePowerups = {};
+
+            function activatePowerup(type) {
+                activePowerups[type] = {
+                    timeLeft: getPowerupDuration(type),
+                    active: true,
+                };
+
+                // Apply immediate effects
+                switch (type) {
+                    case "speed":
+                        // Speed boost is handled in game update
+                        break;
+                    case "shield":
+                        // Shield prevents death for duration
+                        break;
+                    case "rainbow":
+                        // Rainbow mode gives double points
+                        break;
+                }
+            }
+
+            function getPowerupDuration(type) {
+                switch (type) {
+                    case "speed":
+                        return 300; // 5 seconds
+                    case "shield":
+                        return 600; // 10 seconds
+                    case "rainbow":
+                        return 240; // 4 seconds
+                    default:
+                        return 300;
+                }
+            }
+
+            function createPowerupEffect(x, y, type) {
+                const colors = {
+                    speed: "#FFD700",
+                    shield: "#00BFFF",
+                    rainbow: "#FF1493",
+                };
+
+                for (let i = 0; i < 20; i++) {
+                    const particle = new Particle(x, y, "apple");
+                    particle.color = colors[type];
+                    particle.size = Math.random() * 6 + 3;
+                    particles.push(particle);
+                }
+
+                createScreenShake(5);
+            }
+
+            function updateActivePowerups() {
+                for (const type in activePowerups) {
+                    if (activePowerups[type].active) {
+                        activePowerups[type].timeLeft--;
+                        if (activePowerups[type].timeLeft <= 0) {
+                            activePowerups[type].active = false;
+                            delete activePowerups[type];
+                        }
+                    }
+                }
+            }
+
+            function drawPowerupIndicators(ctx) {
+                let yOffset = 10;
+                const iconSize = 24;
+
+                for (const type in activePowerups) {
+                    if (activePowerups[type].active) {
+                        const timeLeft = activePowerups[type].timeLeft;
+                        const progress = timeLeft / getPowerupDuration(type);
+
+                        // Draw background
+                        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                        ctx.fillRect(10, yOffset, 120, iconSize + 4);
+
+                        // Draw icon
+                        ctx.font = `${iconSize}px Arial`;
+                        ctx.textAlign = "left";
+                        ctx.textBaseline = "top";
+
+                        const icons = {
+                            speed: "⚡",
+                            shield: "🛡️",
+                            rainbow: "🌈",
+                        };
+
+                        ctx.fillStyle = "#FFFFFF";
+                        ctx.fillText(icons[type], 12, yOffset + 2);
+
+                        // Draw progress bar
+                        const barWidth = 80;
+                        const barHeight = 4;
+                        const barX = 40;
+                        const barY = yOffset + iconSize - 2;
+
+                        ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+                        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+                        const colors = {
+                            speed: "#FFD700",
+                            shield: "#00BFFF",
+                            rainbow: "#FF1493",
+                        };
+
+                        ctx.fillStyle = colors[type];
+                        ctx.fillRect(
+                            barX,
+                            barY,
+                            barWidth * progress,
+                            barHeight,
+                        );
+
+                        yOffset += iconSize + 8;
+                    }
                 }
             }
 
