@@ -428,6 +428,69 @@
                     max-height: calc(100vh - 240px);
                 }
             }
+
+            .music-toggle {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: transparent;
+                border: 2px solid #2f4f2f;
+                color: #2f4f2f;
+                padding: 12px 16px;
+                font-size: 16px;
+                border-radius: 20px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                z-index: 1000;
+                min-height: 44px;
+                min-width: 80px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .music-toggle:hover {
+                background: #2f4f2f;
+                color: white;
+                transform: scale(1.05);
+            }
+
+            body.dark-mode .music-toggle {
+                border-color: #e6e6e6;
+                color: #e6e6e6;
+            }
+
+            body.dark-mode .music-toggle:hover {
+                background: #e6e6e6;
+                color: #1a1a2e;
+            }
+
+            @media (max-width: 768px) {
+                .music-toggle {
+                    top: 20px;
+                    right: 10px;
+                    padding: 16px 20px;
+                    font-size: 18px;
+                    min-height: 48px;
+                    min-width: 100px;
+                }
+
+                .theme-toggle {
+                    bottom: 350px;
+                }
+            }
+
+            @media (max-width: 480px) {
+                .music-toggle {
+                    padding: 12px 16px;
+                    font-size: 16px;
+                    min-width: 90px;
+                }
+
+                .theme-toggle {
+                    bottom: 320px;
+                }
+            }
         </style>
     </head>
     <body>
@@ -491,8 +554,22 @@
             </div>
         </div>
 
+        <!-- Background music -->
+        <audio id="backgroundMusic" loop preload="auto">
+            <!-- Replace with your Suno soundtrack URL -->
+            <source src="soundtrack.mp3" type="audio/mpeg" />
+            <!-- Add multiple formats for better browser support -->
+            <source src="soundtrack.ogg" type="audio/ogg" />
+            <source src="soundtrack.wav" type="audio/wav" />
+        </audio>
+
         <!-- Theme toggle cycles through: System → Light → Dark → System... -->
         <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
+
+        <!-- Music toggle button -->
+        <button class="music-toggle" onclick="toggleMusic()" id="musicToggle">
+            🎵 Music
+        </button>
 
         <script>
             // Game constants - Calculate dynamic canvas size
@@ -1069,6 +1146,14 @@
                 document.getElementById("startScreen").style.display = "none";
                 initializeGame();
                 updatePauseButton();
+
+                // Start background music if enabled
+                if (musicEnabled) {
+                    backgroundMusic
+                        .play()
+                        .catch((e) => console.log("Audio play failed:", e));
+                }
+
                 lastUpdateTime = performance.now();
                 gameLoop = requestAnimationFrame(function loop(time) {
                     gameUpdate(time);
@@ -1084,6 +1169,9 @@
                     document.getElementById("pauseOverlay").style.display =
                         "block";
                     updatePauseButton();
+
+                    // Pause background music
+                    backgroundMusic.pause();
                 }
             }
 
@@ -1094,6 +1182,13 @@
                         "none";
                     lastUpdateTime = performance.now();
                     updatePauseButton();
+
+                    // Resume background music if enabled
+                    if (musicEnabled) {
+                        backgroundMusic
+                            .play()
+                            .catch((e) => console.log("Audio play failed:", e));
+                    }
                 }
             }
 
@@ -1122,6 +1217,9 @@
                     "block";
 
                 playGameOverSound();
+
+                // Stop background music on game over
+                backgroundMusic.pause();
             }
 
             function restartGame() {
@@ -1341,8 +1439,55 @@
                     });
             }
 
+            // Background music functions
+            const backgroundMusic = document.getElementById("backgroundMusic");
+            let musicEnabled =
+                localStorage.getItem("gooseGameMusic") !== "false";
+
+            function toggleMusic() {
+                const musicToggle = document.getElementById("musicToggle");
+
+                if (musicEnabled) {
+                    backgroundMusic.pause();
+                    musicToggle.textContent = "🔇 Music";
+                    musicEnabled = false;
+                    localStorage.setItem("gooseGameMusic", "false");
+                } else {
+                    backgroundMusic
+                        .play()
+                        .catch((e) => console.log("Audio play failed:", e));
+                    musicToggle.textContent = "🎵 Music";
+                    musicEnabled = true;
+                    localStorage.setItem("gooseGameMusic", "true");
+                }
+            }
+
+            function initMusic() {
+                const musicToggle = document.getElementById("musicToggle");
+                backgroundMusic.volume = 0.2; // Set volume to 20%
+
+                // Handle audio loading errors
+                backgroundMusic.addEventListener("error", () => {
+                    console.log("Background music failed to load");
+                    musicToggle.textContent = "❌ No Music";
+                    musicToggle.disabled = true;
+                    musicEnabled = false;
+                });
+
+                backgroundMusic.addEventListener("canplaythrough", () => {
+                    console.log("Background music ready");
+                });
+
+                if (musicEnabled) {
+                    musicToggle.textContent = "🎵 Music";
+                } else {
+                    musicToggle.textContent = "🔇 Music";
+                }
+            }
+
             // Initialize the game and load theme
             loadTheme();
+            initMusic();
             render();
         </script>
     </body>
