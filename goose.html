@@ -2,13 +2,22 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+        />
         <title>Goose Game</title>
         <style>
             * {
                 margin: 0;
                 padding: 0;
                 box-sizing: border-box;
+                -webkit-tap-highlight-color: transparent;
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
             }
 
             body {
@@ -26,6 +35,7 @@
                 transition:
                     background 0.3s ease,
                     color 0.3s ease;
+                -webkit-overflow-scrolling: touch;
             }
 
             body.dark-mode {
@@ -75,12 +85,17 @@
                 background: transparent;
                 border: 2px solid #2f4f2f;
                 color: #2f4f2f;
-                padding: 8px 12px;
-                font-size: 14px;
+                padding: 12px 16px;
+                font-size: 16px;
                 border-radius: 20px;
                 cursor: pointer;
                 transition: all 0.3s ease;
                 z-index: 1000;
+                min-height: 44px;
+                min-width: 80px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
 
             .theme-toggle:hover {
@@ -106,8 +121,9 @@
                 display: block;
                 margin: 0 auto;
                 max-width: 95vw;
-                max-height: calc(100vh - 150px);
+                max-height: calc(100vh - 200px);
                 transition: border-color 0.3s ease;
+                touch-action: none;
             }
 
             body.dark-mode #gameCanvas {
@@ -236,6 +252,182 @@
                 font-size: 24px;
                 display: none;
             }
+
+            .mobile-controls {
+                display: none;
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 1000;
+            }
+
+            .control-pad {
+                display: grid;
+                grid-template-columns: 60px 60px 60px;
+                grid-template-rows: 60px 60px 60px;
+                gap: 5px;
+                margin-bottom: 10px;
+            }
+
+            .control-btn {
+                background: rgba(47, 79, 47, 0.8);
+                border: 2px solid #2f4f2f;
+                color: white;
+                border-radius: 12px;
+                font-size: 20px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                touch-action: manipulation;
+                user-select: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 60px;
+                min-width: 60px;
+            }
+
+            .control-btn:active {
+                background: rgba(47, 79, 47, 1);
+                transform: scale(0.95);
+            }
+
+            .control-btn.up {
+                grid-column: 2;
+                grid-row: 1;
+            }
+            .control-btn.left {
+                grid-column: 1;
+                grid-row: 2;
+            }
+            .control-btn.pause {
+                grid-column: 2;
+                grid-row: 2;
+                background: rgba(178, 34, 34, 0.8);
+                border-color: #b22222;
+            }
+            .control-btn.right {
+                grid-column: 3;
+                grid-row: 2;
+            }
+            .control-btn.down {
+                grid-column: 2;
+                grid-row: 3;
+            }
+
+            .control-btn.pause:active {
+                background: rgba(178, 34, 34, 1);
+            }
+
+            body.dark-mode .control-btn {
+                background: rgba(230, 230, 230, 0.8);
+                border-color: #e6e6e6;
+                color: #1a1a2e;
+            }
+
+            body.dark-mode .control-btn:active {
+                background: rgba(230, 230, 230, 1);
+            }
+
+            body.dark-mode .control-btn.pause {
+                background: rgba(220, 20, 60, 0.8);
+                border-color: #dc143c;
+                color: white;
+            }
+
+            body.dark-mode .control-btn.pause:active {
+                background: rgba(220, 20, 60, 1);
+            }
+
+            @media (max-width: 768px) {
+                .mobile-controls {
+                    display: block;
+                }
+
+                .theme-toggle {
+                    bottom: 300px;
+                    right: 10px;
+                    padding: 16px 20px;
+                    font-size: 18px;
+                    min-height: 48px;
+                    min-width: 100px;
+                }
+
+                .game-header {
+                    font-size: 18px;
+                    padding: 0 10px;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                }
+
+                .game-footer {
+                    font-size: 16px;
+                    padding: 0 10px;
+                    margin-bottom: 60px;
+                }
+
+                #gameCanvas {
+                    max-height: calc(100vh - 280px);
+                    border-width: 2px;
+                }
+
+                .start-screen,
+                .game-over-screen {
+                    padding: 20px;
+                    margin: 10px;
+                    max-width: calc(100vw - 20px);
+                }
+
+                .start-screen h1 {
+                    font-size: 24px;
+                }
+
+                .start-screen .goose-emoji {
+                    font-size: 32px;
+                }
+
+                button {
+                    padding: 16px 24px;
+                    font-size: 18px;
+                    min-height: 48px;
+                }
+
+                .controls {
+                    font-size: 12px;
+                }
+            }
+
+            @media (max-width: 480px) {
+                .game-header {
+                    font-size: 16px;
+                }
+
+                .game-footer {
+                    font-size: 14px;
+                }
+
+                .control-pad {
+                    grid-template-columns: 50px 50px 50px;
+                    grid-template-rows: 50px 50px 50px;
+                }
+
+                .control-btn {
+                    min-height: 50px;
+                    min-width: 50px;
+                    font-size: 18px;
+                }
+
+                .theme-toggle {
+                    bottom: 260px;
+                    padding: 12px 16px;
+                    font-size: 16px;
+                    min-width: 90px;
+                }
+
+                #gameCanvas {
+                    max-height: calc(100vh - 240px);
+                }
+            }
         </style>
     </head>
     <body>
@@ -259,9 +451,10 @@
                 <p>Help the goose eat apples and grow its neck!</p>
                 <div class="controls">
                     <p><strong>Controls:</strong></p>
-                    <p>Arrow Keys or WASD to move</p>
-                    <p>Spacebar to pause</p>
+                    <p>Arrow Keys/WASD or Swipe to move</p>
+                    <p>Spacebar or Pause button to pause</p>
                     <p>Enter to restart</p>
+                    <p>Theme button: System → Light → Dark</p>
                 </div>
                 <button onclick="startGame()">Start Game</button>
             </div>
@@ -283,18 +476,32 @@
             <div class="pause-overlay" id="pauseOverlay">
                 <p>Game Paused</p>
                 <p style="font-size: 16px; margin-top: 10px">
-                    Press Spacebar to resume
+                    Press Spacebar or Pause button to resume
                 </p>
             </div>
         </div>
 
+        <div class="mobile-controls" id="mobileControls">
+            <div class="control-pad">
+                <button class="control-btn up" id="upBtn">↑</button>
+                <button class="control-btn left" id="leftBtn">←</button>
+                <button class="control-btn pause" id="pauseBtn">⏸</button>
+                <button class="control-btn right" id="rightBtn">→</button>
+                <button class="control-btn down" id="downBtn">↓</button>
+            </div>
+        </div>
+
+        <!-- Theme toggle cycles through: System → Light → Dark → System... -->
         <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
 
         <script>
             // Game constants - Calculate dynamic canvas size
             const calculateCanvasSize = () => {
+                const isMobile = window.innerWidth <= 768;
                 const maxWidth = window.innerWidth * 0.95;
-                const maxHeight = (window.innerHeight - 150) * 0.95;
+                const headerFooterHeight = isMobile ? 280 : 200;
+                const maxHeight =
+                    (window.innerHeight - headerFooterHeight) * 0.95;
                 const GRID_SIZE = 30; // Larger grid squares
 
                 const gridWidth = Math.floor(maxWidth / GRID_SIZE);
@@ -363,10 +570,25 @@
                     setCanvasSize();
                     render();
                 }
+                updateMobileControlsVisibility();
             });
 
             // Set initial size
             setCanvasSize();
+
+            // Initialize mobile controls visibility
+            updateMobileControlsVisibility();
+
+            // Handle orientation change
+            window.addEventListener("orientationchange", () => {
+                setTimeout(() => {
+                    setCanvasSize();
+                    updateMobileControlsVisibility();
+                    if (gameState === "start") {
+                        render();
+                    }
+                }, 100);
+            });
 
             // Game initialization
             function initializeGame() {
@@ -468,6 +690,168 @@
                     }
                 }
             });
+
+            // Mobile touch controls and swipe gestures
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchEndX = 0;
+            let touchEndY = 0;
+
+            // Function to handle direction changes
+            function changeDirection(newDirection) {
+                if (gameState === "playing") {
+                    switch (newDirection) {
+                        case "up":
+                            if (direction.y !== 1) {
+                                nextDirection = { x: 0, y: -1 };
+                            }
+                            break;
+                        case "down":
+                            if (direction.y !== -1) {
+                                nextDirection = { x: 0, y: 1 };
+                            }
+                            break;
+                        case "left":
+                            if (direction.x !== 1) {
+                                nextDirection = { x: -1, y: 0 };
+                            }
+                            break;
+                        case "right":
+                            if (direction.x !== -1) {
+                                nextDirection = { x: 1, y: 0 };
+                            }
+                            break;
+                    }
+                }
+            }
+
+            // Mobile control buttons
+            document
+                .getElementById("upBtn")
+                .addEventListener("touchstart", (e) => {
+                    e.preventDefault();
+                    changeDirection("up");
+                });
+
+            document
+                .getElementById("downBtn")
+                .addEventListener("touchstart", (e) => {
+                    e.preventDefault();
+                    changeDirection("down");
+                });
+
+            document
+                .getElementById("leftBtn")
+                .addEventListener("touchstart", (e) => {
+                    e.preventDefault();
+                    changeDirection("left");
+                });
+
+            document
+                .getElementById("rightBtn")
+                .addEventListener("touchstart", (e) => {
+                    e.preventDefault();
+                    changeDirection("right");
+                });
+
+            document
+                .getElementById("pauseBtn")
+                .addEventListener("touchstart", (e) => {
+                    e.preventDefault();
+                    if (gameState === "playing") {
+                        pauseGame();
+                    } else if (gameState === "paused") {
+                        resumeGame();
+                    }
+                });
+
+            // Also add click events for desktop testing
+            document
+                .getElementById("upBtn")
+                .addEventListener("click", () => changeDirection("up"));
+            document
+                .getElementById("downBtn")
+                .addEventListener("click", () => changeDirection("down"));
+            document
+                .getElementById("leftBtn")
+                .addEventListener("click", () => changeDirection("left"));
+            document
+                .getElementById("rightBtn")
+                .addEventListener("click", () => changeDirection("right"));
+            document
+                .getElementById("pauseBtn")
+                .addEventListener("click", () => {
+                    if (gameState === "playing") {
+                        pauseGame();
+                    } else if (gameState === "paused") {
+                        resumeGame();
+                    }
+                });
+
+            // Swipe detection on canvas
+            canvas.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            });
+
+            canvas.addEventListener("touchend", (e) => {
+                e.preventDefault();
+                touchEndX = e.changedTouches[0].screenX;
+                touchEndY = e.changedTouches[0].screenY;
+                handleSwipe();
+            });
+
+            function handleSwipe() {
+                const deltaX = touchEndX - touchStartX;
+                const deltaY = touchEndY - touchStartY;
+                const minSwipeDistance = 30;
+
+                if (
+                    Math.abs(deltaX) < minSwipeDistance &&
+                    Math.abs(deltaY) < minSwipeDistance
+                ) {
+                    return; // Too small to be a swipe
+                }
+
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    // Horizontal swipe
+                    if (deltaX > 0) {
+                        changeDirection("right");
+                    } else {
+                        changeDirection("left");
+                    }
+                } else {
+                    // Vertical swipe
+                    if (deltaY > 0) {
+                        changeDirection("down");
+                    } else {
+                        changeDirection("up");
+                    }
+                }
+            }
+
+            // Update pause button text based on game state
+            function updatePauseButton() {
+                const pauseBtn = document.getElementById("pauseBtn");
+                if (gameState === "paused") {
+                    pauseBtn.textContent = "▶";
+                } else {
+                    pauseBtn.textContent = "⏸";
+                }
+            }
+
+            // Mobile controls visibility management
+            function updateMobileControlsVisibility() {
+                const isMobile = window.innerWidth <= 768;
+                const mobileControls =
+                    document.getElementById("mobileControls");
+                if (isMobile) {
+                    mobileControls.style.display = "block";
+                } else {
+                    mobileControls.style.display = "none";
+                }
+            }
 
             // Game loop
             function gameUpdate(currentTime) {
@@ -684,6 +1068,7 @@
                 gameState = "playing";
                 document.getElementById("startScreen").style.display = "none";
                 initializeGame();
+                updatePauseButton();
                 lastUpdateTime = performance.now();
                 gameLoop = requestAnimationFrame(function loop(time) {
                     gameUpdate(time);
@@ -698,6 +1083,7 @@
                     gameState = "paused";
                     document.getElementById("pauseOverlay").style.display =
                         "block";
+                    updatePauseButton();
                 }
             }
 
@@ -707,6 +1093,7 @@
                     document.getElementById("pauseOverlay").style.display =
                         "none";
                     lastUpdateTime = performance.now();
+                    updatePauseButton();
                 }
             }
 
@@ -812,15 +1199,43 @@
             function toggleTheme() {
                 const body = document.body;
                 const themeButton = document.querySelector(".theme-toggle");
+                const savedTheme = localStorage.getItem("gooseGameTheme");
 
-                body.classList.toggle("dark-mode");
+                // Check system preference
+                const supportsColorScheme =
+                    window.matchMedia &&
+                    window.matchMedia("(prefers-color-scheme)").media !==
+                        "not all";
+                const prefersDark =
+                    supportsColorScheme &&
+                    window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-                if (body.classList.contains("dark-mode")) {
-                    themeButton.textContent = "☀️ Light";
+                // Cycle through: system -> light -> dark -> system...
+                if (!savedTheme) {
+                    // Currently using system, switch to opposite of system (or light if no system support)
+                    if (supportsColorScheme && prefersDark) {
+                        body.classList.remove("dark-mode");
+                        themeButton.textContent = "🌙 Dark";
+                        localStorage.setItem("gooseGameTheme", "light");
+                    } else {
+                        body.classList.add("dark-mode");
+                        themeButton.textContent = "☀️ Light";
+                        localStorage.setItem("gooseGameTheme", "dark");
+                    }
+                } else if (savedTheme === "light") {
+                    // Switch to dark
+                    body.classList.add("dark-mode");
+                    themeButton.textContent = "🌿 System";
                     localStorage.setItem("gooseGameTheme", "dark");
-                } else {
-                    themeButton.textContent = "🌙 Dark";
-                    localStorage.setItem("gooseGameTheme", "light");
+                } else if (savedTheme === "dark") {
+                    // Switch to system (or light if no system support)
+                    localStorage.removeItem("gooseGameTheme");
+                    if (supportsColorScheme && prefersDark) {
+                        body.classList.add("dark-mode");
+                    } else {
+                        body.classList.remove("dark-mode");
+                    }
+                    updateThemeButtonText();
                 }
 
                 // Re-render the game with new theme
@@ -829,17 +1244,101 @@
                 }
             }
 
-            // Load saved theme on page load
-            function loadTheme() {
-                const savedTheme = localStorage.getItem("gooseGameTheme");
+            function updateThemeButtonText() {
                 const themeButton = document.querySelector(".theme-toggle");
+                const savedTheme = localStorage.getItem("gooseGameTheme");
+                const supportsColorScheme =
+                    window.matchMedia &&
+                    window.matchMedia("(prefers-color-scheme)").media !==
+                        "not all";
+                const prefersDark =
+                    supportsColorScheme &&
+                    window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-                if (savedTheme === "dark") {
-                    document.body.classList.add("dark-mode");
-                    themeButton.textContent = "☀️ Light";
+                if (!savedTheme) {
+                    if (supportsColorScheme) {
+                        themeButton.textContent = prefersDark
+                            ? "☀️ Light"
+                            : "🌙 Dark";
+                    } else {
+                        themeButton.textContent = "🌙 Dark";
+                    }
+                } else if (savedTheme === "dark") {
+                    themeButton.textContent = supportsColorScheme
+                        ? "🌿 System"
+                        : "☀️ Light";
                 } else {
                     themeButton.textContent = "🌙 Dark";
                 }
+            }
+
+            // Load saved theme on page load
+            function loadTheme() {
+                const savedTheme = localStorage.getItem("gooseGameTheme");
+
+                // Check if system supports prefers-color-scheme
+                const supportsColorScheme =
+                    window.matchMedia &&
+                    window.matchMedia("(prefers-color-scheme)").media !==
+                        "not all";
+
+                // Check system preference if supported and no saved theme
+                let prefersDark = false;
+                if (supportsColorScheme) {
+                    prefersDark = window.matchMedia(
+                        "(prefers-color-scheme: dark)",
+                    ).matches;
+                }
+
+                let shouldUseDark = false;
+
+                if (savedTheme) {
+                    shouldUseDark = savedTheme === "dark";
+                } else if (supportsColorScheme) {
+                    shouldUseDark = prefersDark;
+                } else {
+                    // Fallback to light mode if system doesn't support color scheme detection
+                    shouldUseDark = false;
+                }
+
+                if (shouldUseDark) {
+                    document.body.classList.add("dark-mode");
+                } else {
+                    document.body.classList.remove("dark-mode");
+                }
+
+                updateThemeButtonText();
+            }
+
+            // Listen for system theme changes
+            if (
+                window.matchMedia &&
+                window.matchMedia("(prefers-color-scheme)").media !== "not all"
+            ) {
+                window
+                    .matchMedia("(prefers-color-scheme: dark)")
+                    .addEventListener("change", (e) => {
+                        // Only update if user hasn't manually set a preference
+                        const savedTheme =
+                            localStorage.getItem("gooseGameTheme");
+                        if (!savedTheme) {
+                            const themeButton =
+                                document.querySelector(".theme-toggle");
+                            const body = document.body;
+
+                            if (e.matches) {
+                                body.classList.add("dark-mode");
+                            } else {
+                                body.classList.remove("dark-mode");
+                            }
+                            updateThemeButtonText();
+
+                            // Re-render the game with new theme
+                            if (gameState !== "playing") {
+                                render();
+                            }
+                        }
+                    });
             }
 
             // Initialize the game and load theme
