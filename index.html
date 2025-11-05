@@ -101,6 +101,28 @@
                 transform: translateY(0) scale(1);
             }
         }
+
+        @keyframes wiggle {
+            0%, 100% {
+                transform: rotate(0deg) scale(1) translateY(0px);
+            }
+            10%, 30%, 50%, 70%, 90% {
+                transform: rotate(-8deg) scale(1.05) translateY(-3px);
+            }
+            20%, 40%, 60%, 80% {
+                transform: rotate(8deg) scale(1.05) translateY(-2px);
+            }
+        }
+
+        .wiggle-animation {
+            animation: wiggle 0.6s ease-in-out 1 !important;
+            display: inline-block !important;
+            transform-origin: center center !important;
+        }
+
+        .mr-4 {
+            margin-right: 1rem;
+        }
     </style>
 </head>
 
@@ -110,7 +132,7 @@
     <main class="content-container">
         <div class="emoji-container" id="emojiContainer">
             <span class="mr-4 fade-in delay-1" id="apple">🍎</span>
-            <span class="fade-in delay-2" id="geese">🪿<a href="goose.html" style="text-decoration: none;">🪿</a>🪿</span>
+            <span class="fade-in delay-2" id="geese">🪿<a href="goose.html" style="text-decoration: none;" id="playableGoose">🪿</a>🪿</span>
         </div>
     </main>
 
@@ -133,6 +155,21 @@
 
             // Listen for changes in the system color scheme
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateTheme);
+
+            // Add wiggle animation to the playable goose every 3 seconds
+            setInterval(() => {
+                const playableGoose = document.getElementById('playableGoose');
+
+                if (playableGoose) {
+                    playableGoose.style.display = 'inline-block';
+                    playableGoose.classList.add('wiggle-animation');
+
+                    // Remove the animation class after it completes
+                    setTimeout(() => {
+                        playableGoose.classList.remove('wiggle-animation');
+                    }, 600);
+                }
+            }, 3000);
         });
     </script>
 
