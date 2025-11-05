@@ -673,6 +673,14 @@
                         this.vy = (Math.random() - 0.5) * 2;
                         this.size = Math.random() * 3 + 1;
                         this.color = `hsla(45, 80%, 85%, 0.6)`;
+                    } else if (type === "explosion") {
+                        this.vx = (Math.random() - 0.5) * 16;
+                        this.vy = (Math.random() - 0.5) * 16 - 5;
+                        this.gravity = 0.3;
+                        this.size = Math.random() * 8 + 4;
+                        this.color = `hsl(${Math.random() * 60 + 10}, 100%, ${Math.random() * 30 + 50}%)`; // Orange to red
+                        this.spin = Math.random() * 0.2 - 0.1;
+                        this.angle = 0;
                     }
                 }
 
@@ -682,11 +690,13 @@
                     if (
                         this.type === "apple" ||
                         this.type === "gameOver" ||
-                        this.type === "trail"
+                        this.type === "trail" ||
+                        this.type === "explosion"
                     ) {
                         this.x += this.vx;
                         this.y += this.vy;
                         if (this.gravity) this.vy += this.gravity;
+                        if (this.spin) this.angle += this.spin;
                     } else if (this.type === "sparkle") {
                         this.angle += this.angularVel;
                         this.twinkle += 0.15;
@@ -711,6 +721,19 @@
                         ctx.beginPath();
                         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                         ctx.fill();
+                    } else if (this.type === "explosion") {
+                        ctx.globalAlpha = alpha;
+                        ctx.save();
+                        ctx.translate(this.x, this.y);
+                        ctx.rotate(this.angle);
+                        ctx.fillStyle = this.color;
+                        ctx.fillRect(
+                            -this.size / 2,
+                            -this.size / 2,
+                            this.size,
+                            this.size,
+                        );
+                        ctx.restore();
                     } else {
                         ctx.globalAlpha = alpha;
                         ctx.fillStyle = this.color;
@@ -741,13 +764,26 @@
                 }
             }
 
-            function createGameOverEffect() {
-                const centerX = CANVAS_WIDTH / 2;
-                const centerY = CANVAS_HEIGHT / 2;
-
-                for (let i = 0; i < 30; i++) {
-                    particles.push(new Particle(centerX, centerY, "gameOver"));
+            function createGooseExplosion(gooseX, gooseY) {
+                // Create explosion particles at goose head location
+                for (let i = 0; i < 60; i++) {
+                    particles.push(new Particle(gooseX, gooseY, "explosion"));
                 }
+
+                // Add some white flash particles for extra drama
+                for (let i = 0; i < 15; i++) {
+                    const flashParticle = new Particle(
+                        gooseX,
+                        gooseY,
+                        "explosion",
+                    );
+                    flashParticle.color = "rgba(255, 255, 255, 0.9)";
+                    flashParticle.size *= 1.5;
+                    particles.push(flashParticle);
+                }
+
+                // Create screen shake for dramatic effect
+                createScreenShake(12);
             }
 
             function createSparkleEffect() {
@@ -829,6 +865,39 @@
 
             function drawParticles(ctx) {
                 particles.forEach((particle) => particle.draw(ctx));
+            }
+
+            function drawFieldBackground(ctx, isDarkMode) {
+                // Simple field background with gradient
+                const gradient = ctx.createLinearGradient(
+                    0,
+                    0,
+                    0,
+                    CANVAS_HEIGHT,
+                );
+                gradient.addColorStop(0, isDarkMode ? "#2d4a2d" : "#81C784");
+                gradient.addColorStop(1, isDarkMode ? "#1a3d1a" : "#4CAF50");
+
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                // Simple grid overlay
+                ctx.strokeStyle = isDarkMode
+                    ? "rgba(255, 255, 255, 0.08)"
+                    : "rgba(0, 0, 0, 0.08)";
+                ctx.lineWidth = 1;
+                for (let x = 0; x <= GRID_WIDTH; x++) {
+                    ctx.beginPath();
+                    ctx.moveTo(x * GRID_SIZE, 0);
+                    ctx.lineTo(x * GRID_SIZE, CANVAS_HEIGHT);
+                    ctx.stroke();
+                }
+                for (let y = 0; y <= GRID_HEIGHT; y++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y * GRID_SIZE);
+                    ctx.lineTo(CANVAS_WIDTH, y * GRID_SIZE);
+                    ctx.stroke();
+                }
             }
 
             // Set initial canvas size
@@ -1135,7 +1204,7 @@
 
             // Game loop
             function gameUpdate(currentTime) {
-                if (gameState !== "playing") return;
+                if (gameState !== "playing" && gameState !== "gameOver") return;
 
                 // Update particles regardless of game update interval
                 updateParticles();
@@ -1155,6 +1224,17 @@
                         head.y < 0 ||
                         head.y >= GRID_HEIGHT
                     ) {
+                        // Store the last valid goose head position BEFORE clearing
+                        const lastValidX =
+                            goose[0].x * GRID_SIZE + GRID_SIZE / 2;
+                        const lastValidY =
+                            goose[0].y * GRID_SIZE + GRID_SIZE / 2;
+
+                        // Clear goose immediately so it doesn't show during explosion
+                        goose = [];
+
+                        // Create explosion at last valid position
+                        createGooseExplosion(lastValidX, lastValidY);
                         gameOver();
                         return;
                     }
@@ -1166,6 +1246,15 @@
                                 segment.x === head.x && segment.y === head.y,
                         )
                     ) {
+                        // Store collision position BEFORE clearing goose
+                        const collisionX = head.x * GRID_SIZE + GRID_SIZE / 2;
+                        const collisionY = head.y * GRID_SIZE + GRID_SIZE / 2;
+
+                        // Clear goose immediately so it doesn't show during explosion
+                        goose = [];
+
+                        // Create explosion at collision position
+                        createGooseExplosion(collisionX, collisionY);
                         gameOver();
                         return;
                     }
@@ -1223,29 +1312,12 @@
                 ctx.save();
                 ctx.translate(screenShake.x, screenShake.y);
 
-                // Clear canvas with theme-appropriate background
+                // Clear canvas and draw field background
                 const isDarkMode =
                     document.body.classList.contains("dark-mode");
-                ctx.fillStyle = isDarkMode ? "#2d3748" : "#90EE90";
-                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-                // Draw subtle grid pattern
-                ctx.strokeStyle = isDarkMode
-                    ? "rgba(255, 255, 255, 0.1)"
-                    : "rgba(0, 0, 0, 0.1)";
-                ctx.lineWidth = 1;
-                for (let x = 0; x <= GRID_WIDTH; x++) {
-                    ctx.beginPath();
-                    ctx.moveTo(x * GRID_SIZE, 0);
-                    ctx.lineTo(x * GRID_SIZE, CANVAS_HEIGHT);
-                    ctx.stroke();
-                }
-                for (let y = 0; y <= GRID_HEIGHT; y++) {
-                    ctx.beginPath();
-                    ctx.moveTo(0, y * GRID_SIZE);
-                    ctx.lineTo(CANVAS_WIDTH, y * GRID_SIZE);
-                    ctx.stroke();
-                }
+                // Draw field background
+                drawFieldBackground(ctx, isDarkMode);
 
                 // Draw goose
                 goose.forEach((segment, index) => {
@@ -1388,7 +1460,7 @@
                 // Restore context after screen shake
                 ctx.restore();
 
-                // Draw apple
+                // Draw apple (simplified)
                 const appleX = apple.x * GRID_SIZE;
                 const appleY = apple.y * GRID_SIZE;
 
@@ -1442,7 +1514,12 @@
                 lastUpdateTime = performance.now();
                 gameLoop = requestAnimationFrame(function loop(time) {
                     gameUpdate(time);
-                    if (gameState === "playing" || gameState === "paused") {
+                    render();
+                    if (
+                        gameState === "playing" ||
+                        gameState === "paused" ||
+                        gameState === "gameOver"
+                    ) {
                         gameLoop = requestAnimationFrame(loop);
                     }
                 });
@@ -1480,9 +1557,6 @@
             function gameOver() {
                 gameState = "gameOver";
 
-                // Create game over particle effect
-                createGameOverEffect();
-
                 // Update high score
                 if (score > highScore) {
                     highScore = score;
@@ -1501,13 +1575,17 @@
                 document.getElementById("finalScore").textContent = score;
                 document.getElementById("finalNeckLength").textContent =
                     goose.length;
-                document.getElementById("gameOverScreen").style.display =
-                    "block";
 
                 playGameOverSound();
 
                 // Stop background music on game over
                 backgroundMusic.pause();
+
+                // Simple delay to let explosion play out completely
+                setTimeout(() => {
+                    document.getElementById("gameOverScreen").style.display =
+                        "block";
+                }, 1500);
             }
 
             function restartGame() {
