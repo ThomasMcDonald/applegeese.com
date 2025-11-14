@@ -88,11 +88,16 @@
 
             .goose-area {
                 text-align: center;
-                margin: 30px 0;
+                margin: 30px auto;
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
             }
 
             .main-goose {
-                font-size: 8em;
+                font-size: 12em;
                 cursor: pointer;
                 transition: transform 0.1s;
                 user-select: none;
@@ -116,6 +121,57 @@
                 50% {
                     transform: translateY(-10px);
                 }
+            }
+
+            @keyframes shake {
+                0% {
+                    transform: translateX(0px) translateY(0px) rotate(0deg)
+                        scale(1);
+                }
+                10% {
+                    transform: translateX(-15px) translateY(-8px) rotate(-5deg)
+                        scale(1.05);
+                }
+                20% {
+                    transform: translateX(15px) translateY(-12px) rotate(5deg)
+                        scale(1.1);
+                }
+                30% {
+                    transform: translateX(-12px) translateY(-6px) rotate(-3deg)
+                        scale(1.08);
+                }
+                40% {
+                    transform: translateX(12px) translateY(-10px) rotate(3deg)
+                        scale(1.06);
+                }
+                50% {
+                    transform: translateX(-8px) translateY(-4px) rotate(-2deg)
+                        scale(1.04);
+                }
+                60% {
+                    transform: translateX(8px) translateY(-6px) rotate(2deg)
+                        scale(1.02);
+                }
+                70% {
+                    transform: translateX(-5px) translateY(-2px) rotate(-1deg)
+                        scale(1.01);
+                }
+                80% {
+                    transform: translateX(5px) translateY(-3px) rotate(1deg)
+                        scale(1.005);
+                }
+                90% {
+                    transform: translateX(-2px) translateY(-1px) rotate(-0.5deg)
+                        scale(1.002);
+                }
+                100% {
+                    transform: translateX(0px) translateY(0px) rotate(0deg)
+                        scale(1);
+                }
+            }
+
+            .main-goose.shake {
+                animation: shake 0.6s ease-in-out infinite;
             }
 
             .click-effect {
@@ -234,15 +290,29 @@
                 margin-right: 10px;
             }
 
+            .upgrade-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                align-items: flex-end;
+            }
+
+            .buy-quantity-row {
+                display: flex;
+                gap: 3px;
+            }
+
             .upgrade-button {
                 background: #28a745;
                 color: white;
                 border: none;
-                padding: 8px 15px;
-                border-radius: 5px;
+                padding: 4px 8px;
+                border-radius: 4px;
                 cursor: pointer;
                 font-weight: bold;
                 transition: background 0.3s;
+                font-size: 0.8em;
+                min-width: 35px;
             }
 
             .upgrade-button:hover {
@@ -252,6 +322,21 @@
             .upgrade-button:disabled {
                 background: #6c757d;
                 cursor: not-allowed;
+            }
+
+            .upgrade-button.max {
+                background: #dc3545;
+            }
+
+            .upgrade-button.max:hover {
+                background: #c82333;
+            }
+
+            .upgrade-cost {
+                font-size: 0.75em;
+                color: #6c757d;
+                text-align: right;
+                margin-top: 2px;
             }
 
             .achievements {
@@ -299,13 +384,90 @@
                 cursor: not-allowed;
             }
 
+            .mobile-menu-toggle {
+                display: none;
+                background: #007bff;
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                border-radius: 8px;
+                font-weight: bold;
+                cursor: pointer;
+                width: 100%;
+                margin-bottom: 15px;
+            }
+
+            .mobile-menu-toggle:hover {
+                background: #0056b3;
+            }
+
+            .mobile-stats {
+                display: none;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+                margin-bottom: 20px;
+            }
+
             @media (max-width: 768px) {
+                .stats {
+                    display: none;
+                }
+
+                .mobile-stats {
+                    display: grid;
+                }
+
+                .mobile-menu-toggle {
+                    display: block;
+                }
+
+                .sidebar.mobile-open #mobileMenuClose {
+                    display: block !important;
+                }
+
                 .main-area {
                     flex-direction: column;
                 }
 
+                .game-content {
+                    width: 100%;
+                    text-align: center;
+                }
+
                 .sidebar {
                     width: 100%;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(255, 255, 255, 0.98);
+                    z-index: 1000;
+                    display: none;
+                    overflow-y: auto;
+                    padding: 20px;
+                }
+
+                .sidebar.mobile-open {
+                    display: block;
+                }
+
+                .goose-area {
+                    margin: 20px auto;
+                    text-align: center;
+                    width: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .main-goose {
+                    font-size: 10em;
+                }
+
+                .tab-container {
+                    display: block;
                 }
             }
         </style>
@@ -327,36 +489,45 @@
                     <div class="stat-value" id="totalClicks">0</div>
                     <div class="stat-label">Total Clicks</div>
                 </div>
+            </div>
+
+            <div class="mobile-stats">
                 <div class="stat-card">
-                    <div class="stat-value" id="prestigeLevel">0</div>
-                    <div class="stat-label">Prestige Level</div>
+                    <div class="stat-value" id="mobileApples">0</div>
+                    <div class="stat-label">Apples</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="mobileApplesPerSecond">0</div>
+                    <div class="stat-label">Per Second</div>
                 </div>
             </div>
 
             <div class="main-area">
                 <div class="game-content">
+                    <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                        📱 Show Menu
+                    </button>
                     <div class="goose-area">
                         <div class="main-goose" id="mainGoose">🪿</div>
                         <p>Click the goose to gather apples!</p>
                     </div>
-
-                    <div class="prestige-section">
-                        <button
-                            class="prestige-button"
-                            id="prestigeButton"
-                            disabled
-                        >
-                            Prestige (Reset for permanent bonuses)
-                        </button>
-                        <p id="prestigeInfo">Requires 1,000,000 total apples</p>
-                    </div>
                 </div>
 
                 <div class="sidebar">
+                    <button
+                        class="mobile-menu-toggle"
+                        id="mobileMenuClose"
+                        style="display: none"
+                    >
+                        ❌ Close Menu
+                    </button>
                     <div class="tab-container">
                         <div class="tabs">
                             <button class="tab-button active" id="upgradesTab">
-                                🏪 Upgrades
+                                🏪 Passive
+                            </button>
+                            <button class="tab-button" id="clickTab">
+                                👆 Click
                             </button>
                             <button class="tab-button" id="achievementsTab">
                                 🏆 Achievements
@@ -365,6 +536,10 @@
 
                         <div class="tab-content active" id="upgradesContent">
                             <div class="upgrades" id="upgrades"></div>
+                        </div>
+
+                        <div class="tab-content" id="clickContent">
+                            <div class="upgrades" id="clickUpgrades"></div>
                         </div>
 
                         <div class="tab-content" id="achievementsContent">
@@ -388,7 +563,13 @@
                         prestigeMultiplier: 1,
                         upgrades: {},
                         achievements: new Set(),
+                        buyQuantity: 1,
                     };
+
+                    // Click tracking for dynamic per second calculation
+                    this.clickTimes = [];
+                    this.dynamicClicksPerSecond = 0;
+                    this.shakeTimeout = null;
 
                     this.upgrades = [
                         {
@@ -398,6 +579,7 @@
                             baseCost: 10,
                             bpsIncrease: 0.1,
                             costMultiplier: 1.15,
+                            type: "passive",
                         },
                         {
                             id: "pond",
@@ -406,6 +588,7 @@
                             baseCost: 100,
                             bpsIncrease: 0.5,
                             costMultiplier: 1.15,
+                            type: "passive",
                         },
                         {
                             id: "duck_family",
@@ -414,6 +597,7 @@
                             baseCost: 500,
                             bpsIncrease: 2,
                             costMultiplier: 1.15,
+                            type: "passive",
                         },
                         {
                             id: "bread_factory",
@@ -422,6 +606,7 @@
                             baseCost: 2000,
                             bpsIncrease: 8,
                             costMultiplier: 1.15,
+                            type: "passive",
                         },
                         {
                             id: "goose_army",
@@ -430,6 +615,7 @@
                             baseCost: 10000,
                             bpsIncrease: 20,
                             costMultiplier: 1.15,
+                            type: "passive",
                         },
                         {
                             id: "golden_goose",
@@ -438,6 +624,52 @@
                             baseCost: 50000,
                             bpsIncrease: 50,
                             costMultiplier: 1.15,
+                            type: "passive",
+                        },
+                        {
+                            id: "sharp_beak",
+                            name: "🗡️ Sharp Beak",
+                            description: "+1 apple per click",
+                            baseCost: 25,
+                            clickIncrease: 1,
+                            costMultiplier: 1.2,
+                            type: "click",
+                        },
+                        {
+                            id: "strong_wings",
+                            name: "💪 Strong Wings",
+                            description: "+3 apples per click",
+                            baseCost: 150,
+                            clickIncrease: 3,
+                            costMultiplier: 1.2,
+                            type: "click",
+                        },
+                        {
+                            id: "golden_feathers",
+                            name: "✨ Golden Feathers",
+                            description: "+10 apples per click",
+                            baseCost: 750,
+                            clickIncrease: 10,
+                            costMultiplier: 1.2,
+                            type: "click",
+                        },
+                        {
+                            id: "magic_touch",
+                            name: "🪄 Magic Touch",
+                            description: "+25 apples per click",
+                            baseCost: 3000,
+                            clickIncrease: 25,
+                            costMultiplier: 1.2,
+                            type: "click",
+                        },
+                        {
+                            id: "apple_magnet",
+                            name: "🧲 Apple Magnet",
+                            description: "+75 apples per click",
+                            baseCost: 15000,
+                            clickIncrease: 75,
+                            costMultiplier: 1.2,
+                            type: "click",
                         },
                     ];
 
@@ -500,6 +732,7 @@
                     this.setupTabs();
                     this.createUpgradeElements();
                     this.createAchievementElements();
+                    this.calculateClickPower();
                     this.updateDisplay();
                     this.startGameLoop();
                 }
@@ -508,33 +741,65 @@
                     document
                         .getElementById("mainGoose")
                         .addEventListener("click", (e) => this.clickGoose(e));
-                    document
-                        .getElementById("prestigeButton")
-                        .addEventListener("click", () => this.prestige());
+
+                    // Mobile menu toggle
+                    const mobileToggle =
+                        document.getElementById("mobileMenuToggle");
+                    const mobileClose =
+                        document.getElementById("mobileMenuClose");
+                    const sidebar = document.querySelector(".sidebar");
+
+                    const toggleMenu = () => {
+                        sidebar.classList.toggle("mobile-open");
+                        mobileToggle.textContent = sidebar.classList.contains(
+                            "mobile-open",
+                        )
+                            ? "📱 Hide Menu"
+                            : "📱 Show Menu";
+                    };
+
+                    mobileToggle.addEventListener("click", toggleMenu);
+                    mobileClose.addEventListener("click", toggleMenu);
                 }
 
                 setupTabs() {
                     const upgradesTab = document.getElementById("upgradesTab");
                     const achievementsTab =
                         document.getElementById("achievementsTab");
+                    const clickTab = document.getElementById("clickTab");
                     const upgradesContent =
                         document.getElementById("upgradesContent");
                     const achievementsContent = document.getElementById(
                         "achievementsContent",
                     );
+                    const clickContent =
+                        document.getElementById("clickContent");
 
                     upgradesTab.addEventListener("click", () => {
                         upgradesTab.classList.add("active");
                         achievementsTab.classList.remove("active");
+                        clickTab.classList.remove("active");
                         upgradesContent.classList.add("active");
                         achievementsContent.classList.remove("active");
+                        clickContent.classList.remove("active");
                     });
 
                     achievementsTab.addEventListener("click", () => {
                         achievementsTab.classList.add("active");
                         upgradesTab.classList.remove("active");
+                        clickTab.classList.remove("active");
                         achievementsContent.classList.add("active");
                         upgradesContent.classList.remove("active");
+                        clickContent.classList.remove("active");
+                    });
+
+                    clickTab.addEventListener("click", () => {
+                        clickTab.classList.add("active");
+                        upgradesTab.classList.remove("active");
+                        achievementsTab.classList.remove("active");
+                        clickContent.classList.add("active");
+                        upgradesContent.classList.remove("active");
+                        achievementsContent.classList.remove("active");
                     });
                 }
 
@@ -546,8 +811,44 @@
                     this.gameState.totalApples += clickValue;
                     this.gameState.totalClicks++;
 
+                    // Track click time for dynamic per second calculation
+                    const now = Date.now();
+                    this.clickTimes.push(now);
+
+                    // Keep only clicks from the last 10 seconds for accurate rate calculation
+                    this.clickTimes = this.clickTimes.filter(
+                        (time) => now - time <= 10000,
+                    );
+
+                    // Calculate dynamic clicks per second based on recent clicks
+                    if (this.clickTimes.length > 1) {
+                        const timeSpan = (now - this.clickTimes[0]) / 1000; // Convert to seconds
+                        this.dynamicClicksPerSecond =
+                            this.clickTimes.length / Math.max(timeSpan, 1);
+                    } else {
+                        this.dynamicClicksPerSecond = this.clickTimes.length;
+                    }
+
                     // Create click effect
                     this.createClickEffect(event, clickValue);
+
+                    // Add continuous shake animation
+                    const goose = document.getElementById("mainGoose");
+
+                    // Start shaking if not already shaking
+                    if (!goose.classList.contains("shake")) {
+                        goose.classList.add("shake");
+                    }
+
+                    // Clear existing timeout and set new one to stop shaking
+                    if (this.shakeTimeout) {
+                        clearTimeout(this.shakeTimeout);
+                    }
+
+                    this.shakeTimeout = setTimeout(() => {
+                        goose.classList.remove("shake");
+                        this.shakeTimeout = null;
+                    }, 800); // Stop shaking 0.8s after last click
 
                     this.checkAchievements();
                     this.updateDisplay();
@@ -567,35 +868,117 @@
                     }, 1000);
                 }
 
-                buyUpgrade(upgradeId) {
+                buyUpgrade(upgradeId, quantity = 1) {
                     const upgrade = this.upgrades.find(
                         (u) => u.id === upgradeId,
                     );
                     const currentCount =
                         this.gameState.upgrades[upgradeId] || 0;
-                    const cost = Math.floor(
-                        upgrade.baseCost *
-                            Math.pow(upgrade.costMultiplier, currentCount),
-                    );
 
-                    if (this.gameState.apples >= cost) {
-                        this.gameState.apples -= cost;
-                        this.gameState.upgrades[upgradeId] = currentCount + 1;
-                        this.calculateApplesPerSecond();
+                    let actualQuantity = quantity;
+                    let totalCost = 0;
+
+                    // Calculate actual quantity and cost
+                    if (quantity === "max") {
+                        actualQuantity = this.calculateMaxBuy(
+                            upgrade,
+                            currentCount,
+                        );
+                        totalCost = this.calculateBulkCost(
+                            upgrade,
+                            currentCount,
+                            actualQuantity,
+                        );
+                    } else {
+                        actualQuantity = Math.min(
+                            quantity,
+                            this.calculateMaxBuy(upgrade, currentCount),
+                        );
+                        totalCost = this.calculateBulkCost(
+                            upgrade,
+                            currentCount,
+                            actualQuantity,
+                        );
+                    }
+
+                    if (
+                        actualQuantity > 0 &&
+                        this.gameState.apples >= totalCost
+                    ) {
+                        this.gameState.apples -= totalCost;
+                        this.gameState.upgrades[upgradeId] =
+                            currentCount + actualQuantity;
+
+                        if (upgrade.type === "passive") {
+                            this.calculateApplesPerSecond();
+                        } else if (upgrade.type === "click") {
+                            this.calculateClickPower();
+                        }
+
                         this.checkAchievements();
                         this.updateDisplay();
                         this.saveGame();
                     }
                 }
 
+                calculateBulkCost(upgrade, currentCount, quantity) {
+                    let totalCost = 0;
+                    for (let i = 0; i < quantity; i++) {
+                        totalCost += Math.floor(
+                            upgrade.baseCost *
+                                Math.pow(
+                                    upgrade.costMultiplier,
+                                    currentCount + i,
+                                ),
+                        );
+                    }
+                    return totalCost;
+                }
+
+                calculateMaxBuy(upgrade, currentCount) {
+                    let count = 0;
+                    let totalCost = 0;
+                    while (true) {
+                        const nextCost = Math.floor(
+                            upgrade.baseCost *
+                                Math.pow(
+                                    upgrade.costMultiplier,
+                                    currentCount + count,
+                                ),
+                        );
+                        if (totalCost + nextCost > this.gameState.apples) {
+                            break;
+                        }
+                        totalCost += nextCost;
+                        count++;
+                        if (count >= 1000) break; // Safety limit
+                    }
+                    return count;
+                }
+
                 calculateApplesPerSecond() {
                     let aps = 0;
                     this.upgrades.forEach((upgrade) => {
-                        const count = this.gameState.upgrades[upgrade.id] || 0;
-                        aps += upgrade.bpsIncrease * count;
+                        if (upgrade.type === "passive") {
+                            const count =
+                                this.gameState.upgrades[upgrade.id] || 0;
+                            aps += upgrade.bpsIncrease * count;
+                        }
                     });
                     this.gameState.applesPerSecond =
                         aps * this.gameState.prestigeMultiplier;
+                }
+
+                calculateClickPower() {
+                    let clickPower = 1; // Base click power
+                    this.upgrades.forEach((upgrade) => {
+                        if (upgrade.type === "click") {
+                            const count =
+                                this.gameState.upgrades[upgrade.id] || 0;
+                            clickPower += upgrade.clickIncrease * count;
+                        }
+                    });
+                    this.gameState.clickPower = clickPower;
                 }
 
                 prestige() {
@@ -634,6 +1017,9 @@
                 createUpgradeElements() {
                     const upgradesContainer =
                         document.getElementById("upgrades");
+                    const clickUpgradesContainer =
+                        document.getElementById("clickUpgrades");
+
                     this.upgrades.forEach((upgrade) => {
                         const upgradeElement = document.createElement("div");
                         upgradeElement.className = "upgrade";
@@ -643,16 +1029,43 @@
                             <div class="upgrade-name">${upgrade.name}</div>
                             <div class="upgrade-description">${upgrade.description}</div>
                         </div>
-                        <button class="upgrade-button" id="btn-${upgrade.id}">
-                            ${this.formatNumber(upgrade.baseCost)}
-                        </button>
+                        <div class="upgrade-buttons">
+                            <div class="buy-quantity-row">
+                                <button class="upgrade-button" id="btn-${upgrade.id}-1">1</button>
+                                <button class="upgrade-button" id="btn-${upgrade.id}-10">10</button>
+                                <button class="upgrade-button" id="btn-${upgrade.id}-100">100</button>
+                                <button class="upgrade-button max" id="btn-${upgrade.id}-max">Max</button>
+                            </div>
+                            <div class="upgrade-cost" id="cost-${upgrade.id}">${this.formatNumber(upgrade.baseCost)}</div>
+                        </div>
                     `;
-                        upgradesContainer.appendChild(upgradeElement);
 
+                        if (upgrade.type === "passive") {
+                            upgradesContainer.appendChild(upgradeElement);
+                        } else if (upgrade.type === "click") {
+                            clickUpgradesContainer.appendChild(upgradeElement);
+                        }
+
+                        // Add event listeners for each quantity button
                         document
-                            .getElementById(`btn-${upgrade.id}`)
+                            .getElementById(`btn-${upgrade.id}-1`)
                             .addEventListener("click", () =>
-                                this.buyUpgrade(upgrade.id),
+                                this.buyUpgrade(upgrade.id, 1),
+                            );
+                        document
+                            .getElementById(`btn-${upgrade.id}-10`)
+                            .addEventListener("click", () =>
+                                this.buyUpgrade(upgrade.id, 10),
+                            );
+                        document
+                            .getElementById(`btn-${upgrade.id}-100`)
+                            .addEventListener("click", () =>
+                                this.buyUpgrade(upgrade.id, 100),
+                            );
+                        document
+                            .getElementById(`btn-${upgrade.id}-max`)
+                            .addEventListener("click", () =>
+                                this.buyUpgrade(upgrade.id, "max"),
                             );
                     });
                 }
@@ -676,31 +1089,97 @@
                 updateDisplay() {
                     document.getElementById("apples").textContent =
                         this.formatNumber(this.gameState.apples);
+
+                    // Calculate total per second including both passive and dynamic clicking
+                    const totalPerSecond =
+                        this.gameState.applesPerSecond +
+                        this.dynamicClicksPerSecond *
+                            this.gameState.clickPower *
+                            this.gameState.prestigeMultiplier;
+
                     document.getElementById("applesPerSecond").textContent =
-                        this.formatNumber(this.gameState.applesPerSecond, 1);
+                        this.formatNumber(totalPerSecond, 1);
                     document.getElementById("totalClicks").textContent =
                         this.formatNumber(this.gameState.totalClicks);
-                    document.getElementById("prestigeLevel").textContent =
-                        this.gameState.prestigeLevel;
+
+                    // Update mobile stats
+                    const mobileApples =
+                        document.getElementById("mobileApples");
+                    const mobileApplesPerSecond = document.getElementById(
+                        "mobileApplesPerSecond",
+                    );
+                    if (mobileApples) {
+                        mobileApples.textContent = this.formatNumber(
+                            this.gameState.apples,
+                        );
+                    }
+                    if (mobileApplesPerSecond) {
+                        // Use same total per second calculation for mobile
+                        const totalPerSecond =
+                            this.gameState.applesPerSecond +
+                            this.dynamicClicksPerSecond *
+                                this.gameState.clickPower *
+                                this.gameState.prestigeMultiplier;
+                        mobileApplesPerSecond.textContent = this.formatNumber(
+                            totalPerSecond,
+                            1,
+                        );
+                    }
 
                     // Update upgrade buttons
                     this.upgrades.forEach((upgrade) => {
                         const currentCount =
                             this.gameState.upgrades[upgrade.id] || 0;
-                        const cost = Math.floor(
-                            upgrade.baseCost *
-                                Math.pow(upgrade.costMultiplier, currentCount),
-                        );
-                        const button = document.getElementById(
-                            `btn-${upgrade.id}`,
-                        );
                         const countElement = document.getElementById(
                             `count-${upgrade.id}`,
                         );
+                        const costElement = document.getElementById(
+                            `cost-${upgrade.id}`,
+                        );
 
                         countElement.textContent = currentCount;
-                        button.textContent = this.formatNumber(cost);
-                        button.disabled = this.gameState.apples < cost;
+
+                        // Update each quantity button
+                        [1, 10, 100, "max"].forEach((qty) => {
+                            const button = document.getElementById(
+                                `btn-${upgrade.id}-${qty}`,
+                            );
+
+                            if (qty === "max") {
+                                const maxBuy = this.calculateMaxBuy(
+                                    upgrade,
+                                    currentCount,
+                                );
+                                const maxCost = this.calculateBulkCost(
+                                    upgrade,
+                                    currentCount,
+                                    maxBuy,
+                                );
+                                button.disabled =
+                                    maxBuy === 0 ||
+                                    this.gameState.apples < maxCost;
+                            } else {
+                                const cost = this.calculateBulkCost(
+                                    upgrade,
+                                    currentCount,
+                                    qty,
+                                );
+                                const maxPossible = this.calculateMaxBuy(
+                                    upgrade,
+                                    currentCount,
+                                );
+                                button.disabled =
+                                    qty > maxPossible ||
+                                    this.gameState.apples < cost;
+                            }
+                        });
+
+                        // Update cost display (show cost for buying 1)
+                        const singleCost = Math.floor(
+                            upgrade.baseCost *
+                                Math.pow(upgrade.costMultiplier, currentCount),
+                        );
+                        costElement.textContent = this.formatNumber(singleCost);
                     });
 
                     // Update achievements
@@ -712,19 +1191,6 @@
                             element.classList.add("unlocked");
                         }
                     });
-
-                    // Update prestige button
-                    const prestigeButton =
-                        document.getElementById("prestigeButton");
-                    const prestigeInfo =
-                        document.getElementById("prestigeInfo");
-                    if (this.gameState.totalApples >= 1000000) {
-                        prestigeButton.disabled = false;
-                        prestigeInfo.textContent = `Reset for +${(this.gameState.prestigeLevel + 1) * 50}% production bonus`;
-                    } else {
-                        prestigeButton.disabled = true;
-                        prestigeInfo.textContent = `Requires ${this.formatNumber(1000000)} total apples`;
-                    }
                 }
 
                 formatNumber(num, decimals = 0) {
@@ -743,8 +1209,29 @@
                             const gain = this.gameState.applesPerSecond / 10; // 10 updates per second
                             this.gameState.apples += gain;
                             this.gameState.totalApples += gain;
-                            this.updateDisplay();
                         }
+
+                        // Clean up old click times periodically
+                        const now = Date.now();
+                        this.clickTimes = this.clickTimes.filter(
+                            (time) => now - time <= 10000,
+                        );
+
+                        // Recalculate dynamic click rate
+                        if (this.clickTimes.length > 1) {
+                            const timeSpan = (now - this.clickTimes[0]) / 1000;
+                            this.dynamicClicksPerSecond =
+                                this.clickTimes.length / Math.max(timeSpan, 1);
+                        } else if (this.clickTimes.length === 1) {
+                            // If only one click in the window, calculate based on that
+                            this.dynamicClicksPerSecond =
+                                this.clickTimes.length /
+                                Math.min((now - this.clickTimes[0]) / 1000, 10);
+                        } else {
+                            this.dynamicClicksPerSecond = 0;
+                        }
+
+                        this.updateDisplay();
                     }, 100);
 
                     // Save every 30 seconds
@@ -774,6 +1261,7 @@
                             achievements: new Set(parsed.achievements || []),
                         };
                         this.calculateApplesPerSecond();
+                        this.calculateClickPower();
                     }
                 }
             }
