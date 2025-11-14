@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Idle Goose Game</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: "Arial", sans-serif;
+                background: linear-gradient(135deg, #87ceeb 0%, #98fb98 100%);
+                min-height: 100vh;
+                padding: 20px;
+                color: #333;
+            }
+
+            .game-container {
+                max-width: 1600px;
+                min-height: 800px;
+                margin: 0 auto;
+                background: rgba(255, 255, 255, 0.9);
+                border-radius: 15px;
+                padding: 30px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            }
+
+            .main-area {
+                display: flex;
+                gap: 30px;
+                align-items: flex-start;
+            }
+
+            .game-content {
+                flex: 1;
+            }
+
+            .sidebar {
+                width: 400px;
+                flex-shrink: 0;
+            }
+
+            .panel {
+                background: rgba(255, 255, 255, 0.9);
+                border-radius: 15px;
+                padding: 15px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            }
+
+            h1 {
+                text-align: center;
+                color: #2c3e50;
+                margin-bottom: 20px;
+                font-size: 2.5em;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            .stats {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin-bottom: 30px;
+            }
+
+            .stat-card {
+                background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+                padding: 15px;
+                border-radius: 10px;
+                border: 2px solid #e9ecef;
+                text-align: center;
+            }
+
+            .stat-value {
+                font-size: 1.5em;
+                font-weight: bold;
+                color: #2c3e50;
+            }
+
+            .stat-label {
+                color: #6c757d;
+                font-size: 0.9em;
+                margin-top: 5px;
+            }
+
+            .goose-area {
+                text-align: center;
+                margin: 30px 0;
+            }
+
+            .main-goose {
+                font-size: 8em;
+                cursor: pointer;
+                transition: transform 0.1s;
+                user-select: none;
+                display: inline-block;
+                animation: float 3s ease-in-out infinite;
+            }
+
+            .main-goose:hover {
+                transform: scale(1.1);
+            }
+
+            .main-goose:active {
+                transform: scale(0.95);
+            }
+
+            @keyframes float {
+                0%,
+                100% {
+                    transform: translateY(0px);
+                }
+                50% {
+                    transform: translateY(-10px);
+                }
+            }
+
+            .click-effect {
+                position: absolute;
+                color: #28a745;
+                font-weight: bold;
+                font-size: 1.2em;
+                pointer-events: none;
+                animation: floatUp 1s ease-out forwards;
+            }
+
+            @keyframes floatUp {
+                0% {
+                    opacity: 1;
+                    transform: translateY(0px);
+                }
+                100% {
+                    opacity: 0;
+                    transform: translateY(-50px);
+                }
+            }
+
+            .tab-container {
+                background: rgba(255, 255, 255, 0.8);
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+                border: 2px solid #e9ecef;
+            }
+
+            .tabs {
+                display: flex;
+                background: #f8f9fa;
+                border-bottom: 2px solid #e9ecef;
+            }
+
+            .tab-button {
+                flex: 1;
+                padding: 10px 12px;
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-weight: bold;
+                color: #6c757d;
+                transition: all 0.3s;
+                font-size: 0.9em;
+            }
+
+            .tab-button:hover {
+                background: rgba(0, 123, 255, 0.1);
+                color: #007bff;
+            }
+
+            .tab-button.active {
+                background: white;
+                color: #007bff;
+                border-bottom: 3px solid #007bff;
+            }
+
+            .tab-content {
+                padding: 15px;
+                display: none;
+                max-height: 400px;
+                overflow-y: auto;
+            }
+
+            .tab-content.active {
+                display: block;
+            }
+
+            .upgrades {
+                display: grid;
+                gap: 10px;
+            }
+
+            .upgrade {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px;
+                background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+                border-radius: 8px;
+                border: 2px solid #e9ecef;
+                transition: all 0.3s;
+            }
+
+            .upgrade:hover {
+                border-color: #007bff;
+                transform: translateY(-2px);
+            }
+
+            .upgrade-info {
+                flex: 1;
+            }
+
+            .upgrade-name {
+                font-weight: bold;
+                color: #2c3e50;
+            }
+
+            .upgrade-description {
+                font-size: 0.8em;
+                color: #6c757d;
+            }
+
+            .upgrade-count {
+                background: #007bff;
+                color: white;
+                border-radius: 50%;
+                width: 25px;
+                height: 25px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.8em;
+                margin-right: 10px;
+            }
+
+            .upgrade-button {
+                background: #28a745;
+                color: white;
+                border: none;
+                padding: 8px 15px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-weight: bold;
+                transition: background 0.3s;
+            }
+
+            .upgrade-button:hover {
+                background: #218838;
+            }
+
+            .upgrade-button:disabled {
+                background: #6c757d;
+                cursor: not-allowed;
+            }
+
+            .achievements {
+                max-height: 200px;
+                overflow-y: auto;
+            }
+
+            .achievement {
+                padding: 8px;
+                margin: 5px 0;
+                background: #fff3cd;
+                border-radius: 5px;
+                border-left: 4px solid #ffc107;
+                font-size: 0.9em;
+            }
+
+            .achievement.unlocked {
+                background: #d4edda;
+                border-left-color: #28a745;
+            }
+
+            .prestige-section {
+                text-align: center;
+                margin-top: 20px;
+            }
+
+            .prestige-button {
+                background: #dc3545;
+                color: white;
+                border: none;
+                padding: 15px 30px;
+                border-radius: 10px;
+                font-size: 1.1em;
+                font-weight: bold;
+                cursor: pointer;
+                transition: background 0.3s;
+            }
+
+            .prestige-button:hover {
+                background: #c82333;
+            }
+
+            .prestige-button:disabled {
+                background: #6c757d;
+                cursor: not-allowed;
+            }
+
+            @media (max-width: 768px) {
+                .main-area {
+                    flex-direction: column;
+                }
+
+                .sidebar {
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="game-container">
+            <h1>🪿 Idle Goose Game 🪿</h1>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="apples">0</div>
+                    <div class="stat-label">Apples</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="applesPerSecond">0</div>
+                    <div class="stat-label">Per Second</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalClicks">0</div>
+                    <div class="stat-label">Total Clicks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="prestigeLevel">0</div>
+                    <div class="stat-label">Prestige Level</div>
+                </div>
+            </div>
+
+            <div class="main-area">
+                <div class="game-content">
+                    <div class="goose-area">
+                        <div class="main-goose" id="mainGoose">🪿</div>
+                        <p>Click the goose to gather apples!</p>
+                    </div>
+
+                    <div class="prestige-section">
+                        <button
+                            class="prestige-button"
+                            id="prestigeButton"
+                            disabled
+                        >
+                            Prestige (Reset for permanent bonuses)
+                        </button>
+                        <p id="prestigeInfo">Requires 1,000,000 total apples</p>
+                    </div>
+                </div>
+
+                <div class="sidebar">
+                    <div class="tab-container">
+                        <div class="tabs">
+                            <button class="tab-button active" id="upgradesTab">
+                                🏪 Upgrades
+                            </button>
+                            <button class="tab-button" id="achievementsTab">
+                                🏆 Achievements
+                            </button>
+                        </div>
+
+                        <div class="tab-content active" id="upgradesContent">
+                            <div class="upgrades" id="upgrades"></div>
+                        </div>
+
+                        <div class="tab-content" id="achievementsContent">
+                            <div class="achievements" id="achievements"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            class IdleGooseGame {
+                constructor() {
+                    this.gameState = {
+                        apples: 0,
+                        totalApples: 0,
+                        applesPerSecond: 0,
+                        clickPower: 1,
+                        totalClicks: 0,
+                        prestigeLevel: 0,
+                        prestigeMultiplier: 1,
+                        upgrades: {},
+                        achievements: new Set(),
+                    };
+
+                    this.upgrades = [
+                        {
+                            id: "helper_duck",
+                            name: "🪿 Helper Goose",
+                            description: "+0.1 apples/sec",
+                            baseCost: 10,
+                            bpsIncrease: 0.1,
+                            costMultiplier: 1.15,
+                        },
+                        {
+                            id: "pond",
+                            name: "🏞️ Pond",
+                            description: "+0.5 apples/sec",
+                            baseCost: 100,
+                            bpsIncrease: 0.5,
+                            costMultiplier: 1.15,
+                        },
+                        {
+                            id: "duck_family",
+                            name: "👨‍👩‍👧‍👦 Goose Family",
+                            description: "+2 apples/sec",
+                            baseCost: 500,
+                            bpsIncrease: 2,
+                            costMultiplier: 1.15,
+                        },
+                        {
+                            id: "bread_factory",
+                            name: "🏭 Apple Orchard",
+                            description: "+8 apples/sec",
+                            baseCost: 2000,
+                            bpsIncrease: 8,
+                            costMultiplier: 1.15,
+                        },
+                        {
+                            id: "goose_army",
+                            name: "🪿🪿🪿 Goose Army",
+                            description: "+20 apples/sec",
+                            baseCost: 10000,
+                            bpsIncrease: 20,
+                            costMultiplier: 1.15,
+                        },
+                        {
+                            id: "golden_goose",
+                            name: "✨ Golden Goose",
+                            description: "+50 apples/sec",
+                            baseCost: 50000,
+                            bpsIncrease: 50,
+                            costMultiplier: 1.15,
+                        },
+                    ];
+
+                    this.achievements = [
+                        {
+                            id: "first_click",
+                            name: "First Steps",
+                            description: "Click the goose for the first time",
+                            condition: () => this.gameState.totalClicks >= 1,
+                        },
+                        {
+                            id: "hundred_clicks",
+                            name: "Clicking Champion",
+                            description: "Click the goose 100 times",
+                            condition: () => this.gameState.totalClicks >= 100,
+                        },
+                        {
+                            id: "first_upgrade",
+                            name: "Getting Help",
+                            description: "Buy your first upgrade",
+                            condition: () =>
+                                Object.values(this.gameState.upgrades).some(
+                                    (count) => count > 0,
+                                ),
+                        },
+                        {
+                            id: "thousand_apples",
+                            name: "Apple Collector",
+                            description: "Collect 1,000 apples",
+                            condition: () => this.gameState.totalApples >= 1000,
+                        },
+                        {
+                            id: "ten_aps",
+                            name: "Passive Income",
+                            description: "Reach 10 apples per second",
+                            condition: () =>
+                                this.gameState.applesPerSecond >= 10,
+                        },
+                        {
+                            id: "first_prestige",
+                            name: "New Beginnings",
+                            description: "Prestige for the first time",
+                            condition: () => this.gameState.prestigeLevel >= 1,
+                        },
+                        {
+                            id: "million_apples",
+                            name: "Millionaire",
+                            description: "Collect 1,000,000 total apples",
+                            condition: () =>
+                                this.gameState.totalApples >= 1000000,
+                        },
+                    ];
+
+                    this.init();
+                }
+
+                init() {
+                    this.loadGame();
+                    this.setupEventListeners();
+                    this.setupTabs();
+                    this.createUpgradeElements();
+                    this.createAchievementElements();
+                    this.updateDisplay();
+                    this.startGameLoop();
+                }
+
+                setupEventListeners() {
+                    document
+                        .getElementById("mainGoose")
+                        .addEventListener("click", (e) => this.clickGoose(e));
+                    document
+                        .getElementById("prestigeButton")
+                        .addEventListener("click", () => this.prestige());
+                }
+
+                setupTabs() {
+                    const upgradesTab = document.getElementById("upgradesTab");
+                    const achievementsTab =
+                        document.getElementById("achievementsTab");
+                    const upgradesContent =
+                        document.getElementById("upgradesContent");
+                    const achievementsContent = document.getElementById(
+                        "achievementsContent",
+                    );
+
+                    upgradesTab.addEventListener("click", () => {
+                        upgradesTab.classList.add("active");
+                        achievementsTab.classList.remove("active");
+                        upgradesContent.classList.add("active");
+                        achievementsContent.classList.remove("active");
+                    });
+
+                    achievementsTab.addEventListener("click", () => {
+                        achievementsTab.classList.add("active");
+                        upgradesTab.classList.remove("active");
+                        achievementsContent.classList.add("active");
+                        upgradesContent.classList.remove("active");
+                    });
+                }
+
+                clickGoose(event) {
+                    const clickValue =
+                        this.gameState.clickPower *
+                        this.gameState.prestigeMultiplier;
+                    this.gameState.apples += clickValue;
+                    this.gameState.totalApples += clickValue;
+                    this.gameState.totalClicks++;
+
+                    // Create click effect
+                    this.createClickEffect(event, clickValue);
+
+                    this.checkAchievements();
+                    this.updateDisplay();
+                    this.saveGame();
+                }
+
+                createClickEffect(event, value) {
+                    const effect = document.createElement("div");
+                    effect.className = "click-effect";
+                    effect.textContent = `+${this.formatNumber(value)}`;
+                    effect.style.left = event.clientX + "px";
+                    effect.style.top = event.clientY + "px";
+                    document.body.appendChild(effect);
+
+                    setTimeout(() => {
+                        document.body.removeChild(effect);
+                    }, 1000);
+                }
+
+                buyUpgrade(upgradeId) {
+                    const upgrade = this.upgrades.find(
+                        (u) => u.id === upgradeId,
+                    );
+                    const currentCount =
+                        this.gameState.upgrades[upgradeId] || 0;
+                    const cost = Math.floor(
+                        upgrade.baseCost *
+                            Math.pow(upgrade.costMultiplier, currentCount),
+                    );
+
+                    if (this.gameState.apples >= cost) {
+                        this.gameState.apples -= cost;
+                        this.gameState.upgrades[upgradeId] = currentCount + 1;
+                        this.calculateApplesPerSecond();
+                        this.checkAchievements();
+                        this.updateDisplay();
+                        this.saveGame();
+                    }
+                }
+
+                calculateApplesPerSecond() {
+                    let aps = 0;
+                    this.upgrades.forEach((upgrade) => {
+                        const count = this.gameState.upgrades[upgrade.id] || 0;
+                        aps += upgrade.bpsIncrease * count;
+                    });
+                    this.gameState.applesPerSecond =
+                        aps * this.gameState.prestigeMultiplier;
+                }
+
+                prestige() {
+                    if (this.gameState.totalApples >= 1000000) {
+                        this.gameState.prestigeLevel++;
+                        this.gameState.prestigeMultiplier =
+                            1 + this.gameState.prestigeLevel * 0.5;
+                        this.gameState.apples = 0;
+                        this.gameState.upgrades = {};
+                        this.gameState.applesPerSecond = 0;
+                        this.checkAchievements();
+                        this.updateDisplay();
+                        this.saveGame();
+                    }
+                }
+
+                checkAchievements() {
+                    this.achievements.forEach((achievement) => {
+                        if (
+                            !this.gameState.achievements.has(achievement.id) &&
+                            achievement.condition()
+                        ) {
+                            this.gameState.achievements.add(achievement.id);
+                            this.showAchievementNotification(achievement);
+                        }
+                    });
+                }
+
+                showAchievementNotification(achievement) {
+                    // Simple notification - could be enhanced with a proper notification system
+                    console.log(
+                        `Achievement Unlocked: ${achievement.name} - ${achievement.description}`,
+                    );
+                }
+
+                createUpgradeElements() {
+                    const upgradesContainer =
+                        document.getElementById("upgrades");
+                    this.upgrades.forEach((upgrade) => {
+                        const upgradeElement = document.createElement("div");
+                        upgradeElement.className = "upgrade";
+                        upgradeElement.innerHTML = `
+                        <div class="upgrade-count" id="count-${upgrade.id}">0</div>
+                        <div class="upgrade-info">
+                            <div class="upgrade-name">${upgrade.name}</div>
+                            <div class="upgrade-description">${upgrade.description}</div>
+                        </div>
+                        <button class="upgrade-button" id="btn-${upgrade.id}">
+                            ${this.formatNumber(upgrade.baseCost)}
+                        </button>
+                    `;
+                        upgradesContainer.appendChild(upgradeElement);
+
+                        document
+                            .getElementById(`btn-${upgrade.id}`)
+                            .addEventListener("click", () =>
+                                this.buyUpgrade(upgrade.id),
+                            );
+                    });
+                }
+
+                createAchievementElements() {
+                    const achievementsContainer =
+                        document.getElementById("achievements");
+                    this.achievements.forEach((achievement) => {
+                        const achievementElement =
+                            document.createElement("div");
+                        achievementElement.className = "achievement";
+                        achievementElement.id = `achievement-${achievement.id}`;
+                        achievementElement.innerHTML = `
+                        <strong>${achievement.name}</strong><br>
+                        <small>${achievement.description}</small>
+                    `;
+                        achievementsContainer.appendChild(achievementElement);
+                    });
+                }
+
+                updateDisplay() {
+                    document.getElementById("apples").textContent =
+                        this.formatNumber(this.gameState.apples);
+                    document.getElementById("applesPerSecond").textContent =
+                        this.formatNumber(this.gameState.applesPerSecond, 1);
+                    document.getElementById("totalClicks").textContent =
+                        this.formatNumber(this.gameState.totalClicks);
+                    document.getElementById("prestigeLevel").textContent =
+                        this.gameState.prestigeLevel;
+
+                    // Update upgrade buttons
+                    this.upgrades.forEach((upgrade) => {
+                        const currentCount =
+                            this.gameState.upgrades[upgrade.id] || 0;
+                        const cost = Math.floor(
+                            upgrade.baseCost *
+                                Math.pow(upgrade.costMultiplier, currentCount),
+                        );
+                        const button = document.getElementById(
+                            `btn-${upgrade.id}`,
+                        );
+                        const countElement = document.getElementById(
+                            `count-${upgrade.id}`,
+                        );
+
+                        countElement.textContent = currentCount;
+                        button.textContent = this.formatNumber(cost);
+                        button.disabled = this.gameState.apples < cost;
+                    });
+
+                    // Update achievements
+                    this.achievements.forEach((achievement) => {
+                        const element = document.getElementById(
+                            `achievement-${achievement.id}`,
+                        );
+                        if (this.gameState.achievements.has(achievement.id)) {
+                            element.classList.add("unlocked");
+                        }
+                    });
+
+                    // Update prestige button
+                    const prestigeButton =
+                        document.getElementById("prestigeButton");
+                    const prestigeInfo =
+                        document.getElementById("prestigeInfo");
+                    if (this.gameState.totalApples >= 1000000) {
+                        prestigeButton.disabled = false;
+                        prestigeInfo.textContent = `Reset for +${(this.gameState.prestigeLevel + 1) * 50}% production bonus`;
+                    } else {
+                        prestigeButton.disabled = true;
+                        prestigeInfo.textContent = `Requires ${this.formatNumber(1000000)} total apples`;
+                    }
+                }
+
+                formatNumber(num, decimals = 0) {
+                    if (num < 1000) return num.toFixed(decimals);
+                    if (num < 1000000) return (num / 1000).toFixed(1) + "K";
+                    if (num < 1000000000)
+                        return (num / 1000000).toFixed(1) + "M";
+                    if (num < 1000000000000)
+                        return (num / 1000000000).toFixed(1) + "B";
+                    return (num / 1000000000000).toFixed(1) + "T";
+                }
+
+                startGameLoop() {
+                    setInterval(() => {
+                        if (this.gameState.applesPerSecond > 0) {
+                            const gain = this.gameState.applesPerSecond / 10; // 10 updates per second
+                            this.gameState.apples += gain;
+                            this.gameState.totalApples += gain;
+                            this.updateDisplay();
+                        }
+                    }, 100);
+
+                    // Save every 30 seconds
+                    setInterval(() => {
+                        this.saveGame();
+                    }, 30000);
+                }
+
+                saveGame() {
+                    const saveData = {
+                        ...this.gameState,
+                        achievements: Array.from(this.gameState.achievements),
+                    };
+                    localStorage.setItem(
+                        "idleGooseGame",
+                        JSON.stringify(saveData),
+                    );
+                }
+
+                loadGame() {
+                    const saveData = localStorage.getItem("idleGooseGame");
+                    if (saveData) {
+                        const parsed = JSON.parse(saveData);
+                        this.gameState = {
+                            ...this.gameState,
+                            ...parsed,
+                            achievements: new Set(parsed.achievements || []),
+                        };
+                        this.calculateApplesPerSecond();
+                    }
+                }
+            }
+
+            // Start the game when page loads
+            window.addEventListener("load", () => {
+                new IdleGooseGame();
+            });
+        </script>
+    </body>
+</html>
