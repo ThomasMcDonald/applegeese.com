@@ -1370,28 +1370,6 @@
                         );
                     }
 
-                    // Update mobile per second tooltip with full number
-                    const mobileApplesPerSecondFullNumber =
-                        document.getElementById(
-                            "mobileApplesPerSecondFullNumber",
-                        );
-                    if (mobileApplesPerSecondFullNumber) {
-                        mobileApplesPerSecondFullNumber.textContent =
-                            totalPerSecond.toLocaleString(undefined, {
-                                minimumFractionDigits: 1,
-                                maximumFractionDigits: 1,
-                            });
-                    }
-
-                    // Update mobile tooltip with full number
-                    const mobileApplesFullNumber = document.getElementById(
-                        "mobileApplesFullNumber",
-                    );
-                    if (mobileApplesFullNumber) {
-                        mobileApplesFullNumber.textContent =
-                            this.gameState.apples.toLocaleString();
-                    }
-
                     // Update upgrade buttons
                     this.upgrades.forEach((upgrade) => {
                         const currentCount =
