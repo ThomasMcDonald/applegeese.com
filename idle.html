@@ -408,6 +408,54 @@
                 margin-bottom: 20px;
             }
 
+            .decorative-apples {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                pointer-events: none;
+                z-index: -1;
+                overflow: hidden;
+            }
+
+            .apple {
+                position: absolute;
+                font-size: 3em;
+                opacity: 0.7;
+                animation: fall linear infinite;
+                user-select: none;
+            }
+
+            .apple:nth-child(odd) {
+                animation-delay: -2s;
+            }
+
+            .apple:nth-child(3n) {
+                animation-delay: -4s;
+            }
+
+            .apple:nth-child(4n) {
+                animation-delay: -6s;
+            }
+
+            @keyframes fall {
+                0% {
+                    transform: translateY(-100px);
+                    opacity: 0;
+                }
+                10% {
+                    opacity: 0.7;
+                }
+                90% {
+                    opacity: 0.7;
+                }
+                100% {
+                    transform: translateY(calc(100vh + 100px));
+                    opacity: 0;
+                }
+            }
+
             @media (max-width: 768px) {
                 .stats {
                     display: none;
@@ -473,6 +521,7 @@
         </style>
     </head>
     <body>
+        <div class="decorative-apples" id="decorativeApples"></div>
         <div class="game-container">
             <h1>🪿 Idle Goose Game 🪿</h1>
 
@@ -831,6 +880,7 @@
                     this.createAchievementElements();
                     this.calculateClickPower();
                     this.calculateAutoClicksPerSecond();
+                    this.createDecorativeApples();
                     this.updateDisplay();
                     this.startGameLoop();
                     this.startAutoClicker();
@@ -1089,6 +1139,9 @@
                     });
                     this.gameState.applesPerSecond =
                         aps * this.gameState.prestigeMultiplier;
+
+                    // Update falling apples when production changes
+                    this.createDecorativeApples();
                 }
 
                 calculateClickPower() {
@@ -1113,6 +1166,9 @@
                         }
                     });
                     this.gameState.autoClicksPerSecond = autoClicks;
+
+                    // Update falling apples when auto-click rate changes
+                    this.createDecorativeApples();
                 }
 
                 prestige() {
@@ -1401,6 +1457,9 @@
                         this.calculateClickPower();
                         this.calculateAutoClicksPerSecond();
 
+                        // Update falling apples after loading
+                        this.createDecorativeApples();
+
                         // Restart auto-clicker after loading to ensure it works with new rates
                         this.startAutoClicker();
                     }
@@ -1583,6 +1642,35 @@
                     `;
 
                     document.body.appendChild(popup);
+                }
+
+                createDecorativeApples() {
+                    const container =
+                        document.getElementById("decorativeApples");
+
+                    // Clear existing apples
+                    container.innerHTML = "";
+
+                    // Calculate apple count based on apples per second (1 apple per 10 aps, min 3, max 25)
+                    const baseApples = Math.floor(
+                        this.gameState.applesPerSecond / 10,
+                    );
+                    const appleCount = Math.max(3, Math.min(25, baseApples));
+
+                    for (let i = 0; i < appleCount; i++) {
+                        const apple = document.createElement("div");
+                        apple.className = "apple";
+                        apple.textContent = "🍎";
+
+                        // Random horizontal positioning
+                        apple.style.left = Math.random() * 90 + "%";
+
+                        // Random fall duration (8-15 seconds)
+                        apple.style.animationDuration =
+                            8 + Math.random() * 7 + "s";
+
+                        container.appendChild(apple);
+                    }
                 }
             }
 
