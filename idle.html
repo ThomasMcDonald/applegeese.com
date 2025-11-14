@@ -485,10 +485,6 @@
                     <div class="stat-value" id="applesPerSecond">0</div>
                     <div class="stat-label">Per Second</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalClicks">0</div>
-                    <div class="stat-label">Total Clicks</div>
-                </div>
             </div>
 
             <div class="mobile-stats">
@@ -529,6 +525,9 @@
                             <button class="tab-button" id="clickTab">
                                 👆 Click
                             </button>
+                            <button class="tab-button" id="autoTab">
+                                🤖 Auto
+                            </button>
                             <button class="tab-button" id="achievementsTab">
                                 🏆 Achievements
                             </button>
@@ -540,6 +539,10 @@
 
                         <div class="tab-content" id="clickContent">
                             <div class="upgrades" id="clickUpgrades"></div>
+                        </div>
+
+                        <div class="tab-content" id="autoContent">
+                            <div class="upgrades" id="autoUpgrades"></div>
                         </div>
 
                         <div class="tab-content" id="achievementsContent">
@@ -565,12 +568,14 @@
                         achievements: new Set(),
                         buyQuantity: 1,
                         lastSaveTime: Date.now(),
+                        autoClicksPerSecond: 0,
                     };
 
                     // Click tracking for dynamic per second calculation
                     this.clickTimes = [];
                     this.dynamicClicksPerSecond = 0;
                     this.shakeTimeout = null;
+                    this.autoClickInterval = null;
 
                     this.upgrades = [
                         {
@@ -726,6 +731,42 @@
                             costMultiplier: 1.2,
                             type: "click",
                         },
+                        {
+                            id: "auto_pecker",
+                            name: "🤖 Auto Pecker",
+                            description: "0.1 clicks per second",
+                            baseCost: 100,
+                            autoClickIncrease: 0.1,
+                            costMultiplier: 1.3,
+                            type: "auto",
+                        },
+                        {
+                            id: "click_bot",
+                            name: "🦾 Click Bot",
+                            description: "0.5 clicks per second",
+                            baseCost: 1000,
+                            autoClickIncrease: 0.5,
+                            costMultiplier: 1.3,
+                            type: "auto",
+                        },
+                        {
+                            id: "robo_goose",
+                            name: "🤖 Robo Goose",
+                            description: "2 clicks per second",
+                            baseCost: 10000,
+                            autoClickIncrease: 2,
+                            costMultiplier: 1.3,
+                            type: "auto",
+                        },
+                        {
+                            id: "quantum_clicker",
+                            name: "⚛️ Quantum Clicker",
+                            description: "10 clicks per second",
+                            baseCost: 100000,
+                            autoClickIncrease: 10,
+                            costMultiplier: 1.3,
+                            type: "auto",
+                        },
                     ];
 
                     this.achievements = [
@@ -789,8 +830,10 @@
                     this.createUpgradeElements();
                     this.createAchievementElements();
                     this.calculateClickPower();
+                    this.calculateAutoClicksPerSecond();
                     this.updateDisplay();
                     this.startGameLoop();
+                    this.startAutoClicker();
                 }
 
                 setupEventListeners() {
@@ -823,6 +866,7 @@
                     const achievementsTab =
                         document.getElementById("achievementsTab");
                     const clickTab = document.getElementById("clickTab");
+                    const autoTab = document.getElementById("autoTab");
                     const upgradesContent =
                         document.getElementById("upgradesContent");
                     const achievementsContent = document.getElementById(
@@ -830,32 +874,50 @@
                     );
                     const clickContent =
                         document.getElementById("clickContent");
+                    const autoContent = document.getElementById("autoContent");
 
                     upgradesTab.addEventListener("click", () => {
                         upgradesTab.classList.add("active");
                         achievementsTab.classList.remove("active");
                         clickTab.classList.remove("active");
+                        autoTab.classList.remove("active");
                         upgradesContent.classList.add("active");
                         achievementsContent.classList.remove("active");
                         clickContent.classList.remove("active");
+                        autoContent.classList.remove("active");
                     });
 
                     achievementsTab.addEventListener("click", () => {
                         achievementsTab.classList.add("active");
                         upgradesTab.classList.remove("active");
                         clickTab.classList.remove("active");
+                        autoTab.classList.remove("active");
                         achievementsContent.classList.add("active");
                         upgradesContent.classList.remove("active");
                         clickContent.classList.remove("active");
+                        autoContent.classList.remove("active");
                     });
 
                     clickTab.addEventListener("click", () => {
                         clickTab.classList.add("active");
                         upgradesTab.classList.remove("active");
                         achievementsTab.classList.remove("active");
+                        autoTab.classList.remove("active");
                         clickContent.classList.add("active");
                         upgradesContent.classList.remove("active");
                         achievementsContent.classList.remove("active");
+                        autoContent.classList.remove("active");
+                    });
+
+                    autoTab.addEventListener("click", () => {
+                        autoTab.classList.add("active");
+                        upgradesTab.classList.remove("active");
+                        achievementsTab.classList.remove("active");
+                        clickTab.classList.remove("active");
+                        autoContent.classList.add("active");
+                        upgradesContent.classList.remove("active");
+                        achievementsContent.classList.remove("active");
+                        clickContent.classList.remove("active");
                     });
                 }
 
@@ -969,6 +1031,10 @@
                             this.calculateApplesPerSecond();
                         } else if (upgrade.type === "click") {
                             this.calculateClickPower();
+                        } else if (upgrade.type === "auto") {
+                            this.calculateAutoClicksPerSecond();
+                            // Restart auto-clicker when auto upgrades are bought
+                            this.startAutoClicker();
                         }
 
                         this.checkAchievements();
@@ -1037,6 +1103,18 @@
                     this.gameState.clickPower = clickPower;
                 }
 
+                calculateAutoClicksPerSecond() {
+                    let autoClicks = 0;
+                    this.upgrades.forEach((upgrade) => {
+                        if (upgrade.type === "auto") {
+                            const count =
+                                this.gameState.upgrades[upgrade.id] || 0;
+                            autoClicks += upgrade.autoClickIncrease * count;
+                        }
+                    });
+                    this.gameState.autoClicksPerSecond = autoClicks;
+                }
+
                 prestige() {
                     if (this.gameState.totalApples >= 1000000) {
                         this.gameState.prestigeLevel++;
@@ -1075,6 +1153,8 @@
                         document.getElementById("upgrades");
                     const clickUpgradesContainer =
                         document.getElementById("clickUpgrades");
+                    const autoUpgradesContainer =
+                        document.getElementById("autoUpgrades");
 
                     this.upgrades.forEach((upgrade) => {
                         const upgradeElement = document.createElement("div");
@@ -1100,6 +1180,8 @@
                             upgradesContainer.appendChild(upgradeElement);
                         } else if (upgrade.type === "click") {
                             clickUpgradesContainer.appendChild(upgradeElement);
+                        } else if (upgrade.type === "auto") {
+                            autoUpgradesContainer.appendChild(upgradeElement);
                         }
 
                         // Add event listeners for each quantity button
@@ -1155,8 +1237,6 @@
 
                     document.getElementById("applesPerSecond").textContent =
                         this.formatNumber(totalPerSecond, 1);
-                    document.getElementById("totalClicks").textContent =
-                        this.formatNumber(this.gameState.totalClicks);
 
                     // Update mobile stats
                     const mobileApples =
@@ -1319,7 +1399,109 @@
                         };
                         this.calculateApplesPerSecond();
                         this.calculateClickPower();
+                        this.calculateAutoClicksPerSecond();
+
+                        // Restart auto-clicker after loading to ensure it works with new rates
+                        this.startAutoClicker();
                     }
+                }
+
+                startAutoClicker() {
+                    // Clear any existing interval
+                    if (this.autoClickInterval) {
+                        clearInterval(this.autoClickInterval);
+                    }
+
+                    this.autoClickInterval = setInterval(() => {
+                        if (this.gameState.autoClicksPerSecond > 0) {
+                            // Calculate clicks to perform this interval (every 100ms)
+                            const clicksThisInterval =
+                                this.gameState.autoClicksPerSecond / 10;
+
+                            // Handle fractional clicks by accumulating
+                            this.autoClickAccumulator =
+                                (this.autoClickAccumulator || 0) +
+                                clicksThisInterval;
+
+                            const clicksToPerform = Math.floor(
+                                this.autoClickAccumulator,
+                            );
+                            this.autoClickAccumulator -= clicksToPerform;
+
+                            for (let i = 0; i < clicksToPerform; i++) {
+                                const clickValue =
+                                    this.gameState.clickPower *
+                                    this.gameState.prestigeMultiplier;
+                                this.gameState.apples += clickValue;
+                                this.gameState.totalApples += clickValue;
+                                this.gameState.totalClicks++;
+
+                                // Create auto-click effect with random position around goose
+                                const goose =
+                                    document.getElementById("mainGoose");
+                                const gooseRect = goose.getBoundingClientRect();
+                                const centerX =
+                                    gooseRect.left + gooseRect.width / 2;
+                                const centerY =
+                                    gooseRect.top + gooseRect.height / 2;
+
+                                // Random offset around the goose (within 50px radius)
+                                const angle = Math.random() * 2 * Math.PI;
+                                const radius = Math.random() * 50;
+                                const offsetX = Math.cos(angle) * radius;
+                                const offsetY = Math.sin(angle) * radius;
+
+                                this.createAutoClickEffect(
+                                    centerX + offsetX,
+                                    centerY + offsetY,
+                                    clickValue,
+                                );
+
+                                // Add auto clicks to click tracking for dynamic per second calculation
+                                const now = Date.now();
+                                this.clickTimes.push(now);
+                                this.clickTimes = this.clickTimes.filter(
+                                    (time) => now - time <= 10000,
+                                );
+                            }
+
+                            if (clicksToPerform > 0) {
+                                // Trigger shake animation for auto clicks
+                                const goose =
+                                    document.getElementById("mainGoose");
+                                if (!goose.classList.contains("shake")) {
+                                    goose.classList.add("shake");
+                                }
+
+                                if (this.shakeTimeout) {
+                                    clearTimeout(this.shakeTimeout);
+                                }
+
+                                this.shakeTimeout = setTimeout(() => {
+                                    goose.classList.remove("shake");
+                                    this.shakeTimeout = null;
+                                }, 400);
+
+                                this.updateDisplay();
+                            }
+                        }
+                    }, 100);
+                }
+
+                createAutoClickEffect(x, y, value) {
+                    const effect = document.createElement("div");
+                    effect.className = "click-effect";
+                    effect.textContent = `+${this.formatNumber(value)}`;
+                    effect.style.left = x + "px";
+                    effect.style.top = y + "px";
+                    effect.style.color = "#007bff"; // Blue color for auto-clicks
+                    document.body.appendChild(effect);
+
+                    setTimeout(() => {
+                        if (document.body.contains(effect)) {
+                            document.body.removeChild(effect);
+                        }
+                    }, 1000);
                 }
 
                 calculateOfflineProgress() {
