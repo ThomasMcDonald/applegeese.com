@@ -72,6 +72,40 @@
                 border-radius: 10px;
                 border: 2px solid #e9ecef;
                 text-align: center;
+                position: relative;
+            }
+
+            .stat-card .tooltip {
+                position: absolute;
+                bottom: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.9);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 0.9em;
+                white-space: nowrap;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+                z-index: 1000;
+                pointer-events: none;
+            }
+
+            .stat-card .tooltip::after {
+                content: "";
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                border: 5px solid transparent;
+                border-top-color: rgba(0, 0, 0, 0.9);
+            }
+
+            .stat-card:hover .tooltip {
+                opacity: 1;
+                visibility: visible;
             }
 
             .stat-value {
@@ -529,10 +563,12 @@
                 <div class="stat-card">
                     <div class="stat-value" id="apples">0</div>
                     <div class="stat-label">Apples</div>
+                    <div class="tooltip" id="applesFullNumber">0</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="applesPerSecond">0</div>
                     <div class="stat-label">Per Second</div>
+                    <div class="tooltip" id="applesPerSecondFullNumber">0</div>
                 </div>
             </div>
 
@@ -540,10 +576,14 @@
                 <div class="stat-card">
                     <div class="stat-value" id="mobileApples">0</div>
                     <div class="stat-label">Apples</div>
+                    <div class="tooltip" id="mobileApplesFullNumber">0</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="mobileApplesPerSecond">0</div>
                     <div class="stat-label">Per Second</div>
+                    <div class="tooltip" id="mobileApplesPerSecondFullNumber">
+                        0
+                    </div>
                 </div>
             </div>
 
@@ -1294,6 +1334,18 @@
                     document.getElementById("applesPerSecond").textContent =
                         this.formatNumber(totalPerSecond, 1);
 
+                    // Update per second tooltip with full number
+                    document.getElementById(
+                        "applesPerSecondFullNumber",
+                    ).textContent = totalPerSecond.toLocaleString(undefined, {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 1,
+                    });
+
+                    // Update tooltip with full number
+                    document.getElementById("applesFullNumber").textContent =
+                        this.gameState.apples.toLocaleString();
+
                     // Update mobile stats
                     const mobileApples =
                         document.getElementById("mobileApples");
@@ -1316,6 +1368,28 @@
                             totalPerSecond,
                             1,
                         );
+                    }
+
+                    // Update mobile per second tooltip with full number
+                    const mobileApplesPerSecondFullNumber =
+                        document.getElementById(
+                            "mobileApplesPerSecondFullNumber",
+                        );
+                    if (mobileApplesPerSecondFullNumber) {
+                        mobileApplesPerSecondFullNumber.textContent =
+                            totalPerSecond.toLocaleString(undefined, {
+                                minimumFractionDigits: 1,
+                                maximumFractionDigits: 1,
+                            });
+                    }
+
+                    // Update mobile tooltip with full number
+                    const mobileApplesFullNumber = document.getElementById(
+                        "mobileApplesFullNumber",
+                    );
+                    if (mobileApplesFullNumber) {
+                        mobileApplesFullNumber.textContent =
+                            this.gameState.apples.toLocaleString();
                     }
 
                     // Update upgrade buttons
