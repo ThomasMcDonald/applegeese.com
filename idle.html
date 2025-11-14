@@ -564,6 +564,7 @@
                         upgrades: {},
                         achievements: new Set(),
                         buyQuantity: 1,
+                        lastSaveTime: Date.now(),
                     };
 
                     // Click tracking for dynamic per second calculation
@@ -728,6 +729,7 @@
 
                 init() {
                     this.loadGame();
+                    this.calculateOfflineProgress();
                     this.setupEventListeners();
                     this.setupTabs();
                     this.createUpgradeElements();
@@ -1241,6 +1243,7 @@
                 }
 
                 saveGame() {
+                    this.gameState.lastSaveTime = Date.now();
                     const saveData = {
                         ...this.gameState,
                         achievements: Array.from(this.gameState.achievements),
@@ -1263,6 +1266,87 @@
                         this.calculateApplesPerSecond();
                         this.calculateClickPower();
                     }
+                }
+
+                calculateOfflineProgress() {
+                    if (
+                        this.gameState.lastSaveTime &&
+                        this.gameState.applesPerSecond > 0
+                    ) {
+                        const now = Date.now();
+                        const timeDiff =
+                            (now - this.gameState.lastSaveTime) / 1000; // Convert to seconds
+
+                        // Only calculate offline progress if away for more than 10 seconds
+                        if (timeDiff > 10) {
+                            const offlineApples = Math.floor(
+                                this.gameState.applesPerSecond * timeDiff,
+                            );
+
+                            if (offlineApples > 0) {
+                                this.gameState.apples += offlineApples;
+                                this.gameState.totalApples += offlineApples;
+
+                                // Show offline progress notification
+                                this.showOfflineProgress(
+                                    offlineApples,
+                                    timeDiff,
+                                );
+                            }
+                        }
+
+                        this.gameState.lastSaveTime = now;
+                    }
+                }
+
+                showOfflineProgress(applesGained, timeAway) {
+                    const hours = Math.floor(timeAway / 3600);
+                    const minutes = Math.floor((timeAway % 3600) / 60);
+
+                    let timeText = "";
+                    if (hours > 0) {
+                        timeText = `${hours}h ${minutes}m`;
+                    } else if (minutes > 0) {
+                        timeText = `${minutes}m`;
+                    } else {
+                        timeText = `${Math.floor(timeAway)}s`;
+                    }
+
+                    // Create and show offline progress popup
+                    const popup = document.createElement("div");
+                    popup.style.cssText = `
+                        position: fixed;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        background: rgba(255, 255, 255, 0.95);
+                        padding: 20px;
+                        border-radius: 15px;
+                        border: 3px solid #28a745;
+                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                        z-index: 1000;
+                        text-align: center;
+                        font-weight: bold;
+                        color: #333;
+                    `;
+
+                    popup.innerHTML = `
+                        <h3 style="margin: 0 0 10px 0; color: #28a745;">🍎 Welcome Back! 🍎</h3>
+                        <p style="margin: 5px 0;">You were away for: <strong>${timeText}</strong></p>
+                        <p style="margin: 5px 0;">Your geese collected: <strong>${this.formatNumber(applesGained)} apples</strong></p>
+                        <button onclick="this.parentElement.remove()" style="
+                            background: #28a745;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            font-weight: bold;
+                            margin-top: 10px;
+                        ">Collect Apples!</button>
+                    `;
+
+                    document.body.appendChild(popup);
                 }
             }
 
