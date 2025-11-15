@@ -1,184 +1,213 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <m
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-8BSG532JKB"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <!-- Favicon for different browsers and devices -->
+        <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+        <link rel="icon" type="image/png" sizes="32x32" href="favicon.svg" />
+        <link rel="icon" type="image/png" sizes="16x16" href="favicon.svg" />
+        <link rel="apple-touch-icon" sizes="180x180" href="favicon.svg" />
+        <link rel="shortcut icon" href="favicon.svg" />
 
-      gtag('config', 'G-8BSG532JKB');
-    </script>
+        <title>Applegeese</title>
+        <!-- Google Fonts for Inter -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <!-- Preload arcade soundtrack for the game -->
+        <link
+            rel="preload"
+            href="assets/goose/arcade.mp3"
+            as="audio"
+            type="audio/mpeg"
+        />
+        <style>
+            :root {
+                --background-light: #f3f4f6;
+                --text-light: #1a1a1a;
+                --background-dark: linear-gradient(
+                    135deg,
+                    #1a1a2e 0%,
+                    #16213e 100%
+                );
+                --text-dark: #e4e4e7;
+            }
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Favicon for different browsers and devices -->
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon.svg">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon.svg">
-    <link rel="apple-touch-icon" sizes="180x180" href="favicon.svg">
-    <link rel="shortcut icon" href="favicon.svg">
+            html,
+            body {
+                height: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+                user-select: none;
+            }
 
-    <title>Applegeese</title>
-    <!-- Google Fonts for Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Preload arcade soundtrack for the game -->
-    <link rel="preload" href="assets/goose/arcade.mp3" as="audio" type="audio/mpeg">
-    <style>
-        :root {
-            --background-light: #f3f4f6;
-            --text-light: #1a1a1a;
-            --background-dark: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            --text-dark: #e4e4e7;
-        }
+            body {
+                font-family: "Inter", sans-serif;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                transition:
+                    background-color 0.3s,
+                    color 0.3s;
+            }
 
-        html, body {
-            height: 100%;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            user-select: none;
-        }
+            body.light-mode {
+                background-color: var(--background-light);
+                color: var(--text-light);
+            }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            transition: background-color 0.3s, color 0.3s;
-        }
+            body.dark-mode {
+                background: var(--background-dark);
+                color: var(--text-dark);
+            }
 
-        body.light-mode {
-            background-color: var(--background-light);
-            color: var(--text-light);
-        }
+            .content-container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 1.5rem;
+                height: 100vh;
+                width: 100vw;
+            }
 
-        body.dark-mode {
-            background: var(--background-dark);
-            color: var(--text-dark);
-        }
+            .emoji-container {
+                font-size: clamp(2.5rem, 8vw, 5rem);
+            }
 
-        .content-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 1.5rem;
-            height: 100vh;
-            width: 100vw;
-        }
-
-        .emoji-container {
-            font-size: clamp(2.5rem, 8vw, 5rem);
-        }
-
-        .fade-in {
-            opacity: 0;
-            animation: fadeInBounce 1s forwards;
-        }
-
-        .fade-in.delay-1 {
-            animation-delay: 0.5s;
-        }
-
-        .fade-in.delay-2 {
-            animation-delay: 1s;
-        }
-
-        @keyframes fadeInBounce {
-            0% {
+            .fade-in {
                 opacity: 0;
-                transform: translateY(30px) scale(0.95);
+                animation: fadeInBounce 1s forwards;
             }
-            60% {
-                opacity: 1;
-                transform: translateY(-10px) scale(1.05);
+
+            .fade-in.delay-1 {
+                animation-delay: 0.5s;
             }
-            80% {
-                transform: translateY(5px) scale(0.98);
+
+            .fade-in.delay-2 {
+                animation-delay: 1s;
             }
-            100% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
 
-        @keyframes wiggle {
-            0%, 100% {
-                transform: rotate(0deg) scale(1) translateY(0px);
-            }
-            10%, 30%, 50%, 70%, 90% {
-                transform: rotate(-8deg) scale(1.05) translateY(-3px);
-            }
-            20%, 40%, 60%, 80% {
-                transform: rotate(8deg) scale(1.05) translateY(-2px);
-            }
-        }
-
-        .wiggle-animation {
-            animation: wiggle 0.6s ease-in-out 1 !important;
-            display: inline-block !important;
-            transform-origin: center center !important;
-        }
-
-        .mr-4 {
-            margin-right: 1rem;
-        }
-    </style>
-</head>
-
-<body>
-
-    <!-- Main Content Section -->
-    <main class="content-container">
-        <div class="emoji-container" id="emojiContainer">
-            <span class="mr-4 fade-in delay-1" id="apple"><a href="about.html" style="text-decoration: none;">🍎</a></span>
-            <span class="fade-in delay-2" id="geese">🪿<a href="goose.html" style="text-decoration: none;" id="playableGoose">🪿</a><a href="idle.html" style="text-decoration: none;">🪿</a></span>
-        </div>
-    </main>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const body = document.body;
-
-            function updateTheme() {
-                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    body.classList.remove('light-mode');
-                    body.classList.add('dark-mode');
-                } else {
-                    body.classList.remove('dark-mode');
-                    body.classList.add('light-mode');
+            @keyframes fadeInBounce {
+                0% {
+                    opacity: 0;
+                    transform: translateY(30px) scale(0.95);
+                }
+                60% {
+                    opacity: 1;
+                    transform: translateY(-10px) scale(1.05);
+                }
+                80% {
+                    transform: translateY(5px) scale(0.98);
+                }
+                100% {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
                 }
             }
 
-            // Set initial theme based on system preference
-            updateTheme();
-
-            // Listen for changes in the system color scheme
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateTheme);
-
-            // Add wiggle animation to the playable goose every 3 seconds
-            setInterval(() => {
-                const playableGoose = document.getElementById('playableGoose');
-
-                if (playableGoose) {
-                    playableGoose.style.display = 'inline-block';
-                    playableGoose.classList.add('wiggle-animation');
-
-                    // Remove the animation class after it completes
-                    setTimeout(() => {
-                        playableGoose.classList.remove('wiggle-animation');
-                    }, 1600);
+            @keyframes wiggle {
+                0%,
+                100% {
+                    transform: rotate(0deg) scale(1) translateY(0px);
                 }
-            }, 2000);
-        });
-    </script>
+                10%,
+                30%,
+                50%,
+                70%,
+                90% {
+                    transform: rotate(-8deg) scale(1.05) translateY(-3px);
+                }
+                20%,
+                40%,
+                60%,
+                80% {
+                    transform: rotate(8deg) scale(1.05) translateY(-2px);
+                }
+            }
 
-</body>
+            .wiggle-animation {
+                animation: wiggle 0.6s ease-in-out 1 !important;
+                display: inline-block !important;
+                transform-origin: center center !important;
+            }
+
+            .mr-4 {
+                margin-right: 1rem;
+            }
+        </style>
+    </head>
+
+    <body>
+        <!-- Main Content Section -->
+        <main class="content-container">
+            <div class="emoji-container" id="emojiContainer">
+                <span class="mr-4 fade-in delay-1" id="apple"
+                    ><a href="about.html" style="text-decoration: none"
+                        >🍎</a
+                    ></span
+                >
+                <span class="fade-in delay-2" id="geese"
+                    >🪿<a
+                        href="goose.html"
+                        style="text-decoration: none"
+                        id="playableGoose"
+                        >🪿</a
+                    ><a href="idle.html" style="text-decoration: none"
+                        >🪿</a
+                    ></span
+                >
+            </div>
+        </main>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const body = document.body;
+
+                function updateTheme() {
+                    if (
+                        window.matchMedia("(prefers-color-scheme: dark)")
+                            .matches
+                    ) {
+                        body.classList.remove("light-mode");
+                        body.classList.add("dark-mode");
+                    } else {
+                        body.classList.remove("dark-mode");
+                        body.classList.add("light-mode");
+                    }
+                }
+
+                // Set initial theme based on system preference
+                updateTheme();
+
+                // Listen for changes in the system color scheme
+                window
+                    .matchMedia("(prefers-color-scheme: dark)")
+                    .addEventListener("change", updateTheme);
+
+                // Add wiggle animation to the playable goose every 3 seconds
+                setInterval(() => {
+                    const playableGoose =
+                        document.getElementById("playableGoose");
+
+                    if (playableGoose) {
+                        playableGoose.style.display = "inline-block";
+                        playableGoose.classList.add("wiggle-animation");
+
+                        // Remove the animation class after it completes
+                        setTimeout(() => {
+                            playableGoose.classList.remove("wiggle-animation");
+                        }, 1600);
+                    }
+                }, 2000);
+            });
+        </script>
+    </body>
 </html>
