@@ -1765,8 +1765,11 @@
                         this.gameState.applesPerSecond > 0
                     ) {
                         const now = Date.now();
-                        const timeDiff =
+                        let timeDiff =
                             (now - this.gameState.lastSaveTime) / 1000; // Convert to seconds
+
+                        // Limit offline time to 2 hours maximum (7200 seconds)
+                        timeDiff = Math.min(timeDiff, 7200);
 
                         // Only calculate offline progress if away for more than 10 seconds
                         if (timeDiff > 10) {
