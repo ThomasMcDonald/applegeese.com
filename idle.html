@@ -17,6 +17,150 @@
                 min-height: 100vh;
                 padding: 20px;
                 color: #333;
+                transition:
+                    background 0.3s ease,
+                    color 0.3s ease;
+            }
+
+            @media (prefers-color-scheme: dark) {
+                body {
+                    background: linear-gradient(
+                        135deg,
+                        #1a1a2e 0%,
+                        #16213e 100%
+                    );
+                    color: #e4e4e7;
+                }
+
+                .game-container {
+                    background: rgba(30, 30, 30, 0.9);
+                    border: 1px solid #374151;
+                }
+
+                .stat-card {
+                    background: linear-gradient(
+                        135deg,
+                        #374151 0%,
+                        #4b5563 100%
+                    );
+                    border-color: #6b7280;
+                    color: #f1f5f9;
+                }
+
+                .stat-value {
+                    color: #f1f5f9;
+                }
+
+                .stat-label {
+                    color: #d1d5db;
+                }
+
+                h1 {
+                    color: #f1f5f9;
+                }
+
+                .tab-container {
+                    background: rgba(30, 30, 30, 0.9);
+                    border: 1px solid #374151;
+                }
+
+                .tabs {
+                    background: #374151;
+                    border-bottom-color: #4b5563;
+                }
+
+                .tab-button {
+                    color: #d1d5db;
+                }
+
+                .tab-button:hover {
+                    background: rgba(59, 130, 246, 0.1);
+                    color: #60a5fa;
+                }
+
+                .tab-button.active {
+                    background: #4b5563;
+                    color: #60a5fa;
+                    border-bottom-color: #60a5fa;
+                }
+
+                .tab-content {
+                    background: rgba(30, 30, 30, 0.9);
+                }
+
+                .upgrade {
+                    background: linear-gradient(
+                        135deg,
+                        #374151 0%,
+                        #4b5563 100%
+                    );
+                    border-color: #6b7280;
+                }
+
+                .upgrade:hover {
+                    border-color: #60a5fa;
+                }
+
+                .upgrade-name {
+                    color: #f1f5f9;
+                }
+
+                .upgrade-description {
+                    color: #d1d5db;
+                }
+
+                .upgrade-count {
+                    background: #60a5fa;
+                    color: #1e293b;
+                }
+
+                .upgrade-button {
+                    background: #059669;
+                }
+
+                .upgrade-button:hover {
+                    background: #047857;
+                }
+
+                .upgrade-button:disabled {
+                    background: #6b7280;
+                }
+
+                .upgrade-cost {
+                    color: #d1d5db;
+                }
+
+                .achievement {
+                    background: #451a03;
+                    border-left-color: #f59e0b;
+                    color: #fbbf24;
+                }
+
+                .achievement.unlocked {
+                    background: #064e3b;
+                    border-left-color: #10b981;
+                    color: #34d399;
+                }
+
+                .prestige-button {
+                    background: #dc2626;
+                }
+
+                .prestige-button:hover {
+                    background: #b91c1c;
+                }
+
+                .prestige-button:disabled {
+                    background: #6b7280;
+                }
+
+                .mobile-menu-toggle {
+                    background: #60a5fa;
+                }
+
+                .mobile-menu-toggle:hover {
+                    background: #3b82f6;
+                }
             }
 
             .game-container {

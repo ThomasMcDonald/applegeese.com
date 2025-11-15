@@ -108,6 +108,59 @@
                 background: #218838;
             }
 
+            @media (prefers-color-scheme: dark) {
+                body {
+                    background: linear-gradient(
+                        135deg,
+                        #1a1a2e 0%,
+                        #16213e 100%
+                    );
+                    color: #e4e4e7;
+                }
+
+                .container {
+                    background: rgba(30, 30, 30, 0.9);
+                    border: 1px solid #374151;
+                }
+
+                h1 {
+                    color: #f1f5f9;
+                }
+
+                .description {
+                    color: #d1d5db;
+                }
+
+                .social-link {
+                    background: rgba(55, 65, 81, 0.8);
+                    border-color: #4b5563;
+                    color: #f1f5f9;
+                }
+
+                .social-link:hover {
+                    background: rgba(75, 85, 99, 0.8);
+                }
+
+                .github-link:hover {
+                    border-color: #9ca3af;
+                    background: rgba(55, 65, 81, 0.9);
+                }
+
+                .bluesky-link:hover {
+                    border-color: #3b82f6;
+                    background: rgba(59, 130, 246, 0.1);
+                }
+
+                .back-button {
+                    background: #059669;
+                    color: #f1f5f9;
+                }
+
+                .back-button:hover {
+                    background: #047857;
+                }
+            }
+
             @media (max-width: 768px) {
                 .container {
                     padding: 30px 20px;

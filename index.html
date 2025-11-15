@@ -32,8 +32,8 @@
         :root {
             --background-light: #f3f4f6;
             --text-light: #1a1a1a;
-            --background-dark: #1a1a1a;
-            --text-dark: #f3f4f6;
+            --background-dark: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            --text-dark: #e4e4e7;
         }
 
         html, body {
@@ -60,7 +60,7 @@
         }
 
         body.dark-mode {
-            background-color: var(--background-dark);
+            background: var(--background-dark);
             color: var(--text-dark);
         }
 
@@ -138,7 +138,7 @@
     <!-- Main Content Section -->
     <main class="content-container">
         <div class="emoji-container" id="emojiContainer">
-            <span class="mr-4 fade-in delay-1" id="apple">🍎</span>
+            <span class="mr-4 fade-in delay-1" id="apple"><a href="about.html" style="text-decoration: none;">🍎</a></span>
             <span class="fade-in delay-2" id="geese">🪿<a href="goose.html" style="text-decoration: none;" id="playableGoose">🪿</a><a href="idle.html" style="text-decoration: none;">🪿</a></span>
         </div>
     </main>
