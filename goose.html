@@ -1923,10 +1923,10 @@
                         document.getElementById("shareBlueskyButton");
                     if (shareButton) {
                         const scoreToShare = finalScore;
-                        let shareText = `I just scored ${scoreToShare} in Goose Game! Can you beat it? #GooseGame #applegeese\n\napplegeese.com/goose`;
+                        let shareText = `I just scored ${scoreToShare} in Goose Game! Can you beat it? #GooseGame #applegeese\n\nhttps://applegeese.com/goose`;
 
                         if (finalScore === highScore) {
-                            shareText = `I set a NEW HIGH SCORE of ${scoreToShare} in Goose Game! Try to beat it! #GooseGame #applegeese\n\napplegeese.com/goose`;
+                            shareText = `I set a NEW HIGH SCORE of ${scoreToShare} in Goose Game! Try to beat it! #GooseGame #applegeese\n\nhttps://applegeese.com/goose`;
                         }
 
                         const blueskyShareUrl = `https://bsky.app/intent/compose?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(window.location.href)}`;
