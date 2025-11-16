@@ -629,6 +629,20 @@
                 border-left-color: #28a745;
             }
 
+            .achievement-notification {
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: #4caf50; /* Green */
+                color: white;
+                padding: 10px 20px;
+                border-radius: 5px;
+                z-index: 1000;
+                opacity: 0;
+                transition: opacity 0.5s ease-in-out;
+            }
+
             /* Prestige Section */
             .prestige-section {
                 text-align: center;
@@ -847,6 +861,7 @@
                 </div>
             </div>
 
+            <!-- Main Game Area -->
             <div class="main-area">
                 <div class="game-content">
                     <button class="mobile-menu-toggle" id="mobileMenuToggle">
@@ -858,6 +873,7 @@
                     </div>
                 </div>
 
+                <!-- Sidebar (Upgrades, Achievements, Prestige) -->
                 <div class="sidebar">
                     <button
                         class="mobile-menu-toggle"
@@ -925,6 +941,13 @@
                                     <span id="prestigeCost">1,000,000</span>
                                     Apples)
                                 </button>
+                                <div
+                                    id="prestigeUpgradesContainer"
+                                    class="upgrades"
+                                    style="margin-top: 20px"
+                                >
+                                    <!-- Prestige upgrades will be rendered here -->
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -948,8 +971,9 @@
                         buyQuantity: 1,
                         lastSaveTime: Date.now(),
                         autoClicksPerSecond: 0,
+                        prestigeUpgrades: {}, // New: To track purchased prestige upgrades
                     };
-                    IdleGooseGame.PRESTIGE_COST = 1000000;
+                    IdleGooseGame.PRESTIGE_COST = 1000000; // Define PRESTIGE_COST here as a static property
 
                     this.clickTimes = [];
                     this.dynamicClicksPerSecond = 0;
@@ -1156,6 +1180,44 @@
                         },
                     ];
 
+                    this.prestigeUpgrades = [
+                        {
+                            id: "click_power_boost",
+                            name: "Enhanced Beak",
+                            description:
+                                "+100% Click Power (additive per level)",
+                            cost: 1, // Prestige Points cost
+                            effect: { type: "clickMultiplier", value: 1 }, // 100% == 1
+                            maxLevel: 5,
+                        },
+                        {
+                            id: "aps_boost",
+                            name: "Golden Orchard",
+                            description: "+100% APS (additive per level)",
+                            cost: 2,
+                            effect: { type: "apsMultiplier", value: 1 },
+                            maxLevel: 5,
+                        },
+                        {
+                            id: "auto_click_efficiency",
+                            name: "Robotic Precision",
+                            description:
+                                "+100% Auto-Clicker Efficiency (additive per level)",
+                            cost: 1,
+                            effect: { type: "autoClickMultiplier", value: 1 },
+                            maxLevel: 5,
+                        },
+                        {
+                            id: "upgrade_cost_reduction",
+                            name: "Bargain Hunter",
+                            description:
+                                "-5% Upgrade Cost (multiplicative per level)",
+                            cost: 3,
+                            effect: { type: "costReduction", value: 0.05 }, // 5% reduction
+                            maxLevel: 3,
+                        },
+                    ];
+
                     this.achievements = [
                         {
                             id: "first_click",
@@ -1255,7 +1317,9 @@
                     this.setupTabs();
                     this.createUpgradeElements();
                     this.createAchievementElements();
+                    this.createPrestigeUpgradeElements(); // New: Call this to create prestige upgrade UI
                     this.calculateClickPower();
+                    this.calculateApplesPerSecond(); // Recalculate APS after loading prestige upgrades
                     this.calculateAutoClicksPerSecond();
                     this.createDecorativeApples();
                     this.updateDisplay();
@@ -1442,14 +1506,25 @@
 
                 calculateBulkCost(upgrade, currentCount, quantity) {
                     let totalCost = 0;
+                    // Calculate total upgrade cost reduction from prestige upgrades
+                    const costReductionLevel =
+                        this.gameState.prestigeUpgrades[
+                            "upgrade_cost_reduction"
+                        ] || 0;
+                    const reductionMultiplier = costReductionLevel
+                        ? 1 - costReductionLevel * 0.05
+                        : 1; // 5% reduction per level
+
                     for (let i = 0; i < quantity; i++) {
-                        totalCost += Math.floor(
+                        let cost = Math.floor(
                             upgrade.baseCost *
                                 Math.pow(
                                     upgrade.costMultiplier,
                                     currentCount + i,
                                 ),
                         );
+                        cost = Math.floor(cost * reductionMultiplier); // Apply reduction
+                        totalCost += cost;
                     }
                     return totalCost;
                 }
@@ -1457,14 +1532,25 @@
                 calculateMaxBuy(upgrade, currentCount) {
                     let count = 0;
                     let totalCost = 0;
+                    // Calculate total upgrade cost reduction from prestige upgrades
+                    const costReductionLevel =
+                        this.gameState.prestigeUpgrades[
+                            "upgrade_cost_reduction"
+                        ] || 0;
+                    const reductionMultiplier = costReductionLevel
+                        ? 1 - costReductionLevel * 0.05
+                        : 1; // 5% reduction per level
+
                     while (true) {
-                        const nextCost = Math.floor(
+                        let nextCost = Math.floor(
                             upgrade.baseCost *
                                 Math.pow(
                                     upgrade.costMultiplier,
                                     currentCount + count,
                                 ),
                         );
+                        nextCost = Math.floor(nextCost * reductionMultiplier); // Apply reduction
+
                         if (totalCost + nextCost > this.gameState.apples) {
                             break;
                         }
@@ -1484,6 +1570,14 @@
                             aps += upgrade.bpsIncrease * count;
                         }
                     });
+
+                    // Apply APS multiplier from prestige upgrades
+                    const apsBoostLevel =
+                        this.gameState.prestigeUpgrades["aps_boost"] || 0;
+                    if (apsBoostLevel) {
+                        aps *= 1 + apsBoostLevel * 1; // 100% per level means current APS * (1 + level)
+                    }
+
                     this.gameState.applesPerSecond =
                         aps * (this.gameState.prestigeMultiplier || 1);
 
@@ -1496,11 +1590,20 @@
                         if (upgrade.type === "auto") {
                             const count =
                                 this.gameState.upgrades[upgrade.id] || 0;
-                            autoClicks += upgrade.bpsIncrease * count;
+                            autoClicks += upgrade.autoClickIncrease * count; // Base auto-clicks
                         }
                     });
-                    this.gameState.autoClicks =
-                        autoClicks * (this.gameState.prestigeMultiplier || 1);
+
+                    // Apply Auto-Clicker Efficiency multiplier from prestige upgrades
+                    const autoClickEfficiencyLevel =
+                        this.gameState.prestigeUpgrades[
+                            "auto_click_efficiency"
+                        ] || 0;
+                    if (autoClickEfficiencyLevel) {
+                        autoClicks *= 1 + autoClickEfficiencyLevel * 1; // 100% per level means current AutoClicks * (1 + level)
+                    }
+
+                    this.gameState.autoClicksPerSecond = autoClicks;
                 }
 
                 prestige() {
@@ -1514,6 +1617,7 @@
                         this.gameState.clickPower = 1;
                         this.gameState.applesPerSecond = 0;
                         this.gameState.autoClicks = 0;
+                        this.gameState.totalClicks = 0; // Reset total clicks for replayability if desired
 
                         for (const upgradeId in this.gameState.upgrades) {
                             this.gameState.upgrades[upgradeId] = 0;
@@ -1540,7 +1644,7 @@
                 }
 
                 calculateClickPower() {
-                    let clickPower = 1;
+                    let clickPower = 1; // Base click power
                     this.upgrades.forEach((upgrade) => {
                         if (upgrade.type === "click") {
                             const count =
@@ -1548,21 +1652,72 @@
                             clickPower += upgrade.clickIncrease * count;
                         }
                     });
+
+                    // Apply Click Power multiplier from prestige upgrades
+                    const clickPowerBoostLevel =
+                        this.gameState.prestigeUpgrades["click_power_boost"] ||
+                        0;
+                    if (clickPowerBoostLevel) {
+                        clickPower *= 1 + clickPowerBoostLevel * 1; // 100% per level means current ClickPower * (1 + level)
+                    }
                     this.gameState.clickPower = clickPower;
                 }
 
-                calculateAutoClicksPerSecond() {
-                    let autoClicks = 0;
-                    this.upgrades.forEach((upgrade) => {
-                        if (upgrade.type === "auto") {
-                            const count =
-                                this.gameState.upgrades[upgrade.id] || 0;
-                            autoClicks += upgrade.autoClickIncrease * count;
-                        }
-                    });
-                    this.gameState.autoClicksPerSecond = autoClicks;
+                // New function to handle purchasing prestige upgrades
+                buyPrestigeUpgrade(upgradeId) {
+                    const upgrade = this.prestigeUpgrades.find(
+                        (u) => u.id === upgradeId,
+                    );
+                    if (!upgrade) return;
 
-                    this.createDecorativeApples();
+                    const currentLevel =
+                        this.gameState.prestigeUpgrades[upgradeId] || 0;
+
+                    if (currentLevel >= upgrade.maxLevel) {
+                        this.showAchievementNotification(
+                            "Max Level",
+                            `${upgrade.name} is already at max level.`,
+                        );
+                        return;
+                    }
+
+                    if (this.gameState.prestigePoints >= upgrade.cost) {
+                        this.gameState.prestigePoints -= upgrade.cost;
+                        this.gameState.prestigeUpgrades[upgradeId] =
+                            currentLevel + 1;
+
+                        // Apply the immediate effect of the prestige upgrade
+                        switch (upgrade.effect.type) {
+                            case "clickMultiplier":
+                                // This will be calculated in calculateClickPower based on total levels
+                                this.calculateClickPower();
+                                break;
+                            case "apsMultiplier":
+                                // This will be calculated in calculateApplesPerSecond based on total levels
+                                this.calculateApplesPerSecond();
+                                break;
+                            case "autoClickMultiplier":
+                                // This will be calculated in calculateAutoClicksPerSecond based on total levels
+                                this.calculateAutoClicksPerSecond();
+                                this.startAutoClicker(); // Restart auto-clicker to apply new rate
+                                break;
+                            case "costReduction":
+                                // Cost reduction is applied directly in calculateBulkCost and calculateMaxBuy
+                                break;
+                        }
+
+                        this.saveGame();
+                        this.updateDisplay();
+                        this.showAchievementNotification(
+                            "Prestige Upgrade!",
+                            `${upgrade.name} upgraded to level ${currentLevel + 1}!`,
+                        );
+                    } else {
+                        this.showAchievementNotification(
+                            "Not Enough PP",
+                            `Need ${upgrade.cost} Prestige Points for ${upgrade.name}.`,
+                        );
+                    }
                 }
 
                 checkAchievements() {
@@ -1582,7 +1737,6 @@
 
                 showAchievementNotification(title, message) {
                     console.log(`Achievement Unlocked: ${title} - ${message}`);
-                    // A simple notification display. You can enhance this with a proper UI notification system.
                     const notification = document.createElement("div");
                     notification.className = "achievement-notification";
                     notification.style.cssText = `
@@ -1672,6 +1826,38 @@
                     });
                 }
 
+                // New function to create prestige upgrade elements
+                createPrestigeUpgradeElements() {
+                    const prestigeUpgradesContainer = document.getElementById(
+                        "prestigeUpgradesContainer",
+                    );
+                    if (!prestigeUpgradesContainer) return;
+
+                    this.prestigeUpgrades.forEach((pu) => {
+                        const upgradeElement = document.createElement("div");
+                        upgradeElement.className = "upgrade prestige-upgrade"; // Add a specific class for styling if needed
+                        upgradeElement.id = `prestige-upgrade-${pu.id}`;
+                        upgradeElement.innerHTML = `
+                            <div class="upgrade-count">0</div> <!-- Current level -->
+                            <div class="upgrade-info">
+                                <div class="upgrade-name">${pu.name}</div>
+                                <div class="upgrade-description">${pu.description}</div>
+                            </div>
+                            <div class="upgrade-buttons">
+                                <button class="upgrade-button" id="buy-prestige-${pu.id}">Buy</button>
+                                <div class="upgrade-cost"></div>
+                            </div>
+                        `;
+                        prestigeUpgradesContainer.appendChild(upgradeElement);
+
+                        document
+                            .getElementById(`buy-prestige-${pu.id}`)
+                            .addEventListener("click", () =>
+                                this.buyPrestigeUpgrade(pu.id),
+                            );
+                    });
+                }
+
                 createAchievementElements() {
                     const achievementsContainer =
                         document.getElementById("achievements");
@@ -1692,11 +1878,60 @@
                     document.getElementById("apples").textContent =
                         this.formatNumber(this.gameState.apples);
 
+                    let calculatedAps = 0;
+                    this.upgrades.forEach((upgrade) => {
+                        if (upgrade.type === "passive") {
+                            const count =
+                                this.gameState.upgrades[upgrade.id] || 0;
+                            calculatedAps += upgrade.bpsIncrease * count;
+                        }
+                    });
+
+                    // Apply APS multiplier from prestige upgrades
+                    const apsBoostLevel =
+                        this.gameState.prestigeUpgrades["aps_boost"] || 0;
+                    calculatedAps *= 1 + apsBoostLevel * 1; // 100% per level means current APS * (1 + level)
+
+                    this.gameState.applesPerSecond =
+                        calculatedAps *
+                        (this.gameState.prestigeMultiplier || 1);
+
+                    let calculatedClickPower = 1; // Base click power
+                    this.upgrades.forEach((upgrade) => {
+                        if (upgrade.type === "click") {
+                            const count =
+                                this.gameState.upgrades[upgrade.id] || 0;
+                            calculatedClickPower +=
+                                upgrade.clickIncrease * count;
+                        }
+                    });
+                    // Apply Click Power multiplier from prestige upgrades
+                    const clickPowerBoostLevel =
+                        this.gameState.prestigeUpgrades["click_power_boost"] ||
+                        0;
+                    calculatedClickPower *= 1 + clickPowerBoostLevel * 1; // 100% per level means current ClickPower * (1 + level)
+                    this.gameState.clickPower = calculatedClickPower;
+
+                    let calculatedAutoClicks = 0;
+                    this.upgrades.forEach((upgrade) => {
+                        if (upgrade.type === "auto") {
+                            const count =
+                                this.gameState.upgrades[upgrade.id] || 0;
+                            calculatedAutoClicks +=
+                                upgrade.autoClickIncrease * count;
+                        }
+                    });
+                    // Apply Auto-Clicker Efficiency multiplier from prestige upgrades
+                    const autoClickEfficiencyLevel =
+                        this.gameState.prestigeUpgrades[
+                            "auto_click_efficiency"
+                        ] || 0;
+                    calculatedAutoClicks *= 1 + autoClickEfficiencyLevel * 1; // 100% per level
+                    this.gameState.autoClicksPerSecond = calculatedAutoClicks;
+
                     const totalPerSecond =
                         this.gameState.applesPerSecond +
-                        this.dynamicClicksPerSecond *
-                            this.gameState.clickPower *
-                            (this.gameState.prestigeMultiplier || 1);
+                        this.dynamicClicksPerSecond * this.gameState.clickPower; // Dynamic clicks already have prestige multiplier applied in clickGoose
 
                     document.getElementById("applesPerSecond").textContent =
                         this.formatNumber(totalPerSecond, 1);
@@ -1755,7 +1990,7 @@
 
                     this.upgrades.forEach((upgrade) => {
                         const count = this.gameState.upgrades[upgrade.id] || 0;
-                        const cost = this.calculateBulkCost(upgrade, count, 1);
+                        const cost = this.calculateBulkCost(upgrade, count, 1); // Cost for one more
                         const countElement = document.getElementById(
                             `count-${upgrade.id}`,
                         );
@@ -1808,6 +2043,56 @@
                             achievementElement.classList.add("unlocked");
                         } else if (achievementElement) {
                             achievementElement.classList.remove("unlocked");
+                        }
+                    });
+
+                    // Update prestige upgrades display
+                    this.prestigeUpgrades.forEach((pu) => {
+                        const currentLevel =
+                            this.gameState.prestigeUpgrades[pu.id] || 0;
+                        const upgradeElement = document.getElementById(
+                            `prestige-upgrade-${pu.id}`,
+                        );
+                        if (!upgradeElement) return;
+
+                        const levelElement =
+                            upgradeElement.querySelector(".upgrade-count");
+                        const costElement =
+                            upgradeElement.querySelector(".upgrade-cost");
+                        const buyButton =
+                            upgradeElement.querySelector(".upgrade-button");
+                        const descriptionElement = upgradeElement.querySelector(
+                            ".upgrade-description",
+                        );
+
+                        if (levelElement)
+                            levelElement.textContent = currentLevel;
+                        if (costElement)
+                            costElement.textContent = `Cost: ${pu.cost} PP`;
+                        if (descriptionElement) {
+                            if (currentLevel < pu.maxLevel) {
+                                descriptionElement.textContent = `${pu.description} (Level ${currentLevel}/${pu.maxLevel})`;
+                            } else {
+                                descriptionElement.textContent = `${pu.description} (MAX Level)`;
+                            }
+                        }
+
+                        if (buyButton) {
+                            buyButton.disabled =
+                                this.gameState.prestigePoints < pu.cost ||
+                                currentLevel >= pu.maxLevel;
+                            if (currentLevel >= pu.maxLevel) {
+                                buyButton.textContent = "MAX";
+                                buyButton.classList.add("max");
+                            } else {
+                                buyButton.textContent = "Buy";
+                                buyButton.classList.remove("max");
+                            }
+                            if (buyButton.disabled) {
+                                buyButton.classList.add("disabled");
+                            } else {
+                                buyButton.classList.remove("disabled");
+                            }
                         }
                     });
                 }
@@ -1871,6 +2156,11 @@
                         }
                         this.gameState.prestigeMultiplier =
                             1 + this.gameState.prestigePoints * 0.1;
+
+                        // Ensure prestigeUpgrades are initialized
+                        if (this.gameState.prestigeUpgrades === undefined) {
+                            this.gameState.prestigeUpgrades = {};
+                        }
                     }
                 }
 
