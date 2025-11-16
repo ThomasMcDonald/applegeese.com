@@ -13,6 +13,12 @@
         <link rel="apple-touch-icon" sizes="180x180" href="favicon.svg" />
         <link rel="shortcut icon" href="favicon.svg" />
         <title>Goose Game</title>
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"
+        />
         <style>
             * {
                 margin: 0;
@@ -614,6 +620,17 @@
                 </p>
                 <button onclick="restartGame()">Play Again</button>
                 <button onclick="showStartScreen()">Main Menu</button>
+                <button
+                    id="shareBlueskyButton"
+                    style="
+                        display: none;
+                        background-color: #0096ff;
+                        margin: 10px auto;
+                        display: block;
+                    "
+                >
+                    <i class="fa-brands fa-bluesky"></i> Share
+                </button>
             </div>
 
             <div class="pause-overlay" id="pauseOverlay">
@@ -1901,6 +1918,24 @@
                 setTimeout(() => {
                     document.getElementById("gameOverScreen").style.display =
                         "block";
+
+                    const shareButton =
+                        document.getElementById("shareBlueskyButton");
+                    if (shareButton) {
+                        const scoreToShare = finalScore;
+                        let shareText = `I just scored ${scoreToShare} in Goose Game! Can you beat it? #GooseGame #applegeese\n\napplegeese.com/goose`;
+
+                        if (finalScore === highScore) {
+                            shareText = `I set a NEW HIGH SCORE of ${scoreToShare} in Goose Game! Try to beat it! #GooseGame #applegeese\n\napplegeese.com/goose`;
+                        }
+
+                        const blueskyShareUrl = `https://bsky.app/intent/compose?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(window.location.href)}`;
+
+                        shareButton.style.display = "block"; // Make the button visible
+                        shareButton.onclick = () => {
+                            window.open(blueskyShareUrl, "_blank");
+                        };
+                    }
                 }, 1500);
             }
 
