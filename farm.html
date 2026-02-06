@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apple Goose Farm</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #2c3e50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            color: white;
+        }
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        canvas {
+            background-color: #76c753; /* Grass color */
+            display: block;
+            border-radius: 4px;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 10px;
+            left: 0;
+            width: 100%;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            text-shadow: 1px 1px 0 #000;
+        }
+        .stat-box {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #controls-hint {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 1px 1px 0 #000;
+            pointer-events: none;
+        }
+        #message-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            /* Reset previous centering transforms */
+            top: auto;
+            transform: none;
+            
+            background: rgba(0,0,0,0.8);
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-align: left;
+            display: none;
+            z-index: 100;
+            font-size: 14px;
+            max-width: 300px;
+        }
+
+        /* MARKET UI */
+        #market-modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            color: #333;
+            width: 400px;
+            height: 300px;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            z-index: 100;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+        }
+        .market-header {
+            background: #ef5350;
+            color: white;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .market-header h2 { margin: 0; font-size: 18px; }
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .market-tabs {
+            display: flex;
+            background: #eee;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: #eee;
+            cursor: pointer;
+            font-weight: bold;
+            color: #666;
+        }
+        .tab-btn.active {
+            background: #fff;
+            color: #ef5350;
+            border-bottom: 2px solid #ef5350;
+        }
+        #market-content {
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .action-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+        }
+        .btn-buy { background-color: #4CAF50; }
+        .btn-sell { background-color: #FF9800; }
+        .btn-disabled { background-color: #ccc; cursor: not-allowed; }
+        
+        #settings-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 20px;
+            z-index: 50;
+        }
+        #settings-modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            color: #333;
+            width: 300px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 101;
+            text-align: center;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    
+    <div id="ui-layer">
+        <div class="stat-box">💰 <span id="coins-display">0</span></div>
+        <div class="stat-box">🍎 <span id="apples-display">0</span></div>
+        <div class="stat-box">🌱 <span id="seeds-display">5</span></div>
+        <div class="stat-box">💧 <span id="water-display">100</span>%</div>
+    </div>
+
+    <div id="controls-hint">
+        WASD / Arrows to Move • SPACE to Interact • Market is at the top left
+    </div>
+
+    <div id="message-overlay">
+        <h2 id="msg-title">Title</h2>
+        <p id="msg-body">Body</p>
+    </div>
+
+    <div id="market-modal">
+        <div class="market-header">
+            <h2>MARKET</h2>
+            <button class="close-btn" onclick="closeMarket()">×</button>
+        </div>
+        <div class="market-tabs">
+            <button class="tab-btn active" onclick="switchTab('buy')" id="tab-buy">Buy</button>
+            <button class="tab-btn" onclick="switchTab('sell')" id="tab-sell">Sell</button>
+        </div>
+        <div id="market-content">
+            <!-- Table injected by JS -->
+        </div>
+    </div>
+
+    <button id="settings-btn" onclick="openSettings()">⚙️</button>
+
+    <div id="settings-modal">
+        <h2>Settings</h2>
+        <p>Manage your game data.</p>
+        <button class="btn-danger" onclick="resetGame()">🗑️ Reset Save Data</button>
+        <button class="action-btn" onclick="closeSettings()" style="background:#ccc; color:#333;">Close</button>
+    </div>
+</div>
+
+<script>
+/**
+ * APPLE GOOSE FARM
+ * A single-file farming game.
+ */
+
+// --- CONFIGURATION ---
+const TILE_SIZE = 40;
+const ROWS = 15;
+const COLS = 20;
+const GAME_SPEED = 1000 / 60; // 60 FPS
+
+const COLORS = {
+    GRASS: '#76c753',
+    SOIL: '#8d6e63',
+    SOIL_WET: '#5d4037',
+    WATER: '#4fc3f7',
+    MARKET_FLOOR: '#e0e0e0',
+    MARKET_ROOF: '#ef5350',
+    GOOSE_BODY: '#ffffff',
+    GOOSE_BEAK: '#ff9800',
+    TREE_TRUNK: '#795548',
+    TREE_LEAVES: '#2e7d32',
+    APPLE: '#d32f2f'
+};
+
+const GROWTH_TIME = 600; // Frames per stage (approx 10 seconds)
+
+// --- STATE MANAGEMENT ---
+const GAME = {
+    canvas: null,
+    ctx: null,
+    frame: 0,
+    player: {
+        x: 10, // Grid coordinates
+        y: 8,
+        pixelX: 0,
+        pixelY: 0,
+        direction: 1, // 1: right, -1: left
+        moving: false,
+        waddleOffset: 0
+    },
+    inventory: {
+        coins: 1000,
+        apples: 0,
+        seeds: 2,
+        water: 100,
+        maxWater: 100,
+        hasSprinkler: false,
+        hasHarvester: false,
+        hasPickaxe: false
+    },
+    sprinkler: {
+        active: false,
+        water: 0,
+        maxWater: 400
+    },
+    drone: {
+        x: 400, // Start center
+        y: 300,
+        target: null, // {r, c, x, y}
+        state: 'IDLE', // IDLE, MOVING_TO_TREE, HARVESTING, MOVING_HOME
+        timer: 0,
+        apples: 0,
+        capacity: 5
+    },
+    grid: [], // Will hold tile data
+    particles: [], // For effects
+    projectiles: [], // Water droplets
+    keys: {},
+    isMarketOpen: false,
+    activeTab: 'buy'
+};
+
+// Tile Types
+const TILE_TYPE = {
+    GRASS: 0,
+    SOIL: 1,
+    WATER: 2,
+    MARKET: 3,
+    FENCE: 4,
+    SPRINKLER: 5,
+    ROCK: 6
+};
+
+// Plant States
+const PLANT_STATE = {
+    NONE: 0,
+    SEED: 1,
+    SAPLING: 2,
+    TREE: 3,
+    MATURE: 4 // Has apples
+};
+
+// --- INITIALIZATION ---
+window.onload = function() {
+    GAME.canvas = document.getElementById('gameCanvas');
+    GAME.ctx = GAME.canvas.getContext('2d');
+    
+    // Smooth pixel movement setup
+    GAME.player.pixelX = GAME.player.x * TILE_SIZE;
+    GAME.player.pixelY = GAME.player.y * TILE_SIZE;
+
+    initGrid();
+    loadGame(); // Load save if exists (overwrites grid)
+    setupInput();
+    updateUI();
+    
+    // Auto-save every 5 seconds
+    setInterval(saveGame, 5000);
+
+    // Start Game Loop
+    requestAnimationFrame(gameLoop);
+};
+
+// --- SAVE SYSTEM ---
+function saveGame() {
+    const saveData = {
+        inventory: GAME.inventory,
+        sprinkler: GAME.sprinkler,
+        grid: GAME.grid
+    };
+    localStorage.setItem('appleGooseSave', JSON.stringify(saveData));
+    console.log("Game Saved");
+}
+
+function loadGame() {
+    const saveString = localStorage.getItem('appleGooseSave');
+    if (saveString) {
+        try {
+            const saveData = JSON.parse(saveString);
+            
+            if (saveData.inventory) GAME.inventory = saveData.inventory;
+            if (saveData.sprinkler) GAME.sprinkler = saveData.sprinkler;
+            if (saveData.grid) GAME.grid = saveData.grid;
+            
+            console.log("Game Loaded");
+        } catch (e) {
+            console.error("Save file corrupted", e);
+        }
+    }
+}
+
+function initGrid() {
+    for (let r = 0; r < ROWS; r++) {
+        const row = [];
+        for (let c = 0; c < COLS; c++) {
+            let type = TILE_TYPE.GRASS;
+            
+            // Create a pond
+            if (r > 10 && c > 14) type = TILE_TYPE.WATER;
+            
+            // Create Market Area (Top Left)
+            if (r < 4 && c < 4) type = TILE_TYPE.MARKET;
+            
+            // Fences around market
+            if ((r === 4 && c < 4) || (c === 4 && r < 4)) {
+                // Create a gate
+                if (!(r === 4 && c === 2)) {
+                    type = TILE_TYPE.FENCE;
+                }
+            }
+
+            // Soil patches (Orchard)
+            if (type === TILE_TYPE.GRASS) {
+                // Create rows of soil
+                if (r >= 5 && r < 12 && c >= 5 && c < 14) {
+                    if ((r % 2 !== 0) && (c % 2 !== 0)) {
+                         // 40% Chance to be a Rock (Locked Land)
+                         if (Math.random() < 0.4) {
+                             type = TILE_TYPE.ROCK;
+                         } else {
+                             type = TILE_TYPE.SOIL;
+                         }
+                    }
+                }
+            }
+
+            // Place Sprinkler Base (Middle of Orchard)
+            if (r === 8 && c === 9) type = TILE_TYPE.SPRINKLER;
+
+            row.push({
+                type: type,
+                plant: PLANT_STATE.NONE,
+                growthTimer: 0,
+                watered: false,
+                wetTimer: 0
+            });
+        }
+        GAME.grid.push(row);
+    }
+}
+
+function setupInput() {
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Escape') {
+            if (document.getElementById('settings-modal').style.display === 'flex') {
+                closeSettings();
+                return;
+            }
+            if (GAME.isMarketOpen) {
+                closeMarket();
+                return;
+            }
+        }
+        
+        if (GAME.isMarketOpen) return; // Block game input
+
+        GAME.keys[e.code] = true;
+        if (e.code === 'Space') interact();
+    });
+    window.addEventListener('keyup', (e) => {
+        GAME.keys[e.code] = false;
+    });
+}
+
+// --- LOGIC ---
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+function update() {
+    GAME.frame++;
+    
+    handleMovement();
+    updatePlants();
+    updateDrone();
+    updateParticles();
+    updateProjectiles();
+}
+
+function handleMovement() {
+    if (GAME.isMarketOpen) return;
+
+    const speed = 3;
+    let dx = 0;
+    let dy = 0;
+
+    if (GAME.keys['ArrowUp'] || GAME.keys['KeyW']) dy = -speed;
+    if (GAME.keys['ArrowDown'] || GAME.keys['KeyS']) dy = speed;
+    if (GAME.keys['ArrowLeft'] || GAME.keys['KeyA']) {
+        dx = -speed;
+        GAME.player.direction = -1;
+    }
+    if (GAME.keys['ArrowRight'] || GAME.keys['KeyD']) {
+        dx = speed;
+        GAME.player.direction = 1;
+    }
+
+    if (dx !== 0 || dy !== 0) {
+        GAME.player.moving = true;
+        GAME.player.waddleOffset = Math.sin(GAME.frame * 0.2) * 5;
+        
+        // Predictive collision detection
+        const nextX = GAME.player.pixelX + dx;
+        const nextY = GAME.player.pixelY + dy;
+        
+        // Simple bounding box for player (center point)
+        const pCenter = {
+            x: nextX + TILE_SIZE/2,
+            y: nextY + TILE_SIZE/2
+        };
+        
+        // Check map boundaries
+        if (nextX < 0 || nextX > GAME.canvas.width - TILE_SIZE || 
+            nextY < 0 || nextY > GAME.canvas.height - TILE_SIZE) {
+            return;
+        }
+
+        // Check tile collision (Fence, Deep Water)
+        const tileC = Math.floor(pCenter.x / TILE_SIZE);
+        const tileR = Math.floor(pCenter.y / TILE_SIZE);
+        
+        if (GAME.grid[tileR] && GAME.grid[tileR][tileC]) {
+            const tileType = GAME.grid[tileR][tileC].type;
+            if (tileType === TILE_TYPE.FENCE) return; // Solid object
+        }
+
+        GAME.player.pixelX = nextX;
+        GAME.player.pixelY = nextY;
+        
+        // Update Grid Coordinates
+        GAME.player.x = Math.round(GAME.player.pixelX / TILE_SIZE);
+        GAME.player.y = Math.round(GAME.player.pixelY / TILE_SIZE);
+
+    } else {
+        GAME.player.moving = false;
+        GAME.player.waddleOffset = 0;
+    }
+}
+
+function updatePlants() {
+    let dryPlants = [];
+
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            const tile = GAME.grid[r][c];
+            
+            // Dry out soil
+            if (tile.watered) {
+                tile.wetTimer++;
+                if (tile.wetTimer > 1000) {
+                    tile.watered = false;
+                    tile.wetTimer = 0;
+                }
+            } else if (tile.plant !== PLANT_STATE.NONE && tile.plant !== PLANT_STATE.MATURE && tile.plant !== PLANT_STATE.TREE) {
+                // Collect dry plants for sprinkler
+                dryPlants.push({r, c});
+            }
+
+            // Grow plants if watered
+            if (tile.plant !== PLANT_STATE.NONE && tile.plant !== PLANT_STATE.MATURE && tile.plant !== PLANT_STATE.TREE) {
+                if (tile.watered) {
+                    tile.growthTimer++;
+                    if (tile.growthTimer > GROWTH_TIME) {
+                        tile.plant++; // Level up plant
+                        tile.growthTimer = 0;
+                        tile.watered = false; // Consumes water
+                        createParticles(c * TILE_SIZE + TILE_SIZE/2, r * TILE_SIZE + TILE_SIZE/2, '#4CAF50', 5);
+                    }
+                }
+            }
+            
+            // Tree to Mature (Apples) doesn't need water, just time
+            if (tile.plant === PLANT_STATE.TREE) {
+                tile.growthTimer++;
+                if (tile.growthTimer > GROWTH_TIME * 2) {
+                    tile.plant = PLANT_STATE.MATURE;
+                    tile.growthTimer = 0;
+                }
+            }
+        }
+    }
+
+    // Auto Sprinkler Logic (Uses Sprinkler Tank)
+    if (GAME.sprinkler.active && GAME.sprinkler.water >= 5 && dryPlants.length > 0) {
+        if (Math.random() < 0.05) { // Faster rate (approx 3 times per second)
+            const target = dryPlants[Math.floor(Math.random() * dryPlants.length)];
+            
+            GAME.sprinkler.water -= 5; // Costs water
+            
+            // Spawn Projectile
+            spawnProjectile(
+                9 * TILE_SIZE + TILE_SIZE/2, // Sprinkler X
+                8 * TILE_SIZE + TILE_SIZE/2, // Sprinkler Y
+                target.c * TILE_SIZE + TILE_SIZE/2, // Target X
+                target.r * TILE_SIZE + TILE_SIZE/2, // Target Y
+                target.r,
+                target.c,
+                'water'
+            );
+        }
+    }
+}
+
+function interact() {
+    const px = Math.floor((GAME.player.pixelX + TILE_SIZE/2) / TILE_SIZE);
+    const py = Math.floor((GAME.player.pixelY + TILE_SIZE/2) / TILE_SIZE);
+    
+    if (!GAME.grid[py] || !GAME.grid[py][px]) return;
+    
+    const tile = GAME.grid[py][px];
+    
+    // MARKET INTERACTION
+    if (tile.type === TILE_TYPE.MARKET) {
+        openMarket();
+        return;
+    }
+
+    // WATER INTERACTION (Refill)
+    if (tile.type === TILE_TYPE.WATER) {
+        GAME.inventory.water = GAME.inventory.maxWater;
+        updateUI();
+        // Just visual feedback, goose drinks or fills can
+        createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, '#fff', 5);
+        showMessage("Honk! (Refilled Water)", 1000);
+        return;
+    }
+
+    // SPRINKLER INTERACTION (Refill)
+    if (tile.type === TILE_TYPE.SPRINKLER) {
+        if (!GAME.sprinkler.active) {
+            showMessage("It's a sprinkler base. Buy the part at the market!", 2000);
+            return;
+        }
+        
+        if (GAME.inventory.water > 0) {
+            const space = GAME.sprinkler.maxWater - GAME.sprinkler.water;
+            if (space > 0) {
+                const amount = Math.min(space, GAME.inventory.water);
+                GAME.sprinkler.water += amount;
+                GAME.inventory.water -= amount;
+                updateUI();
+                showMessage(`Refilled Sprinkler: ${GAME.sprinkler.water}/${GAME.sprinkler.maxWater}`, 1000);
+                createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, '#4fc3f7', 8);
+            } else {
+                showMessage("Sprinkler is full!", 1000);
+            }
+        } else {
+            showMessage("Your watering can is empty!", 1500);
+        }
+        return;
+    }
+
+    // ROCK INTERACTION
+    if (tile.type === TILE_TYPE.ROCK) {
+        if (GAME.inventory.hasPickaxe) {
+            tile.type = TILE_TYPE.SOIL;
+            createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, '#9e9e9e', 8);
+            showMessage("Cleared Land!", 500);
+        } else {
+            showMessage("Need a Pickaxe to clear this!", 1000);
+        }
+        return;
+    }
+
+    // FARMING INTERACTIONS
+    if (tile.type === TILE_TYPE.SOIL) {
+        // 1. Harvest
+        if (tile.plant === PLANT_STATE.MATURE) {
+            tile.plant = PLANT_STATE.TREE; // Returns to normal tree
+            tile.growthTimer = 0;
+            GAME.inventory.apples++;
+            createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, COLORS.APPLE, 8);
+            updateUI();
+            return;
+        }
+
+        // 2. Plant
+        if (tile.plant === PLANT_STATE.NONE) {
+            if (GAME.inventory.seeds > 0) {
+                GAME.inventory.seeds--;
+                tile.plant = PLANT_STATE.SEED;
+                updateUI();
+                return;
+            } else {
+                showMessage("No seeds! Go to the market.", 1500);
+            }
+        }
+
+        // 3. Water (Water everything except mature trees)
+        if (tile.plant !== PLANT_STATE.NONE && tile.plant !== PLANT_STATE.MATURE) {
+            if (!tile.watered) {
+                if (GAME.inventory.water >= 10) {
+                    GAME.inventory.water -= 10;
+                    tile.watered = true;
+                    tile.wetTimer = 0;
+                    createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, COLORS.WATER, 5);
+                    updateUI();
+                } else {
+                    showMessage("No water! Honk at the pond.", 1500);
+                }
+            }
+        }
+    }
+}
+
+function openMarket() {
+    GAME.isMarketOpen = true;
+    GAME.keys = {}; // Clear keys to prevent stuck movement
+    document.getElementById('market-modal').style.display = 'flex';
+    renderMarket();
+}
+
+function closeMarket() {
+    GAME.isMarketOpen = false;
+    document.getElementById('market-modal').style.display = 'none';
+}
+
+function openSettings() {
+    GAME.isMarketOpen = true; // Pause input
+    GAME.keys = {};
+    document.getElementById('settings-modal').style.display = 'flex';
+}
+
+function closeSettings() {
+    GAME.isMarketOpen = false;
+    document.getElementById('settings-modal').style.display = 'none';
+}
+
+function resetGame() {
+    if (confirm("Are you sure? This will wipe all progress!")) {
+        localStorage.removeItem('appleGooseSave');
+        location.reload();
+    }
+}
+
+function switchTab(tab) {
+    GAME.activeTab = tab;
+    
+    // Update Tab UI
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    
+    renderMarket();
+}
+
+function renderMarket() {
+    const container = document.getElementById('market-content');
+    let html = '<table><thead><tr><th>Item</th><th>Cost</th><th>Action</th></tr></thead><tbody>';
+    
+    if (GAME.activeTab === 'buy') {
+        // 1. Seeds
+        const seedCost = 10;
+        const canBuySeed = GAME.inventory.coins >= seedCost;
+        html += `
+            <tr>
+                <td>🍎 Apple Seed</td>
+                <td>${seedCost}💰</td>
+                <td>
+                    <button class="action-btn ${canBuySeed ? 'btn-buy' : 'btn-disabled'}" 
+                        onclick="${canBuySeed ? 'buyItem(\'seed\', 10)' : ''}">
+                        Buy
+                    </button>
+                </td>
+            </tr>
+        `;
+
+        // 2. Super Can
+        if (GAME.inventory.maxWater < 200) {
+            const canCost = 50;
+            const canBuyCan = GAME.inventory.coins >= canCost;
+            html += `
+                <tr>
+                    <td>🚿 Super Can (+100 Capacity)</td>
+                    <td>${canCost}💰</td>
+                    <td>
+                        <button class="action-btn ${canBuyCan ? 'btn-buy' : 'btn-disabled'}" 
+                            onclick="${canBuyCan ? 'buyItem(\'superCan\', 50)' : ''}">
+                            Buy
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // 3. Auto Sprinkler
+        if (!GAME.sprinkler.active) {
+            const sprinklerCost = 150;
+            const canBuySprinkler = GAME.inventory.coins >= sprinklerCost;
+            html += `
+                <tr>
+                    <td>💦 Auto Sprinkler (Needs filling)</td>
+                    <td>${sprinklerCost}💰</td>
+                    <td>
+                        <button class="action-btn ${canBuySprinkler ? 'btn-buy' : 'btn-disabled'}" 
+                            onclick="${canBuySprinkler ? 'buyItem(\'sprinkler\', 150)' : ''}">
+                            Buy
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // 4. Auto Harvester
+        if (!GAME.inventory.hasHarvester) {
+            const harvestCost = 300;
+            const canBuyHarvester = GAME.inventory.coins >= harvestCost;
+            html += `
+                <tr>
+                    <td>🛸 Auto-Grabber Drone</td>
+                    <td>${harvestCost}💰</td>
+                    <td>
+                        <button class="action-btn ${canBuyHarvester ? 'btn-buy' : 'btn-disabled'}" 
+                            onclick="${canBuyHarvester ? 'buyItem(\'harvester\', 300)' : ''}">
+                            Buy
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // 5. Pickaxe
+        if (!GAME.inventory.hasPickaxe) {
+            const pickCost = 500;
+            const canBuyPick = GAME.inventory.coins >= pickCost;
+            html += `
+                <tr>
+                    <td>⛏️ Pickaxe (Clear Rocks)</td>
+                    <td>${pickCost}💰</td>
+                    <td>
+                        <button class="action-btn ${canBuyPick ? 'btn-buy' : 'btn-disabled'}" 
+                            onclick="${canBuyPick ? 'buyItem(\'pickaxe\', 500)' : ''}">
+                            Buy
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+    } else if (GAME.activeTab === 'sell') {
+        const price = 4;
+        const count = GAME.inventory.apples;
+        const canSell = count > 0;
+        html += `
+            <tr>
+                <td>🍎 Red Apple (${count})</td>
+                <td>${price}💰 / each</td>
+                <td>
+                    <button class="action-btn ${canSell ? 'btn-sell' : 'btn-disabled'}" 
+                        onclick="${canSell ? 'sellItem(\'apple\', 4)' : ''}">
+                        Sell All (${count * price}💰)
+                    </button>
+                </td>
+            </tr>
+        `;
+    }
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function buyItem(type, cost) {
+    if (GAME.inventory.coins >= cost) {
+        GAME.inventory.coins -= cost;
+        
+        if (type === 'seed') {
+            GAME.inventory.seeds++;
+        } else if (type === 'superCan') {
+            GAME.inventory.maxWater = 200;
+            GAME.inventory.water = 200; // Refill on buy
+            showMessage("Upgrade: Super Watering Can!", 2000);
+        } else if (type === 'sprinkler') {
+            GAME.sprinkler.active = true;
+            showMessage("Upgrade: Sprinkler System Installed!", 2000);
+        } else if (type === 'harvester') {
+            GAME.inventory.hasHarvester = true;
+            showMessage("Upgrade: Auto-Grabber Drone Active!", 2000);
+        } else if (type === 'pickaxe') {
+            GAME.inventory.hasPickaxe = true;
+            showMessage("Upgrade: Pickaxe Acquired!", 2000);
+        }
+
+        updateUI();
+        renderMarket(); // Refresh buttons
+    }
+}
+
+function sellItem(type, price) {
+    if (type === 'apple') {
+        const count = GAME.inventory.apples;
+        if (count > 0) {
+            const total = count * price;
+            GAME.inventory.coins += total;
+            GAME.inventory.apples = 0;
+            updateUI();
+            renderMarket();
+            showMessage(`Sold ${count} Apples for ${total} Coins!`, 1500);
+        }
+    }
+}
+
+function handleMarket() {
+    // Deprecated in favor of UI
+}
+
+function updateParticles() {
+    for (let i = GAME.particles.length - 1; i >= 0; i--) {
+        const p = GAME.particles[i];
+        p.life--;
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.life <= 0) GAME.particles.splice(i, 1);
+    }
+}
+
+function createParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+        GAME.particles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2,
+            life: 30,
+            color: color
+        });
+    }
+}
+
+function spawnProjectile(sx, sy, tx, ty, r, c, type) {
+    const speed = 8;
+    const dx = tx - sx;
+    const dy = ty - sy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    GAME.projectiles.push({
+        x: sx,
+        y: sy,
+        vx: (dx / dist) * speed,
+        vy: (dy / dist) * speed,
+        tx: tx,
+        ty: ty,
+        r: r,
+        c: c,
+        type: type // 'water' or 'apple'
+    });
+}
+
+function updateProjectiles() {
+    for (let i = GAME.projectiles.length - 1; i >= 0; i--) {
+        const p = GAME.projectiles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        
+        // Distance check
+        const dx = p.x - p.tx;
+        const dy = p.y - p.ty;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        if (dist < 10) { // Hit
+            if (p.type === 'water') {
+                // Apply water effect
+                const tile = GAME.grid[p.r][p.c];
+                tile.watered = true;
+                tile.wetTimer = 0;
+                createParticles(p.tx, p.ty, '#4fc3f7', 5);
+            } else if (p.type === 'apple') {
+                // Harvest effect (Add to inventory)
+                GAME.inventory.apples++;
+                updateUI();
+                createParticles(p.tx, p.ty, COLORS.APPLE, 5);
+                // Removed popup
+            }
+            
+            // Remove projectile
+            GAME.projectiles.splice(i, 1);
+        }
+    }
+}
+
+function updateDrone() {
+    if (!GAME.inventory.hasHarvester) return;
+
+    const drone = GAME.drone;
+    const speed = 4;
+    const homeX = 40; // Near market
+    const homeY = 40;
+
+    // State Machine
+    if (drone.state === 'IDLE') {
+        
+        // If full, force go home
+        if (drone.apples >= drone.capacity) {
+            drone.state = 'MOVING_HOME';
+            return;
+        }
+
+        // Find ripe tree
+        let matureTrees = [];
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                if (GAME.grid[r][c].plant === PLANT_STATE.MATURE) {
+                    matureTrees.push({r, c});
+                }
+            }
+        }
+
+        if (matureTrees.length > 0) {
+            // Pick random target
+            const target = matureTrees[Math.floor(Math.random() * matureTrees.length)];
+            drone.target = {
+                r: target.r,
+                c: target.c,
+                x: target.c * TILE_SIZE + TILE_SIZE/2,
+                y: target.r * TILE_SIZE + TILE_SIZE/2
+            };
+            drone.state = 'MOVING_TO_TREE';
+        } else {
+            // Go home if nothing to do
+            const dx = homeX - drone.x;
+            const dy = homeY - drone.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist > 5) {
+                drone.x += (dx / dist) * speed;
+                drone.y += (dy / dist) * speed;
+            } else if (drone.apples > 0) {
+                // Deposit if idle at home with apples
+                 depositApples();
+            }
+        }
+
+    } else if (drone.state === 'MOVING_TO_TREE') {
+        const dx = drone.target.x - drone.x;
+        const dy = drone.target.y - drone.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+
+        if (dist < speed) {
+            drone.x = drone.target.x;
+            drone.y = drone.target.y;
+            drone.state = 'HARVESTING';
+            drone.timer = 30; // 0.5s harvest time
+        } else {
+            drone.x += (dx / dist) * speed;
+            drone.y += (dy / dist) * speed;
+        }
+
+    } else if (drone.state === 'HARVESTING') {
+        drone.timer--;
+        if (drone.timer <= 0) {
+            // Harvest logic
+            const tile = GAME.grid[drone.target.r][drone.target.c];
+            if (tile.plant === PLANT_STATE.MATURE) {
+                tile.plant = PLANT_STATE.TREE;
+                tile.growthTimer = 0;
+                
+                drone.apples++;
+                createParticles(drone.x, drone.y, COLORS.APPLE, 3);
+            }
+            
+            if (drone.apples >= drone.capacity) {
+                drone.state = 'MOVING_HOME';
+            } else {
+                drone.state = 'IDLE'; // Look for next tree immediately
+            }
+        }
+    } else if (drone.state === 'MOVING_HOME') {
+        const dx = homeX - drone.x;
+        const dy = homeY - drone.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        if (dist < speed) {
+            drone.x = homeX;
+            drone.y = homeY;
+            depositApples();
+            drone.state = 'IDLE';
+        } else {
+            drone.x += (dx / dist) * speed;
+            drone.y += (dy / dist) * speed;
+        }
+    }
+}
+
+function depositApples() {
+    if (GAME.drone.apples > 0) {
+        GAME.inventory.apples += GAME.drone.apples;
+        showMessage(`Drone deposited ${GAME.drone.apples} Apples`, 1000);
+        GAME.drone.apples = 0;
+        updateUI();
+    }
+}
+
+function autoHarvest() {
+    // Deprecated in favor of updateDrone
+}
+
+// --- RENDERING ---
+function draw() {
+    // Clear
+    GAME.ctx.fillStyle = COLORS.GRASS;
+    GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
+
+    // Draw Map
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            const tile = GAME.grid[r][c];
+            const x = c * TILE_SIZE;
+            const y = r * TILE_SIZE;
+
+            // Base Tile
+            if (tile.type === TILE_TYPE.SOIL) {
+                GAME.ctx.fillStyle = tile.watered ? COLORS.SOIL_WET : COLORS.SOIL;
+                GAME.ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+            } else if (tile.type === TILE_TYPE.WATER) {
+                GAME.ctx.fillStyle = COLORS.WATER;
+                GAME.ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                // Water ripples
+                GAME.ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                if ((GAME.frame + c * 10) % 60 < 10) {
+                    GAME.ctx.fillRect(x + 5, y + 10, 10, 2);
+                }
+            } else if (tile.type === TILE_TYPE.MARKET) {
+                GAME.ctx.fillStyle = COLORS.MARKET_FLOOR;
+                GAME.ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+            } else if (tile.type === TILE_TYPE.FENCE) {
+                GAME.ctx.fillStyle = '#5d4037';
+                GAME.ctx.fillRect(x + 10, y + 10, 20, 20);
+                GAME.ctx.strokeStyle = '#3e2723';
+                GAME.ctx.lineWidth = 2;
+                GAME.ctx.strokeRect(x+10, y+10, 20, 20);
+            } else if (tile.type === TILE_TYPE.SPRINKLER) {
+                if (GAME.sprinkler.active) {
+                    GAME.ctx.fillStyle = '#90a4ae'; // Base
+                    GAME.ctx.fillRect(x + 5, y + 5, 30, 30);
+                    GAME.ctx.fillStyle = '#4fc3f7'; // Tank water level
+                    const fillHeight = (GAME.sprinkler.water / GAME.sprinkler.maxWater) * 20;
+                    GAME.ctx.fillRect(x + 10, y + 25 - fillHeight, 20, fillHeight);
+                    GAME.ctx.strokeRect(x + 10, y + 5, 20, 20); // Tank Outline
+                    
+                    // Top spinner
+                    GAME.ctx.fillStyle = '#37474f';
+                    GAME.ctx.fillRect(x + 15, y, 10, 5);
+                } else {
+                    // Placeholder / Foundation
+                    GAME.ctx.fillStyle = '#bdbdbd';
+                    GAME.ctx.fillRect(x + 5, y + 30, 30, 5);
+                }
+            } else if (tile.type === TILE_TYPE.ROCK) {
+                // Ground
+                GAME.ctx.fillStyle = '#6d4c41'; 
+                GAME.ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                
+                // Rock
+                GAME.ctx.fillStyle = '#9e9e9e'; 
+                GAME.ctx.beginPath();
+                GAME.ctx.arc(x + TILE_SIZE/2, y + TILE_SIZE/2 + 2, 10, 0, Math.PI * 2);
+                GAME.ctx.fill();
+                
+                // Highlight
+                GAME.ctx.fillStyle = '#bdbdbd';
+                GAME.ctx.beginPath();
+                GAME.ctx.arc(x + TILE_SIZE/2 - 3, y + TILE_SIZE/2 - 3, 3, 0, Math.PI * 2);
+                GAME.ctx.fill();
+            }
+
+            // Plants
+            drawPlant(tile, x, y);
+        }
+    }
+
+    // Draw Market Roof (visual only, drawn over tiles)
+    // Simple text label for market
+    GAME.ctx.fillStyle = "rgba(0,0,0,0.3)";
+    GAME.ctx.font = "bold 14px sans-serif";
+    GAME.ctx.fillText("MARKET", 15, 30);
+
+    // Draw Player (Goose)
+    drawGoose();
+
+    // Draw Particles
+    GAME.particles.forEach(p => {
+        GAME.ctx.fillStyle = p.color;
+        GAME.ctx.fillRect(p.x, p.y, 3, 3);
+    });
+
+    // Draw Projectiles
+    GAME.projectiles.forEach(p => {
+        GAME.ctx.beginPath();
+        GAME.ctx.fillStyle = p.type === 'apple' ? COLORS.APPLE : '#4fc3f7';
+        GAME.ctx.arc(p.x, p.y, p.type === 'apple' ? 6 : 4, 0, Math.PI * 2);
+        GAME.ctx.fill();
+    });
+
+    // Draw Drone
+    if (GAME.inventory.hasHarvester) {
+        const dx = GAME.drone.x;
+        const dy = GAME.drone.y;
+        
+        // Drone Body
+        GAME.ctx.fillStyle = '#607d8b';
+        GAME.ctx.beginPath();
+        GAME.ctx.arc(dx, dy, 8, 0, Math.PI * 2);
+        GAME.ctx.fill();
+
+        // Rotors
+        GAME.ctx.fillStyle = '#cfd8dc';
+        const offset = (GAME.frame % 10) < 5 ? 10 : 0; // Simple spin anim
+        GAME.ctx.fillRect(dx - 12, dy - 2, 8, 4);
+        GAME.ctx.fillRect(dx + 4, dy - 2, 8, 4);
+        GAME.ctx.fillRect(dx - 2, dy - 12, 4, 8);
+        GAME.ctx.fillRect(dx - 2, dy + 4, 4, 8);
+        
+        // Light
+        GAME.ctx.fillStyle = GAME.drone.state === 'HARVESTING' ? '#ffeb3b' : '#f44336';
+        GAME.ctx.beginPath();
+        GAME.ctx.arc(dx, dy, 3, 0, Math.PI * 2);
+        GAME.ctx.fill();
+    }
+}
+
+function drawPlant(tile, x, y) {
+    const cx = x + TILE_SIZE / 2;
+    const cy = y + TILE_SIZE / 2;
+
+    if (tile.plant === PLANT_STATE.SEED) {
+        GAME.ctx.fillStyle = '#3e2723';
+        GAME.ctx.beginPath();
+        GAME.ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+        GAME.ctx.fill();
+    } else if (tile.plant === PLANT_STATE.SAPLING) {
+        GAME.ctx.fillStyle = COLORS.TREE_LEAVES;
+        GAME.ctx.fillRect(cx - 2, cy - 10, 4, 15);
+        GAME.ctx.beginPath();
+        GAME.ctx.arc(cx, cy - 10, 5, 0, Math.PI * 2);
+        GAME.ctx.fill();
+    } else if (tile.plant === PLANT_STATE.TREE || tile.plant === PLANT_STATE.MATURE) {
+        // Trunk
+        GAME.ctx.fillStyle = COLORS.TREE_TRUNK;
+        GAME.ctx.fillRect(cx - 4, cy - 5, 8, 15);
+        
+        // Leaves
+        GAME.ctx.fillStyle = COLORS.TREE_LEAVES;
+        GAME.ctx.beginPath();
+        GAME.ctx.arc(cx, cy - 15, 15, 0, Math.PI * 2);
+        GAME.ctx.fill();
+
+        // Apples
+        if (tile.plant === PLANT_STATE.MATURE) {
+            GAME.ctx.fillStyle = COLORS.APPLE;
+            GAME.ctx.beginPath();
+            GAME.ctx.arc(cx - 5, cy - 15, 4, 0, Math.PI * 2);
+            GAME.ctx.arc(cx + 5, cy - 18, 4, 0, Math.PI * 2);
+            GAME.ctx.arc(cx, cy - 8, 4, 0, Math.PI * 2);
+            GAME.ctx.fill();
+        }
+    }
+}
+
+function drawGoose() {
+    GAME.ctx.save();
+    
+    const x = GAME.player.pixelX + TILE_SIZE/2;
+    const y = GAME.player.pixelY + TILE_SIZE/2;
+    
+    GAME.ctx.translate(x, y);
+    
+    // Flip if facing right
+    if (GAME.player.direction === 1) {
+        GAME.ctx.scale(-1, 1);
+    }
+
+    // Waddle rotation
+    GAME.ctx.rotate(GAME.player.waddleOffset * Math.PI / 180);
+
+    // Draw Emoji Goose
+    GAME.ctx.font = "30px Segoe UI Emoji, Arial"; // Ensure emoji font support
+    GAME.ctx.textAlign = "center";
+    GAME.ctx.textBaseline = "middle";
+    GAME.ctx.fillStyle = "#ffffff"; // Just in case, though emoji has own color
+    GAME.ctx.fillText("🪿", 0, 0);
+
+    GAME.ctx.restore();
+}
+
+function updateUI() {
+    document.getElementById('coins-display').innerText = GAME.inventory.coins;
+    document.getElementById('apples-display').innerText = GAME.inventory.apples;
+    document.getElementById('seeds-display').innerText = GAME.inventory.seeds;
+    document.getElementById('water-display').innerText = Math.floor((GAME.inventory.water / GAME.inventory.maxWater) * 100);
+}
+
+let msgTimeout;
+function showMessage(text, duration = 2000) {
+    const el = document.getElementById('message-overlay');
+    const title = document.getElementById('msg-title');
+    const body = document.getElementById('msg-body');
+    
+    el.style.display = 'block';
+    title.style.display = 'none'; // Only using body for simple messages
+    body.innerText = text;
+    
+    clearTimeout(msgTimeout);
+    msgTimeout = setTimeout(() => {
+        el.style.display = 'none';
+    }, duration);
+}
+
+</script>
+</body>
+</html>
