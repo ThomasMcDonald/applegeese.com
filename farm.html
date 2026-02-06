@@ -320,7 +320,9 @@ const GAME = {
     projectiles: [], // Water droplets
     keys: {},
     isMarketOpen: false,
-    activeTab: 'buy'
+    activeTab: 'buy',
+    weather: 'sun', // 'sun', 'rain'
+    weatherTimer: 0
 };
 
 // Tile Types
@@ -761,12 +763,56 @@ function update() {
     GAME.frame++;
     GAME.time = (GAME.time + 1) % GAME.dayLength;
     
+    updateWeather();
     handleMovement();
     updatePlants();
     updateDrone();
     updateParticles();
     updateProjectiles();
     updateUI();
+}
+
+function updateWeather() {
+    // Change weather randomly
+    if (Math.random() < 0.0005) { // Small chance every frame
+        if (GAME.weather === 'sun') {
+            GAME.weather = 'rain';
+            showMessage("It started raining!", 2000);
+        } else {
+            GAME.weather = 'sun';
+            showMessage("The rain stopped.", 2000);
+        }
+    }
+    
+    if (GAME.weather === 'rain') {
+        // Rain particles
+        if (Math.random() < 0.5) {
+            GAME.particles.push({
+                x: Math.random() * GAME.canvas.width,
+                y: -10,
+                vx: 1, // Slight wind
+                vy: 5 + Math.random() * 5,
+                life: 100,
+                color: '#64b5f6',
+                type: 'rain'
+            });
+        }
+        
+        // Water plants slowly
+        if (GAME.frame % 60 === 0) { // Once per second
+            if (Math.random() < 0.3) { // 30% chance to water a random tile
+                const r = Math.floor(Math.random() * ROWS);
+                const c = Math.floor(Math.random() * COLS);
+                const tile = GAME.grid[r][c];
+                
+                if (tile.type === TILE_TYPE.SOIL && !tile.watered && tile.plant !== PLANT_STATE.WITHERED) {
+                    tile.watered = true;
+                    tile.wetTimer = 0;
+                    createParticles(c * TILE_SIZE + TILE_SIZE/2, r * TILE_SIZE + TILE_SIZE/2, '#4fc3f7', 3);
+                }
+            }
+        }
+    }
 }
 
 function handleMovement() {
@@ -1332,7 +1378,11 @@ function draw() {
     // Draw Particles
     GAME.particles.forEach(p => {
         GAME.ctx.fillStyle = p.color;
-        GAME.ctx.fillRect(p.x, p.y, 3, 3);
+        if (p.type === 'rain') {
+             GAME.ctx.fillRect(p.x, p.y, 2, 8);
+        } else {
+             GAME.ctx.fillRect(p.x, p.y, 3, 3);
+        }
     });
 
     // Draw Projectiles
@@ -1392,6 +1442,12 @@ function drawDayNightOverlay() {
         overlayColor = `rgba(0, 0, 40, ${(1-intensity) * 0.6})`;
         // Mix in orange
         GAME.ctx.fillStyle = `rgba(255, 100, 0, ${intensity * 0.3})`;
+        GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
+    }
+    
+    // Weather Overlay (Rain darkens the sky)
+    if (GAME.weather === 'rain') {
+        GAME.ctx.fillStyle = 'rgba(0, 0, 20, 0.2)'; // Dark blue tint
         GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
     }
     
