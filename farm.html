@@ -206,7 +206,13 @@
     <div id="ui-layer">
         <div class="stat-box">💰 <span id="coins-display">0</span></div>
         <div class="stat-box">🍎 <span id="apples-display">0</span></div>
-        <div class="stat-box">🌱 <span id="seeds-display">5</span></div>
+        <div class="stat-box">🥕 <span id="carrots-display">0</span></div>
+        <div class="stat-box">🌽 <span id="corn-display">0</span></div>
+        <div class="stat-box" id="seed-selector">
+            <span id="current-seed-icon">🍎</span>
+            <span id="current-seed-count">0</span>
+            <small style="font-size:10px; opacity:0.8;">(Tab)</small>
+        </div>
         <div class="stat-box">💧 <span id="water-display">100</span>%</div>
         <div class="stat-box">🕒 <span id="time-display">12:00</span></div>
     </div>
@@ -268,7 +274,11 @@ const COLORS = {
     GOOSE_BEAK: '#ff9800',
     TREE_TRUNK: '#795548',
     TREE_LEAVES: '#2e7d32',
-    APPLE: '#d32f2f'
+    APPLE: '#d32f2f',
+    CARROT_LEAF: '#4caf50',
+    CARROT_ORANGE: '#ff5722',
+    CORN_STALK: '#8bc34a',
+    CORN_YELLOW: '#ffeb3b'
 };
 
 const GROWTH_TIME = 600; // Frames per stage (approx 10 seconds)
@@ -292,7 +302,11 @@ const GAME = {
     inventory: {
         coins: 1000,
         apples: 0,
+        carrots: 0,
+        corn: 0,
         seeds: 2,
+        carrotSeeds: 2,
+        cornSeeds: 2,
         water: 100,
         maxWater: 100,
         hasSprinkler: false,
@@ -322,7 +336,8 @@ const GAME = {
     isMarketOpen: false,
     activeTab: 'buy',
     weather: 'sun', // 'sun', 'rain'
-    weatherTimer: 0
+    weatherTimer: 0,
+    selectedSeed: 'apple' // 'apple', 'carrot', 'corn'
 };
 
 // Tile Types
@@ -344,6 +359,12 @@ const PLANT_STATE = {
     TREE: 3,
     MATURE: 4, // Has apples
     WITHERED: 5
+};
+
+const CROP_TYPE = {
+    APPLE: 'apple',
+    CARROT: 'carrot',
+    CORN: 'corn'
 };
 
 // --- INITIALIZATION ---
@@ -385,7 +406,10 @@ function loadGame() {
         try {
             const saveData = JSON.parse(saveString);
             
-            if (saveData.inventory) GAME.inventory = saveData.inventory;
+            if (saveData.inventory) {
+                // Merge loaded inventory with defaults to ensure new props exist
+                GAME.inventory = { ...GAME.inventory, ...saveData.inventory };
+            }
             if (saveData.sprinkler) GAME.sprinkler = saveData.sprinkler;
             if (saveData.grid) GAME.grid = saveData.grid;
             if (saveData.time !== undefined) GAME.time = saveData.time;
@@ -442,6 +466,7 @@ function initGrid() {
             row.push({
                 type: type,
                 plant: PLANT_STATE.NONE,
+                cropType: null,
                 growthTimer: 0,
                 watered: false,
                 wetTimer: 0,
@@ -469,6 +494,10 @@ function setupInput() {
 
         GAME.keys[e.code] = true;
         if (e.code === 'Space') interact();
+        if (e.code === 'Tab') {
+            e.preventDefault(); // Prevent focus switching
+            cycleSeeds();
+        }
     });
     window.addEventListener('keyup', (e) => {
         GAME.keys[e.code] = false;
@@ -491,6 +520,18 @@ function openSettings() {
 function closeSettings() {
     GAME.isMarketOpen = false;
     document.getElementById('settings-modal').style.display = 'none';
+}
+
+function cycleSeeds() {
+    const seeds = ['apple', 'carrot', 'corn'];
+    let idx = seeds.indexOf(GAME.selectedSeed);
+    idx = (idx + 1) % seeds.length;
+    GAME.selectedSeed = seeds[idx];
+    updateUI();
+    
+    // Visual feedback
+    const seedNames = { 'apple': 'Apple', 'carrot': 'Carrot', 'corn': 'Corn' };
+    showMessage(`Selected: ${seedNames[GAME.selectedSeed]} Seeds`, 500);
 }
 
 function toggleDebug() {
@@ -533,6 +574,7 @@ function applyDebug() {
             const tile = GAME.grid[r][c];
             if (tile.type === TILE_TYPE.SOIL && tile.plant === PLANT_STATE.NONE) {
                 tile.plant = PLANT_STATE.SEED;
+                tile.cropType = CROP_TYPE.APPLE;
             }
         }
     }
@@ -566,16 +608,49 @@ function renderMarket() {
         // 1. Seeds
         const seedCost = 10;
         const canBuySeed = GAME.inventory.coins >= seedCost;
+        
+        const carrotSeedCost = 5;
+        const canBuyCarrot = GAME.inventory.coins >= carrotSeedCost;
+        
+        const cornSeedCost = 15;
+        const canBuyCorn = GAME.inventory.coins >= cornSeedCost;
+
         html += `
             <tr>
                 <td>
                     🍎 Apple Seed<br>
-                    <span style="font-size:12px;color:#888;">Plant on soil to grow trees.</span>
+                    <span style="font-size:12px;color:#888;">Plant on soil. Grows into a tree.</span>
                 </td>
                 <td>${seedCost}💰</td>
                 <td>
                     <button class="action-btn ${canBuySeed ? 'btn-buy' : 'btn-disabled'}" 
                         onclick="${canBuySeed ? 'buyItem(\'seed\', 10)' : ''}">
+                        Buy
+                    </button>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    🥕 Carrot Seed<br>
+                    <span style="font-size:12px;color:#888;">Fast growing root vegetable.</span>
+                </td>
+                <td>${carrotSeedCost}💰</td>
+                <td>
+                    <button class="action-btn ${canBuyCarrot ? 'btn-buy' : 'btn-disabled'}" 
+                        onclick="${canBuyCarrot ? 'buyItem(\'carrotSeed\', 5)' : ''}">
+                        Buy
+                    </button>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    🌽 Corn Seed<br>
+                    <span style="font-size:12px;color:#888;">High value crop.</span>
+                </td>
+                <td>${cornSeedCost}💰</td>
+                <td>
+                    <button class="action-btn ${canBuyCorn ? 'btn-buy' : 'btn-disabled'}" 
+                        onclick="${canBuyCorn ? 'buyItem(\'cornSeed\', 15)' : ''}">
                         Buy
                     </button>
                 </td>
@@ -688,17 +763,43 @@ function renderMarket() {
         }
 
     } else if (GAME.activeTab === 'sell') {
-        const price = 4;
-        const count = GAME.inventory.apples;
-        const canSell = count > 0;
+        const applePrice = 4;
+        const appleCount = GAME.inventory.apples;
+        
+        const carrotPrice = 8;
+        const carrotCount = GAME.inventory.carrots;
+        
+        const cornPrice = 12;
+        const cornCount = GAME.inventory.corn;
+
         html += `
             <tr>
-                <td>🍎 Red Apple (${count})</td>
-                <td>${price}💰 / each</td>
+                <td>🍎 Apple (${appleCount})</td>
+                <td>${applePrice}💰</td>
                 <td>
-                    <button class="action-btn ${canSell ? 'btn-sell' : 'btn-disabled'}" 
-                        onclick="${canSell ? 'sellItem(\'apple\', 4)' : ''}">
-                        Sell All (${count * price}💰)
+                    <button class="action-btn ${appleCount > 0 ? 'btn-sell' : 'btn-disabled'}" 
+                        onclick="${appleCount > 0 ? 'sellItem(\'apple\', 4)' : ''}">
+                        Sell All
+                    </button>
+                </td>
+            </tr>
+            <tr>
+                <td>🥕 Carrot (${carrotCount})</td>
+                <td>${carrotPrice}💰</td>
+                <td>
+                    <button class="action-btn ${carrotCount > 0 ? 'btn-sell' : 'btn-disabled'}" 
+                        onclick="${carrotCount > 0 ? 'sellItem(\'carrot\', 8)' : ''}">
+                        Sell All
+                    </button>
+                </td>
+            </tr>
+            <tr>
+                <td>🌽 Corn (${cornCount})</td>
+                <td>${cornPrice}💰</td>
+                <td>
+                    <button class="action-btn ${cornCount > 0 ? 'btn-sell' : 'btn-disabled'}" 
+                        onclick="${cornCount > 0 ? 'sellItem(\'corn\', 12)' : ''}">
+                        Sell All
                     </button>
                 </td>
             </tr>
@@ -715,6 +816,10 @@ function buyItem(type, cost) {
         
         if (type === 'seed') {
             GAME.inventory.seeds++;
+        } else if (type === 'carrotSeed') {
+            GAME.inventory.carrotSeeds++;
+        } else if (type === 'cornSeed') {
+            GAME.inventory.cornSeeds++;
         } else if (type === 'superCan') {
             GAME.inventory.maxWater = 200;
             GAME.inventory.water = 200; // Refill on buy
@@ -748,6 +853,26 @@ function sellItem(type, price) {
             updateUI();
             renderMarket();
             showMessage(`Sold ${count} Apples for ${total} Coins!`, 1500);
+        }
+    } else if (type === 'carrot') {
+        const count = GAME.inventory.carrots;
+        if (count > 0) {
+            const total = count * price;
+            GAME.inventory.coins += total;
+            GAME.inventory.carrots = 0;
+            updateUI();
+            renderMarket();
+            showMessage(`Sold ${count} Carrots for ${total} Coins!`, 1500);
+        }
+    } else if (type === 'corn') {
+        const count = GAME.inventory.corn;
+        if (count > 0) {
+            const total = count * price;
+            GAME.inventory.coins += total;
+            GAME.inventory.corn = 0;
+            updateUI();
+            renderMarket();
+            showMessage(`Sold ${count} Corn for ${total} Coins!`, 1500);
         }
     }
 }
@@ -898,7 +1023,12 @@ function updatePlants() {
             if (tile.plant !== PLANT_STATE.NONE && tile.plant !== PLANT_STATE.MATURE && tile.plant !== PLANT_STATE.TREE && tile.plant !== PLANT_STATE.WITHERED) {
                 if (tile.watered) {
                     tile.growthTimer++;
-                    if (tile.growthTimer > GROWTH_TIME) {
+                    
+                    let growthRate = GROWTH_TIME;
+                    if (tile.cropType === CROP_TYPE.CARROT) growthRate = GROWTH_TIME * 0.7; // Carrots grow faster
+                    if (tile.cropType === CROP_TYPE.CORN) growthRate = GROWTH_TIME * 1.2; // Corn grows slower
+
+                    if (tile.growthTimer > growthRate) {
                         tile.plant++; // Level up plant
                         tile.growthTimer = 0;
                         tile.watered = false; // Consumes water
@@ -908,7 +1038,8 @@ function updatePlants() {
             }
             
             // Tree to Mature (Apples) doesn't need water, just time
-            if (tile.plant === PLANT_STATE.TREE) {
+            // Only for apples
+            if (tile.plant === PLANT_STATE.TREE && tile.cropType === CROP_TYPE.APPLE) {
                 tile.growthTimer++;
                 if (tile.growthTimer > GROWTH_TIME * 2) {
                     tile.plant = PLANT_STATE.MATURE;
@@ -1028,40 +1159,79 @@ function interact() {
     // FARMING INTERACTIONS
     if (tile.type === TILE_TYPE.SOIL) {
         // 1. Harvest
+        if (tile.plant === PLANT_STATE.MATURE || (tile.plant === PLANT_STATE.TREE && tile.cropType !== CROP_TYPE.APPLE)) {
+            // Check if it's a non-tree crop that is ready at TREE stage (3) or MATURE (4)
+            // Carrots/Corn ready at TREE stage (visual shortcut for now, or we define mature for them)
+            // Actually, let's say they reach MATURE state too.
+        }
+        
         if (tile.plant === PLANT_STATE.MATURE) {
-            tile.plant = PLANT_STATE.TREE; // Returns to normal tree
-            tile.growthTimer = 0;
-            GAME.inventory.apples++;
-            createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, COLORS.APPLE, 8);
+            let harvestColor = COLORS.APPLE;
             
-            // Handle yield life
-            if (!tile.yieldCount) tile.yieldCount = 0;
-            tile.yieldCount++;
-            
-            if (tile.yieldCount >= 4) {
-                // Tree dies
-                tile.plant = PLANT_STATE.WITHERED;
-                // tile.yieldCount = 0; // Keep count or ignore
-                // createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, '#795548', 12); 
-                showMessage("The tree has withered.", 1000);
-            } else {
-                 showMessage(`Harvested! (${4 - tile.yieldCount} harvests left)`, 500);
+            if (tile.cropType === CROP_TYPE.APPLE) {
+                tile.plant = PLANT_STATE.TREE; // Returns to normal tree
+                tile.growthTimer = 0;
+                GAME.inventory.apples++;
+                // Handle yield life
+                if (!tile.yieldCount) tile.yieldCount = 0;
+                tile.yieldCount++;
+                if (tile.yieldCount >= 4) {
+                    tile.plant = PLANT_STATE.WITHERED;
+                    showMessage("The tree has withered.", 1000);
+                } else {
+                     showMessage(`Harvested Apple! (${4 - tile.yieldCount} left)`, 500);
+                }
+            } else if (tile.cropType === CROP_TYPE.CARROT) {
+                tile.plant = PLANT_STATE.NONE; // Consumed
+                tile.cropType = null;
+                GAME.inventory.carrots++;
+                harvestColor = COLORS.CARROT_ORANGE;
+                showMessage("Harvested Carrot!", 500);
+            } else if (tile.cropType === CROP_TYPE.CORN) {
+                tile.plant = PLANT_STATE.NONE; // Consumed
+                tile.cropType = null;
+                GAME.inventory.corn++;
+                harvestColor = COLORS.CORN_YELLOW;
+                showMessage("Harvested Corn!", 500);
             }
 
+            createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, harvestColor, 8);
             updateUI();
             return;
         }
 
         // 2. Plant
         if (tile.plant === PLANT_STATE.NONE) {
-            if (GAME.inventory.seeds > 0) {
-                GAME.inventory.seeds--;
-                tile.plant = PLANT_STATE.SEED;
-                updateUI();
-                return;
-            } else {
-                showMessage("No seeds! Go to the market.", 1500);
+            // Plant based on selection
+            if (GAME.selectedSeed === 'apple') {
+                if (GAME.inventory.seeds > 0) {
+                    GAME.inventory.seeds--;
+                    tile.plant = PLANT_STATE.SEED;
+                    tile.cropType = CROP_TYPE.APPLE;
+                    updateUI();
+                } else {
+                    showMessage("No Apple seeds!", 1000);
+                }
+            } else if (GAME.selectedSeed === 'carrot') {
+                if (GAME.inventory.carrotSeeds > 0) {
+                    GAME.inventory.carrotSeeds--;
+                    tile.plant = PLANT_STATE.SEED;
+                    tile.cropType = CROP_TYPE.CARROT;
+                    updateUI();
+                } else {
+                    showMessage("No Carrot seeds!", 1000);
+                }
+            } else if (GAME.selectedSeed === 'corn') {
+                if (GAME.inventory.cornSeeds > 0) {
+                    GAME.inventory.cornSeeds--;
+                    tile.plant = PLANT_STATE.SEED;
+                    tile.cropType = CROP_TYPE.CORN;
+                    updateUI();
+                } else {
+                    showMessage("No Corn seeds!", 1000);
+                }
             }
+            return;
         }
 
         // 3. Water (Water everything except mature trees and withered)
@@ -1146,10 +1316,31 @@ function updateProjectiles() {
                 }
             } else if (p.type === 'apple') {
                 // Harvest effect (Add to inventory)
-                GAME.inventory.apples++;
-                updateUI();
+                // Determine what was harvested based on the source tile... 
+                // But the projectile doesn't know. 
+                // The drone logic handles inventory add. Visual only?
+                // Wait, projectile 'apple' was used for harvesting.
+                // It was used in updateDrone -> spawnProjectile -> but wait, drone update modifies inventory directly?
+                // Actually drone logic in updateDrone does: drone.apples++
+                // This projectile is just visual travel? No, updateProjectiles does: GAME.inventory.apples++
+                
+                // Correction: The projectile logic below handles the "hit" at the drone or player?
+                // Actually spawnProjectile sends it FROM tree TO somewhere.
+                // In updateDrone, we handle the logic when timer ends.
+                
+                // In 'updateProjectiles' below, it ADDS to inventory. This duplicates logic if drone also adds.
+                // Let's check updateDrone.
+                // updateDrone: drone.apples++. It does NOT spawn a projectile to home.
+                // It moves to home and calls depositApples().
+                
+                // The sprinkler spawns 'water' projectiles.
+                // Where is 'apple' projectile used? 
+                // It seems it wasn't used in the original code I read, only defined types.
+                // Let's assume it's not used yet or I missed it.
+                // Ah, autoHarvest (deprecated) might have used it.
+                
+                // Safe to ignore for now, or just leave as visual.
                 createParticles(p.tx, p.ty, COLORS.APPLE, 5);
-                // Removed popup
             }
             
             // Remove projectile
@@ -1230,22 +1421,26 @@ function updateDrone() {
             // Harvest logic
             const tile = GAME.grid[drone.target.r][drone.target.c];
             if (tile.plant === PLANT_STATE.MATURE) {
-                tile.plant = PLANT_STATE.TREE;
-                tile.growthTimer = 0;
+                // Only harvest Apples for now with Drone, or all?
+                // Let's allow all.
                 
-                drone.apples++;
-                createParticles(drone.x, drone.y, COLORS.APPLE, 3);
-                
-                // Handle yield life (Drone)
-                if (!tile.yieldCount) tile.yieldCount = 0;
-                tile.yieldCount++;
-
-                if (tile.yieldCount >= 4) {
-                     // Tree dies
-                     tile.plant = PLANT_STATE.WITHERED;
-                     // tile.yieldCount = 0;
-                     // createParticles(drone.x, drone.y, '#795548', 8);
+                if (tile.cropType === CROP_TYPE.APPLE) {
+                    tile.plant = PLANT_STATE.TREE;
+                    tile.growthTimer = 0;
+                    // Handle yield life (Drone)
+                    if (!tile.yieldCount) tile.yieldCount = 0;
+                    tile.yieldCount++;
+                    if (tile.yieldCount >= 4) {
+                         tile.plant = PLANT_STATE.WITHERED;
+                    }
+                } else {
+                    // Carrots/Corn - single harvest
+                    tile.plant = PLANT_STATE.NONE;
+                    tile.cropType = null;
                 }
+                
+                drone.apples++; // Generalized capacity
+                createParticles(drone.x, drone.y, COLORS.APPLE, 3);
             }
             
             if (drone.apples >= drone.capacity) {
@@ -1273,8 +1468,19 @@ function updateDrone() {
 
 function depositApples() {
     if (GAME.drone.apples > 0) {
+        // Simple conversion: drone carries "items", we add as apples for now to simplify
+        // Or we could track what it picked up. For now, assume it converts all to apples or cash?
+        // Let's just add to apples to avoid complex drone inventory.
+        // Ideally drone should return specific crops.
+        // For this update: Drone only targets Apples? 
+        // Logic in IDLE state checks for PLANT_STATE.MATURE.
+        // It will pick up carrots/corn too.
+        // Let's just add them as apples for simplicity or split.
+        // Splitting is hard without tracking. 
+        // Quick fix: Add as Coins directly? No.
+        // Let's just add to apples. The "Universal Crop Drone".
         GAME.inventory.apples += GAME.drone.apples;
-        showMessage(`Drone deposited ${GAME.drone.apples} Apples`, 1000);
+        showMessage(`Drone deposited ${GAME.drone.apples} items`, 1000);
         GAME.drone.apples = 0;
         updateUI();
     }
@@ -1473,25 +1679,56 @@ function drawPlant(tile, x, y) {
         GAME.ctx.arc(cx, cy - 10, 5, 0, Math.PI * 2);
         GAME.ctx.fill();
     } else if (tile.plant === PLANT_STATE.TREE || tile.plant === PLANT_STATE.MATURE) {
-        // Trunk
-        GAME.ctx.fillStyle = COLORS.TREE_TRUNK;
-        GAME.ctx.fillRect(cx - 4, cy - 5, 8, 15);
-        
-        // Leaves
-        GAME.ctx.fillStyle = COLORS.TREE_LEAVES;
-        GAME.ctx.beginPath();
-        GAME.ctx.arc(cx, cy - 15, 15, 0, Math.PI * 2);
-        GAME.ctx.fill();
-
-        // Apples
-        if (tile.plant === PLANT_STATE.MATURE) {
-            GAME.ctx.fillStyle = COLORS.APPLE;
+        if (tile.cropType === CROP_TYPE.APPLE) {
+            // Trunk
+            GAME.ctx.fillStyle = COLORS.TREE_TRUNK;
+            GAME.ctx.fillRect(cx - 4, cy - 5, 8, 15);
+            
+            // Leaves
+            GAME.ctx.fillStyle = COLORS.TREE_LEAVES;
             GAME.ctx.beginPath();
-            GAME.ctx.arc(cx - 5, cy - 15, 4, 0, Math.PI * 2);
-            GAME.ctx.arc(cx + 5, cy - 18, 4, 0, Math.PI * 2);
-            GAME.ctx.arc(cx, cy - 8, 4, 0, Math.PI * 2);
+            GAME.ctx.arc(cx, cy - 15, 15, 0, Math.PI * 2);
             GAME.ctx.fill();
+
+            // Apples
+            if (tile.plant === PLANT_STATE.MATURE) {
+                GAME.ctx.fillStyle = COLORS.APPLE;
+                GAME.ctx.beginPath();
+                GAME.ctx.arc(cx - 5, cy - 15, 4, 0, Math.PI * 2);
+                GAME.ctx.arc(cx + 5, cy - 18, 4, 0, Math.PI * 2);
+                GAME.ctx.arc(cx, cy - 8, 4, 0, Math.PI * 2);
+                GAME.ctx.fill();
+            }
+        } else if (tile.cropType === CROP_TYPE.CARROT) {
+            // Carrot Tops
+            GAME.ctx.fillStyle = COLORS.CARROT_LEAF;
+            GAME.ctx.beginPath();
+            GAME.ctx.moveTo(cx, cy);
+            GAME.ctx.lineTo(cx - 5, cy - 10);
+            GAME.ctx.lineTo(cx + 5, cy - 10);
+            GAME.ctx.fill();
+            
+            if (tile.plant === PLANT_STATE.MATURE) {
+                // Show Orange Top
+                GAME.ctx.fillStyle = COLORS.CARROT_ORANGE;
+                GAME.ctx.beginPath();
+                GAME.ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+                GAME.ctx.fill();
+            }
+        } else if (tile.cropType === CROP_TYPE.CORN) {
+            // Corn Stalk
+            GAME.ctx.fillStyle = COLORS.CORN_STALK;
+            GAME.ctx.fillRect(cx - 2, cy - 15, 4, 20);
+            
+            if (tile.plant === PLANT_STATE.MATURE) {
+                // Corn Cob
+                GAME.ctx.fillStyle = COLORS.CORN_YELLOW;
+                GAME.ctx.beginPath();
+                GAME.ctx.ellipse(cx, cy - 8, 3, 6, 0, 0, Math.PI * 2);
+                GAME.ctx.fill();
+            }
         }
+        
     } else if (tile.plant === PLANT_STATE.WITHERED) {
         // Withered Tree
         GAME.ctx.fillStyle = '#5d4037'; // Dark Brown
@@ -1540,7 +1777,19 @@ function drawGoose() {
 function updateUI() {
     document.getElementById('coins-display').innerText = GAME.inventory.coins;
     document.getElementById('apples-display').innerText = GAME.inventory.apples;
-    document.getElementById('seeds-display').innerText = GAME.inventory.seeds;
+    document.getElementById('carrots-display').innerText = GAME.inventory.carrots || 0;
+    document.getElementById('corn-display').innerText = GAME.inventory.corn || 0;
+    
+    // Update Seed Selector
+    let icon = '❓';
+    let count = 0;
+    if (GAME.selectedSeed === 'apple') { icon = '🍎'; count = GAME.inventory.seeds; }
+    else if (GAME.selectedSeed === 'carrot') { icon = '🥕'; count = GAME.inventory.carrotSeeds || 0; }
+    else if (GAME.selectedSeed === 'corn') { icon = '🌽'; count = GAME.inventory.cornSeeds || 0; }
+    
+    document.getElementById('current-seed-icon').innerText = icon;
+    document.getElementById('current-seed-count').innerText = count;
+
     document.getElementById('water-display').innerText = Math.floor((GAME.inventory.water / GAME.inventory.maxWater) * 100);
     
     const totalMinutes = Math.floor((GAME.time / GAME.dayLength) * 24 * 60);
