@@ -208,6 +208,7 @@
         <div class="stat-box">🍎 <span id="apples-display">0</span></div>
         <div class="stat-box">🌱 <span id="seeds-display">5</span></div>
         <div class="stat-box">💧 <span id="water-display">100</span>%</div>
+        <div class="stat-box">🕒 <span id="time-display">12:00</span></div>
     </div>
 
     <div id="controls-hint">
@@ -277,6 +278,8 @@ const GAME = {
     canvas: null,
     ctx: null,
     frame: 0,
+    time: 1800, // Start at noon (dayLength is 3600)
+    dayLength: 3600, // 60 seconds per day
     player: {
         x: 10, // Grid coordinates
         y: 8,
@@ -367,7 +370,8 @@ function saveGame() {
     const saveData = {
         inventory: GAME.inventory,
         sprinkler: GAME.sprinkler,
-        grid: GAME.grid
+        grid: GAME.grid,
+        time: GAME.time
     };
     localStorage.setItem('appleGooseSave', JSON.stringify(saveData));
     console.log("Game Saved");
@@ -382,6 +386,7 @@ function loadGame() {
             if (saveData.inventory) GAME.inventory = saveData.inventory;
             if (saveData.sprinkler) GAME.sprinkler = saveData.sprinkler;
             if (saveData.grid) GAME.grid = saveData.grid;
+            if (saveData.time !== undefined) GAME.time = saveData.time;
             
             console.log("Game Loaded");
         } catch (e) {
@@ -754,12 +759,14 @@ function gameLoop() {
 
 function update() {
     GAME.frame++;
+    GAME.time = (GAME.time + 1) % GAME.dayLength;
     
     handleMovement();
     updatePlants();
     updateDrone();
     updateParticles();
     updateProjectiles();
+    updateUI();
 }
 
 function handleMovement() {
@@ -1361,6 +1368,37 @@ function draw() {
         GAME.ctx.arc(dx, dy, 3, 0, Math.PI * 2);
         GAME.ctx.fill();
     }
+    
+    drawDayNightOverlay();
+}
+
+function drawDayNightOverlay() {
+    const hour = (GAME.time / GAME.dayLength) * 24;
+    let overlayColor = null;
+
+    if (hour >= 20 || hour < 5) {
+        // Night (8PM - 5AM)
+        overlayColor = 'rgba(0, 0, 40, 0.6)';
+    } else if (hour >= 18) {
+        // Sunset (6PM - 8PM)
+        const intensity = (hour - 18) / 2; // 0 to 1
+        overlayColor = `rgba(0, 0, 40, ${intensity * 0.6})`;
+        // Mix in orange
+        GAME.ctx.fillStyle = `rgba(255, 100, 0, ${(1-intensity) * 0.3})`;
+        GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
+    } else if (hour < 7) {
+        // Sunrise (5AM - 7AM)
+        const intensity = (hour - 5) / 2; // 0 to 1
+        overlayColor = `rgba(0, 0, 40, ${(1-intensity) * 0.6})`;
+        // Mix in orange
+        GAME.ctx.fillStyle = `rgba(255, 100, 0, ${intensity * 0.3})`;
+        GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
+    }
+    
+    if (overlayColor) {
+        GAME.ctx.fillStyle = overlayColor;
+        GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
+    }
 }
 
 function drawPlant(tile, x, y) {
@@ -1448,6 +1486,17 @@ function updateUI() {
     document.getElementById('apples-display').innerText = GAME.inventory.apples;
     document.getElementById('seeds-display').innerText = GAME.inventory.seeds;
     document.getElementById('water-display').innerText = Math.floor((GAME.inventory.water / GAME.inventory.maxWater) * 100);
+    
+    const totalMinutes = Math.floor((GAME.time / GAME.dayLength) * 24 * 60);
+    const snappedMinutes = Math.floor(totalMinutes / 30) * 30;
+    
+    const hour = Math.floor(snappedMinutes / 60);
+    const minute = snappedMinutes % 60;
+    
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    const displayMinute = minute === 0 ? '00' : '30';
+    document.getElementById('time-display').innerText = `${displayHour}:${displayMinute} ${ampm}`;
 }
 
 let msgTimeout;
