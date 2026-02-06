@@ -211,7 +211,7 @@
     </div>
 
     <div id="controls-hint">
-        WASD / Arrows to Move • SPACE to Interact • Market is at the top left
+        WASD / Arrows to Move • SPACE to Interact/Plow • Market is at the top left
     </div>
 
     <div id="message-overlay">
@@ -238,6 +238,7 @@
     <div id="settings-modal">
         <h2>Settings</h2>
         <p>Manage your game data.</p>
+        <button id="debug-btn" class="action-btn" onclick="toggleDebug()" style="background:#607d8b; margin-bottom:10px;">Debug Mode: OFF</button>
         <button class="btn-danger" onclick="resetGame()">🗑️ Reset Save Data</button>
         <button class="action-btn" onclick="closeSettings()" style="background:#ccc; color:#333;">Close</button>
     </div>
@@ -293,13 +294,15 @@ const GAME = {
         maxWater: 100,
         hasSprinkler: false,
         hasHarvester: false,
-        hasPickaxe: false
+        hasPickaxe: false,
+        hasPlow: false
     },
     sprinkler: {
         active: false,
         water: 0,
         maxWater: 400
     },
+    debug: false,
     drone: {
         x: 400, // Start center
         y: 300,
@@ -334,7 +337,8 @@ const PLANT_STATE = {
     SEED: 1,
     SAPLING: 2,
     TREE: 3,
-    MATURE: 4 // Has apples
+    MATURE: 4, // Has apples
+    WITHERED: 5
 };
 
 // --- INITIALIZATION ---
@@ -384,6 +388,13 @@ function loadGame() {
             console.error("Save file corrupted", e);
         }
     }
+    
+    // Check Debug Flag
+    const debugState = localStorage.getItem('appleGooseDebug');
+    if (debugState === 'true') {
+        GAME.debug = true;
+        applyDebug();
+    }
 }
 
 function initGrid() {
@@ -406,19 +417,16 @@ function initGrid() {
                 }
             }
 
-            // Soil patches (Orchard)
+            // Soil patches (Orchard) removed - user creates their own farm
             if (type === TILE_TYPE.GRASS) {
-                // Create rows of soil
-                if (r >= 5 && r < 12 && c >= 5 && c < 14) {
-                    if ((r % 2 !== 0) && (c % 2 !== 0)) {
-                         // 40% Chance to be a Rock (Locked Land)
-                         if (Math.random() < 0.4) {
-                             type = TILE_TYPE.ROCK;
-                         } else {
-                             type = TILE_TYPE.SOIL;
-                         }
-                    }
-                }
+                 // Start with 3 pre-plowed areas near the center
+                 if ((r === 7 && c === 9) || (r === 7 && c === 10) || (r === 7 && c === 11)) {
+                     type = TILE_TYPE.SOIL;
+                 }
+                 // Random Rocks scattered
+                 else if (Math.random() < 0.05) {
+                     type = TILE_TYPE.ROCK;
+                 }
             }
 
             // Place Sprinkler Base (Middle of Orchard)
@@ -429,7 +437,8 @@ function initGrid() {
                 plant: PLANT_STATE.NONE,
                 growthTimer: 0,
                 watered: false,
-                wetTimer: 0
+                wetTimer: 0,
+                yieldCount: 0 // New property to track harvests
             });
         }
         GAME.grid.push(row);
@@ -457,6 +466,283 @@ function setupInput() {
     window.addEventListener('keyup', (e) => {
         GAME.keys[e.code] = false;
     });
+}
+
+function openSettings() {
+    GAME.isMarketOpen = true; // Pause input
+    GAME.keys = {};
+    document.getElementById('settings-modal').style.display = 'flex';
+    
+    // Update debug btn state
+    const btn = document.getElementById('debug-btn');
+    if (btn) {
+        btn.innerText = `Debug Mode: ${GAME.debug ? 'ON' : 'OFF'}`;
+        btn.style.background = GAME.debug ? '#4CAF50' : '#607d8b';
+    }
+}
+
+function closeSettings() {
+    GAME.isMarketOpen = false;
+    document.getElementById('settings-modal').style.display = 'none';
+}
+
+function toggleDebug() {
+    GAME.debug = !GAME.debug;
+    localStorage.setItem('appleGooseDebug', GAME.debug);
+    
+    if (GAME.debug) {
+        applyDebug();
+    } else {
+        alert("Debug disabled. Reloading to clear effects.");
+        location.reload();
+    }
+    
+    // Update Btn
+    const btn = document.getElementById('debug-btn');
+    btn.innerText = `Debug Mode: ${GAME.debug ? 'ON' : 'OFF'}`;
+    btn.style.background = GAME.debug ? '#4CAF50' : '#607d8b';
+}
+
+function applyDebug() {
+    // Maximize Resources
+    GAME.inventory.coins = 9999;
+    GAME.inventory.seeds = 100;
+    GAME.inventory.water = 200;
+    GAME.inventory.maxWater = 200;
+    
+    // Unlock Tools
+    GAME.inventory.hasSprinkler = true;
+    GAME.inventory.hasHarvester = true;
+    GAME.inventory.hasPickaxe = true;
+    GAME.inventory.hasPlow = true;
+    
+    // Fill Sprinkler
+    GAME.sprinkler.active = true;
+    GAME.sprinkler.water = 400;
+    
+    // Plant seeds in empty soil
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            const tile = GAME.grid[r][c];
+            if (tile.type === TILE_TYPE.SOIL && tile.plant === PLANT_STATE.NONE) {
+                tile.plant = PLANT_STATE.SEED;
+            }
+        }
+    }
+    
+    updateUI();
+    console.log("Debug State Applied");
+}
+
+function resetGame() {
+    if (confirm("Are you sure? This will wipe all progress!")) {
+        localStorage.removeItem('appleGooseSave');
+        location.reload();
+    }
+}
+
+function switchTab(tab) {
+    GAME.activeTab = tab;
+    
+    // Update Tab UI
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    
+    renderMarket();
+}
+
+function renderMarket() {
+    const container = document.getElementById('market-content');
+    let html = '<table><thead><tr><th>Item</th><th>Cost</th><th>Action</th></tr></thead><tbody>';
+    
+    if (GAME.activeTab === 'buy') {
+        // 1. Seeds
+        const seedCost = 10;
+        const canBuySeed = GAME.inventory.coins >= seedCost;
+        html += `
+            <tr>
+                <td>
+                    🍎 Apple Seed<br>
+                    <span style="font-size:12px;color:#888;">Plant on soil to grow trees.</span>
+                </td>
+                <td>${seedCost}💰</td>
+                <td>
+                    <button class="action-btn ${canBuySeed ? 'btn-buy' : 'btn-disabled'}" 
+                        onclick="${canBuySeed ? 'buyItem(\'seed\', 10)' : ''}">
+                        Buy
+                    </button>
+                </td>
+            </tr>
+        `;
+
+        // 2. Super Can
+        if (GAME.inventory.maxWater < 200) {
+            const canCost = 50;
+            const canBuyCan = GAME.inventory.coins >= canCost;
+            html += `
+                <tr>
+                    <td>
+                        🚿 Super Can<br>
+                        <span style="font-size:12px;color:#888;">Doubles water capacity to 200.</span>
+                    </td>
+                    <td>${canCost}💰</td>
+                    <td>
+                        <button class="action-btn ${canBuyCan ? 'btn-buy' : 'btn-disabled'}" 
+                            onclick="${canBuyCan ? 'buyItem(\'superCan\', 50)' : ''}">
+                            Buy
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // 3. Auto Sprinkler
+        if (!GAME.sprinkler.active) {
+            const sprinklerCost = 150;
+            const canBuySprinkler = GAME.inventory.coins >= sprinklerCost;
+            html += `
+                <tr>
+                    <td>
+                        💦 Auto Sprinkler<br>
+                        <span style="font-size:12px;color:#888;">Automatically waters crops (needs refilling).</span>
+                    </td>
+                    <td>${sprinklerCost}💰</td>
+                    <td>
+                        <button class="action-btn ${canBuySprinkler ? 'btn-buy' : 'btn-disabled'}" 
+                            onclick="${canBuySprinkler ? 'buyItem(\'sprinkler\', 150)' : ''}">
+                            Buy
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // 4. Auto Harvester
+        if (!GAME.inventory.hasHarvester) {
+            const harvestCost = 300;
+            const canBuyHarvester = GAME.inventory.coins >= harvestCost;
+            html += `
+                <tr>
+                    <td>
+                        🛸 Auto-Grabber Drone<br>
+                        <span style="font-size:12px;color:#888;">Collects ripe apples automatically.</span>
+                    </td>
+                    <td>${harvestCost}💰</td>
+                    <td>
+                        <button class="action-btn ${canBuyHarvester ? 'btn-buy' : 'btn-disabled'}" 
+                            onclick="${canBuyHarvester ? 'buyItem(\'harvester\', 300)' : ''}">
+                            Buy
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // 5. Pickaxe
+        if (!GAME.inventory.hasPickaxe) {
+            const pickCost = 500;
+            const canBuyPick = GAME.inventory.coins >= pickCost;
+            html += `
+                <tr>
+                    <td>
+                        ⛏️ Pickaxe<br>
+                        <span style="font-size:12px;color:#888;">Clear rocks to reclaim land (Spacebar).</span>
+                    </td>
+                    <td>${pickCost}💰</td>
+                    <td>
+                        <button class="action-btn ${canBuyPick ? 'btn-buy' : 'btn-disabled'}" 
+                            onclick="${canBuyPick ? 'buyItem(\'pickaxe\', 500)' : ''}">
+                            Buy
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // 6. Plow
+        if (!GAME.inventory.hasPlow) {
+            const plowCost = 200;
+            const canBuyPlow = GAME.inventory.coins >= plowCost;
+            html += `
+                <tr>
+                    <td>
+                        🚜 Hand Plow<br>
+                        <span style="font-size:12px;color:#888;">Turn grass into soil for planting (Spacebar).</span>
+                    </td>
+                    <td>${plowCost}💰</td>
+                    <td>
+                        <button class="action-btn ${canBuyPlow ? 'btn-buy' : 'btn-disabled'}" 
+                            onclick="${canBuyPlow ? 'buyItem(\'plow\', 200)' : ''}">
+                            Buy
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+    } else if (GAME.activeTab === 'sell') {
+        const price = 4;
+        const count = GAME.inventory.apples;
+        const canSell = count > 0;
+        html += `
+            <tr>
+                <td>🍎 Red Apple (${count})</td>
+                <td>${price}💰 / each</td>
+                <td>
+                    <button class="action-btn ${canSell ? 'btn-sell' : 'btn-disabled'}" 
+                        onclick="${canSell ? 'sellItem(\'apple\', 4)' : ''}">
+                        Sell All (${count * price}💰)
+                    </button>
+                </td>
+            </tr>
+        `;
+    }
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function buyItem(type, cost) {
+    if (GAME.inventory.coins >= cost) {
+        GAME.inventory.coins -= cost;
+        
+        if (type === 'seed') {
+            GAME.inventory.seeds++;
+        } else if (type === 'superCan') {
+            GAME.inventory.maxWater = 200;
+            GAME.inventory.water = 200; // Refill on buy
+            showMessage("Upgrade: Super Watering Can!", 2000);
+        } else if (type === 'sprinkler') {
+            GAME.sprinkler.active = true;
+            showMessage("Upgrade: Sprinkler System Installed!", 2000);
+        } else if (type === 'harvester') {
+            GAME.inventory.hasHarvester = true;
+            showMessage("Upgrade: Auto-Grabber Drone Active!", 2000);
+        } else if (type === 'pickaxe') {
+            GAME.inventory.hasPickaxe = true;
+            showMessage("Upgrade: Pickaxe Acquired!", 2000);
+        } else if (type === 'plow') {
+            GAME.inventory.hasPlow = true;
+            showMessage("Upgrade: Hand Plow Acquired!", 2000);
+        }
+
+        updateUI();
+        renderMarket(); // Refresh buttons
+    }
+}
+
+function sellItem(type, price) {
+    if (type === 'apple') {
+        const count = GAME.inventory.apples;
+        if (count > 0) {
+            const total = count * price;
+            GAME.inventory.coins += total;
+            GAME.inventory.apples = 0;
+            updateUI();
+            renderMarket();
+            showMessage(`Sold ${count} Apples for ${total} Coins!`, 1500);
+        }
+    }
 }
 
 // --- LOGIC ---
@@ -550,13 +836,13 @@ function updatePlants() {
                     tile.watered = false;
                     tile.wetTimer = 0;
                 }
-            } else if (tile.plant !== PLANT_STATE.NONE && tile.plant !== PLANT_STATE.MATURE && tile.plant !== PLANT_STATE.TREE) {
-                // Collect dry plants for sprinkler
+            } else if (tile.plant !== PLANT_STATE.NONE && tile.plant !== PLANT_STATE.WITHERED && tile.type === TILE_TYPE.SOIL) {
+                // Collect dry plants for sprinkler - Ignore Withered and non-Soil
                 dryPlants.push({r, c});
             }
 
             // Grow plants if watered
-            if (tile.plant !== PLANT_STATE.NONE && tile.plant !== PLANT_STATE.MATURE && tile.plant !== PLANT_STATE.TREE) {
+            if (tile.plant !== PLANT_STATE.NONE && tile.plant !== PLANT_STATE.MATURE && tile.plant !== PLANT_STATE.TREE && tile.plant !== PLANT_STATE.WITHERED) {
                 if (tile.watered) {
                     tile.growthTimer++;
                     if (tile.growthTimer > GROWTH_TIME) {
@@ -652,11 +938,36 @@ function interact() {
     // ROCK INTERACTION
     if (tile.type === TILE_TYPE.ROCK) {
         if (GAME.inventory.hasPickaxe) {
-            tile.type = TILE_TYPE.SOIL;
+            tile.type = TILE_TYPE.GRASS;
             createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, '#9e9e9e', 8);
-            showMessage("Cleared Land!", 500);
+            showMessage("Cleared Rock!", 500);
         } else {
             showMessage("Need a Pickaxe to clear this!", 1000);
+        }
+        return;
+    }
+
+    // PLOWING INTERACTION (Grass -> Soil)
+    if (tile.type === TILE_TYPE.GRASS) {
+        if (GAME.inventory.hasPlow) {
+            tile.type = TILE_TYPE.SOIL;
+            createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, COLORS.SOIL, 8);
+            showMessage("Honk! (Plowed Land)", 500);
+        } else {
+             showMessage("You need a Plow to dig here!", 1000);
+        }
+        return;
+    }
+
+    // CLEAR WITHERED TREE
+    if (tile.plant === PLANT_STATE.WITHERED) {
+        if (GAME.inventory.hasPlow) {
+            tile.plant = PLANT_STATE.NONE;
+            tile.yieldCount = 0;
+            createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, '#795548', 12);
+            showMessage("Cleared withered tree.", 1000);
+        } else {
+            showMessage("Use a Plow to remove the dead tree.", 1000);
         }
         return;
     }
@@ -669,6 +980,21 @@ function interact() {
             tile.growthTimer = 0;
             GAME.inventory.apples++;
             createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, COLORS.APPLE, 8);
+            
+            // Handle yield life
+            if (!tile.yieldCount) tile.yieldCount = 0;
+            tile.yieldCount++;
+            
+            if (tile.yieldCount >= 4) {
+                // Tree dies
+                tile.plant = PLANT_STATE.WITHERED;
+                // tile.yieldCount = 0; // Keep count or ignore
+                // createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, '#795548', 12); 
+                showMessage("The tree has withered.", 1000);
+            } else {
+                 showMessage(`Harvested! (${4 - tile.yieldCount} harvests left)`, 500);
+            }
+
             updateUI();
             return;
         }
@@ -685,8 +1011,8 @@ function interact() {
             }
         }
 
-        // 3. Water (Water everything except mature trees)
-        if (tile.plant !== PLANT_STATE.NONE && tile.plant !== PLANT_STATE.MATURE) {
+        // 3. Water (Water everything except mature trees and withered)
+        if (tile.plant !== PLANT_STATE.NONE && tile.plant !== PLANT_STATE.MATURE && tile.plant !== PLANT_STATE.WITHERED) {
             if (!tile.watered) {
                 if (GAME.inventory.water >= 10) {
                     GAME.inventory.water -= 10;
@@ -700,205 +1026,6 @@ function interact() {
             }
         }
     }
-}
-
-function openMarket() {
-    GAME.isMarketOpen = true;
-    GAME.keys = {}; // Clear keys to prevent stuck movement
-    document.getElementById('market-modal').style.display = 'flex';
-    renderMarket();
-}
-
-function closeMarket() {
-    GAME.isMarketOpen = false;
-    document.getElementById('market-modal').style.display = 'none';
-}
-
-function openSettings() {
-    GAME.isMarketOpen = true; // Pause input
-    GAME.keys = {};
-    document.getElementById('settings-modal').style.display = 'flex';
-}
-
-function closeSettings() {
-    GAME.isMarketOpen = false;
-    document.getElementById('settings-modal').style.display = 'none';
-}
-
-function resetGame() {
-    if (confirm("Are you sure? This will wipe all progress!")) {
-        localStorage.removeItem('appleGooseSave');
-        location.reload();
-    }
-}
-
-function switchTab(tab) {
-    GAME.activeTab = tab;
-    
-    // Update Tab UI
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(`tab-${tab}`).classList.add('active');
-    
-    renderMarket();
-}
-
-function renderMarket() {
-    const container = document.getElementById('market-content');
-    let html = '<table><thead><tr><th>Item</th><th>Cost</th><th>Action</th></tr></thead><tbody>';
-    
-    if (GAME.activeTab === 'buy') {
-        // 1. Seeds
-        const seedCost = 10;
-        const canBuySeed = GAME.inventory.coins >= seedCost;
-        html += `
-            <tr>
-                <td>🍎 Apple Seed</td>
-                <td>${seedCost}💰</td>
-                <td>
-                    <button class="action-btn ${canBuySeed ? 'btn-buy' : 'btn-disabled'}" 
-                        onclick="${canBuySeed ? 'buyItem(\'seed\', 10)' : ''}">
-                        Buy
-                    </button>
-                </td>
-            </tr>
-        `;
-
-        // 2. Super Can
-        if (GAME.inventory.maxWater < 200) {
-            const canCost = 50;
-            const canBuyCan = GAME.inventory.coins >= canCost;
-            html += `
-                <tr>
-                    <td>🚿 Super Can (+100 Capacity)</td>
-                    <td>${canCost}💰</td>
-                    <td>
-                        <button class="action-btn ${canBuyCan ? 'btn-buy' : 'btn-disabled'}" 
-                            onclick="${canBuyCan ? 'buyItem(\'superCan\', 50)' : ''}">
-                            Buy
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }
-
-        // 3. Auto Sprinkler
-        if (!GAME.sprinkler.active) {
-            const sprinklerCost = 150;
-            const canBuySprinkler = GAME.inventory.coins >= sprinklerCost;
-            html += `
-                <tr>
-                    <td>💦 Auto Sprinkler (Needs filling)</td>
-                    <td>${sprinklerCost}💰</td>
-                    <td>
-                        <button class="action-btn ${canBuySprinkler ? 'btn-buy' : 'btn-disabled'}" 
-                            onclick="${canBuySprinkler ? 'buyItem(\'sprinkler\', 150)' : ''}">
-                            Buy
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }
-
-        // 4. Auto Harvester
-        if (!GAME.inventory.hasHarvester) {
-            const harvestCost = 300;
-            const canBuyHarvester = GAME.inventory.coins >= harvestCost;
-            html += `
-                <tr>
-                    <td>🛸 Auto-Grabber Drone</td>
-                    <td>${harvestCost}💰</td>
-                    <td>
-                        <button class="action-btn ${canBuyHarvester ? 'btn-buy' : 'btn-disabled'}" 
-                            onclick="${canBuyHarvester ? 'buyItem(\'harvester\', 300)' : ''}">
-                            Buy
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }
-
-        // 5. Pickaxe
-        if (!GAME.inventory.hasPickaxe) {
-            const pickCost = 500;
-            const canBuyPick = GAME.inventory.coins >= pickCost;
-            html += `
-                <tr>
-                    <td>⛏️ Pickaxe (Clear Rocks)</td>
-                    <td>${pickCost}💰</td>
-                    <td>
-                        <button class="action-btn ${canBuyPick ? 'btn-buy' : 'btn-disabled'}" 
-                            onclick="${canBuyPick ? 'buyItem(\'pickaxe\', 500)' : ''}">
-                            Buy
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }
-
-    } else if (GAME.activeTab === 'sell') {
-        const price = 4;
-        const count = GAME.inventory.apples;
-        const canSell = count > 0;
-        html += `
-            <tr>
-                <td>🍎 Red Apple (${count})</td>
-                <td>${price}💰 / each</td>
-                <td>
-                    <button class="action-btn ${canSell ? 'btn-sell' : 'btn-disabled'}" 
-                        onclick="${canSell ? 'sellItem(\'apple\', 4)' : ''}">
-                        Sell All (${count * price}💰)
-                    </button>
-                </td>
-            </tr>
-        `;
-    }
-    
-    html += '</tbody></table>';
-    container.innerHTML = html;
-}
-
-function buyItem(type, cost) {
-    if (GAME.inventory.coins >= cost) {
-        GAME.inventory.coins -= cost;
-        
-        if (type === 'seed') {
-            GAME.inventory.seeds++;
-        } else if (type === 'superCan') {
-            GAME.inventory.maxWater = 200;
-            GAME.inventory.water = 200; // Refill on buy
-            showMessage("Upgrade: Super Watering Can!", 2000);
-        } else if (type === 'sprinkler') {
-            GAME.sprinkler.active = true;
-            showMessage("Upgrade: Sprinkler System Installed!", 2000);
-        } else if (type === 'harvester') {
-            GAME.inventory.hasHarvester = true;
-            showMessage("Upgrade: Auto-Grabber Drone Active!", 2000);
-        } else if (type === 'pickaxe') {
-            GAME.inventory.hasPickaxe = true;
-            showMessage("Upgrade: Pickaxe Acquired!", 2000);
-        }
-
-        updateUI();
-        renderMarket(); // Refresh buttons
-    }
-}
-
-function sellItem(type, price) {
-    if (type === 'apple') {
-        const count = GAME.inventory.apples;
-        if (count > 0) {
-            const total = count * price;
-            GAME.inventory.coins += total;
-            GAME.inventory.apples = 0;
-            updateUI();
-            renderMarket();
-            showMessage(`Sold ${count} Apples for ${total} Coins!`, 1500);
-        }
-    }
-}
-
-function handleMarket() {
-    // Deprecated in favor of UI
 }
 
 function updateParticles() {
@@ -958,9 +1085,12 @@ function updateProjectiles() {
             if (p.type === 'water') {
                 // Apply water effect
                 const tile = GAME.grid[p.r][p.c];
-                tile.watered = true;
-                tile.wetTimer = 0;
-                createParticles(p.tx, p.ty, '#4fc3f7', 5);
+                // Only water if not withered
+                if (tile.plant !== PLANT_STATE.WITHERED) {
+                    tile.watered = true;
+                    tile.wetTimer = 0;
+                    createParticles(p.tx, p.ty, '#4fc3f7', 5);
+                }
             } else if (p.type === 'apple') {
                 // Harvest effect (Add to inventory)
                 GAME.inventory.apples++;
@@ -1052,6 +1182,17 @@ function updateDrone() {
                 
                 drone.apples++;
                 createParticles(drone.x, drone.y, COLORS.APPLE, 3);
+                
+                // Handle yield life (Drone)
+                if (!tile.yieldCount) tile.yieldCount = 0;
+                tile.yieldCount++;
+
+                if (tile.yieldCount >= 4) {
+                     // Tree dies
+                     tile.plant = PLANT_STATE.WITHERED;
+                     // tile.yieldCount = 0;
+                     // createParticles(drone.x, drone.y, '#795548', 8);
+                }
             }
             
             if (drone.apples >= drone.capacity) {
@@ -1142,20 +1283,28 @@ function draw() {
                     GAME.ctx.fillRect(x + 5, y + 30, 30, 5);
                 }
             } else if (tile.type === TILE_TYPE.ROCK) {
-                // Ground
-                GAME.ctx.fillStyle = '#6d4c41'; 
-                GAME.ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-                
-                // Rock
-                GAME.ctx.fillStyle = '#9e9e9e'; 
+                // Rock Shape
+                GAME.ctx.fillStyle = '#757575'; // Darker grey
                 GAME.ctx.beginPath();
-                GAME.ctx.arc(x + TILE_SIZE/2, y + TILE_SIZE/2 + 2, 10, 0, Math.PI * 2);
+                const cx = x + TILE_SIZE/2;
+                const cy = y + TILE_SIZE/2;
+                
+                // Jagged polygon
+                GAME.ctx.moveTo(cx - 5, cy - 10);
+                GAME.ctx.lineTo(cx + 8, cy - 8);
+                GAME.ctx.lineTo(cx + 12, cy + 5);
+                GAME.ctx.lineTo(cx + 2, cy + 12);
+                GAME.ctx.lineTo(cx - 10, cy + 8);
+                GAME.ctx.lineTo(cx - 12, cy - 2);
+                GAME.ctx.closePath();
                 GAME.ctx.fill();
                 
-                // Highlight
-                GAME.ctx.fillStyle = '#bdbdbd';
+                // Highlight/Texture
+                GAME.ctx.fillStyle = '#9e9e9e';
                 GAME.ctx.beginPath();
-                GAME.ctx.arc(x + TILE_SIZE/2 - 3, y + TILE_SIZE/2 - 3, 3, 0, Math.PI * 2);
+                GAME.ctx.moveTo(cx - 5, cy - 5);
+                GAME.ctx.lineTo(cx + 5, cy - 5);
+                GAME.ctx.lineTo(cx, cy + 5);
                 GAME.ctx.fill();
             }
 
@@ -1249,6 +1398,22 @@ function drawPlant(tile, x, y) {
             GAME.ctx.arc(cx, cy - 8, 4, 0, Math.PI * 2);
             GAME.ctx.fill();
         }
+    } else if (tile.plant === PLANT_STATE.WITHERED) {
+        // Withered Tree
+        GAME.ctx.fillStyle = '#5d4037'; // Dark Brown
+        GAME.ctx.fillRect(cx - 3, cy - 5, 6, 15); // Trunk
+        
+        GAME.ctx.strokeStyle = '#4e342e';
+        GAME.ctx.lineWidth = 2;
+        GAME.ctx.beginPath();
+        // Dead branches
+        GAME.ctx.moveTo(cx, cy - 5);
+        GAME.ctx.lineTo(cx - 10, cy - 15);
+        GAME.ctx.moveTo(cx, cy - 2);
+        GAME.ctx.lineTo(cx + 10, cy - 12);
+        GAME.ctx.moveTo(cx, cy - 8);
+        GAME.ctx.lineTo(cx - 5, cy - 20);
+        GAME.ctx.stroke();
     }
 }
 
