@@ -1,621 +1,679 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Apple Goose Farm</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #2c3e50;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
-            color: white;
-        }
-        #game-container {
-            position: relative;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-        canvas {
-            background-color: #76c753; /* Grass color */
-            display: block;
-            border-radius: 4px;
-        }
-        #ui-layer {
-            position: absolute;
-            top: 10px;
-            left: 0;
-            width: 100%;
-            pointer-events: none;
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            text-shadow: 1px 1px 0 #000;
-        }
-        .stat-box {
-            background: rgba(0, 0, 0, 0.5);
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        #controls-hint {
-            position: absolute;
-            bottom: 10px;
-            left: 0;
-            width: 100%;
-            text-align: center;
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.8);
-            text-shadow: 1px 1px 0 #000;
-            pointer-events: none;
-        }
-        #message-overlay {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            /* Reset previous centering transforms */
-            top: auto;
-            transform: none;
-            
-            background: rgba(0,0,0,0.8);
-            padding: 10px 15px;
-            border-radius: 8px;
-            text-align: left;
-            display: none;
-            z-index: 100;
-            font-size: 14px;
-            max-width: 300px;
-        }
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #2c3e50;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        overflow: hidden;
+        color: white;
+      }
+      #game-container {
+        position: relative;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      }
+      canvas {
+        background-color: #76c753; /* Grass color */
+        display: block;
+        border-radius: 4px;
+      }
+      #ui-layer {
+        position: absolute;
+        top: 10px;
+        left: 0;
+        width: 100%;
+        pointer-events: none;
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        text-shadow: 1px 1px 0 #000;
+      }
+      .stat-box {
+        background: rgba(0, 0, 0, 0.5);
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-weight: bold;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      #controls-hint {
+        position: absolute;
+        bottom: 10px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.8);
+        text-shadow: 1px 1px 0 #000;
+        pointer-events: none;
+      }
+      #message-overlay {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        /* Reset previous centering transforms */
+        top: auto;
+        transform: none;
 
-        /* MARKET UI */
-        #market-modal {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #fff;
-            color: #333;
-            width: 400px;
-            height: 300px;
-            border-radius: 8px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            display: none;
-            flex-direction: column;
-            z-index: 100;
-            font-family: 'Segoe UI', sans-serif;
-            overflow: hidden;
-        }
-        .market-header {
-            background: #ef5350;
-            color: white;
-            padding: 10px 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .market-header h2 { margin: 0; font-size: 18px; }
-        .close-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-        }
-        .market-tabs {
-            display: flex;
-            background: #eee;
-            border-bottom: 1px solid #ddd;
-        }
-        .tab-btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            background: #eee;
-            cursor: pointer;
-            font-weight: bold;
-            color: #666;
-        }
-        .tab-btn.active {
-            background: #fff;
-            color: #ef5350;
-            border-bottom: 2px solid #ef5350;
-        }
-        #market-content {
-            padding: 15px;
-            flex: 1;
-            overflow-y: auto;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            text-align: left;
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-        }
-        .action-btn {
-            padding: 5px 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            color: white;
-        }
-        .btn-buy { background-color: #4CAF50; }
-        .btn-sell { background-color: #FF9800; }
-        .btn-disabled { background-color: #ccc; cursor: not-allowed; }
-        
-        #settings-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.5);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 5px 10px;
-            cursor: pointer;
-            font-size: 20px;
-            z-index: 50;
-        }
-        #settings-modal {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #fff;
-            color: #333;
-            width: 300px;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            display: none;
-            flex-direction: column;
-            gap: 15px;
-            z-index: 101;
-            text-align: center;
-            font-family: 'Segoe UI', sans-serif;
-        }
-        .btn-danger {
-            background-color: #f44336;
-            color: white;
-            padding: 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
-        }
+        background: rgba(0, 0, 0, 0.8);
+        padding: 10px 15px;
+        border-radius: 8px;
+        text-align: left;
+        display: none;
+        z-index: 100;
+        font-size: 14px;
+        max-width: 300px;
+      }
+
+      /* MARKET UI */
+      #market-modal {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #fff;
+        color: #333;
+        width: 400px;
+        height: 300px;
+        border-radius: 8px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        display: none;
+        flex-direction: column;
+        z-index: 100;
+        font-family: "Segoe UI", sans-serif;
+        overflow: hidden;
+      }
+      .market-header {
+        background: #ef5350;
+        color: white;
+        padding: 10px 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .market-header h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .close-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+      }
+      .market-tabs {
+        display: flex;
+        background: #eee;
+        border-bottom: 1px solid #ddd;
+      }
+      .tab-btn {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        background: #eee;
+        cursor: pointer;
+        font-weight: bold;
+        color: #666;
+      }
+      .tab-btn.active {
+        background: #fff;
+        color: #ef5350;
+        border-bottom: 2px solid #ef5350;
+      }
+      #market-content {
+        padding: 15px;
+        flex: 1;
+        overflow-y: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+      }
+      .action-btn {
+        padding: 5px 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        color: white;
+      }
+      .btn-buy {
+        background-color: #4caf50;
+      }
+      .btn-sell {
+        background-color: #ff9800;
+      }
+      .btn-disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+
+      #settings-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 5px 10px;
+        cursor: pointer;
+        font-size: 20px;
+        z-index: 50;
+      }
+      #settings-modal {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #fff;
+        color: #333;
+        width: 300px;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        display: none;
+        flex-direction: column;
+        gap: 15px;
+        z-index: 101;
+        text-align: center;
+        font-family: "Segoe UI", sans-serif;
+      }
+      .btn-danger {
+        background-color: #f44336;
+        color: white;
+        padding: 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="gameCanvas" width="800" height="600"></canvas>
 
-<div id="game-container">
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-    
-    <div id="ui-layer">
+      <div id="ui-layer">
         <div class="stat-box">💰 <span id="coins-display">0</span></div>
         <div class="stat-box">🍎 <span id="apples-display">0</span></div>
         <div class="stat-box">🥕 <span id="carrots-display">0</span></div>
         <div class="stat-box">🌽 <span id="corn-display">0</span></div>
         <div class="stat-box" id="seed-selector">
-            <span id="current-seed-icon">🍎</span>
-            <span id="current-seed-count">0</span>
-            <small style="font-size:10px; opacity:0.8;">(Tab)</small>
+          <span id="current-seed-icon">🍎</span>
+          <span id="current-seed-count">0</span>
+          <small style="font-size: 10px; opacity: 0.8">(Tab)</small>
         </div>
         <div class="stat-box">💧 <span id="water-display">100</span>%</div>
         <div class="stat-box">🕒 <span id="time-display">12:00</span></div>
-    </div>
+      </div>
 
-    <div id="controls-hint">
-        WASD / Arrows to Move • SPACE to Interact/Plow • Market is at the top left
-    </div>
+      <div id="controls-hint">
+        WASD / Arrows to Move • SPACE to Interact/Plow • Market is at the top
+        left
+      </div>
 
-    <div id="message-overlay">
+      <div id="message-overlay">
         <h2 id="msg-title">Title</h2>
         <p id="msg-body">Body</p>
-    </div>
+      </div>
 
-    <div id="market-modal">
+      <div id="market-modal">
         <div class="market-header">
-            <h2>MARKET</h2>
-            <button class="close-btn" onclick="closeMarket()">×</button>
+          <h2>MARKET</h2>
+          <button class="close-btn" onclick="closeMarket()">×</button>
         </div>
         <div class="market-tabs">
-            <button class="tab-btn active" onclick="switchTab('buy')" id="tab-buy">Buy</button>
-            <button class="tab-btn" onclick="switchTab('sell')" id="tab-sell">Sell</button>
+          <button
+            class="tab-btn active"
+            onclick="switchTab('buy')"
+            id="tab-buy"
+          >
+            Buy
+          </button>
+          <button class="tab-btn" onclick="switchTab('sell')" id="tab-sell">
+            Sell
+          </button>
         </div>
         <div id="market-content">
-            <!-- Table injected by JS -->
+          <!-- Table injected by JS -->
         </div>
-    </div>
+      </div>
 
-    <button id="settings-btn" onclick="openSettings()">⚙️</button>
+      <button id="settings-btn" onclick="openSettings()">⚙️</button>
 
-    <div id="settings-modal">
+      <div id="settings-modal">
         <h2>Settings</h2>
         <p>Manage your game data.</p>
-        <button id="debug-btn" class="action-btn" onclick="toggleDebug()" style="background:#607d8b; margin-bottom:10px;">Debug Mode: OFF</button>
-        <button class="btn-danger" onclick="resetGame()">🗑️ Reset Save Data</button>
-        <button class="action-btn" onclick="closeSettings()" style="background:#ccc; color:#333;">Close</button>
+        <button
+          id="debug-btn"
+          class="action-btn"
+          onclick="toggleDebug()"
+          style="background: #607d8b; margin-bottom: 10px"
+        >
+          Debug Mode: OFF
+        </button>
+        <button class="btn-danger" onclick="resetGame()">
+          🗑️ Reset Save Data
+        </button>
+        <button
+          class="action-btn"
+          onclick="closeSettings()"
+          style="background: #ccc; color: #333"
+        >
+          Close
+        </button>
+      </div>
     </div>
-</div>
 
-<script>
-/**
- * APPLE GOOSE FARM
- * A single-file farming game.
- */
+    <script>
+      /**
+       * APPLE GOOSE FARM
+       * A single-file farming game.
+       */
 
-// --- CONFIGURATION ---
-const TILE_SIZE = 40;
-const ROWS = 15;
-const COLS = 20;
-const GAME_SPEED = 1000 / 60; // 60 FPS
+      // --- CONFIGURATION ---
+      const TILE_SIZE = 40;
+      const ROWS = 15;
+      const COLS = 20;
+      const GAME_SPEED = 1000 / 60; // 60 FPS
 
-const COLORS = {
-    GRASS: '#76c753',
-    SOIL: '#8d6e63',
-    SOIL_WET: '#5d4037',
-    WATER: '#4fc3f7',
-    MARKET_FLOOR: '#e0e0e0',
-    MARKET_ROOF: '#ef5350',
-    GOOSE_BODY: '#ffffff',
-    GOOSE_BEAK: '#ff9800',
-    TREE_TRUNK: '#795548',
-    TREE_LEAVES: '#2e7d32',
-    APPLE: '#d32f2f',
-    CARROT_LEAF: '#4caf50',
-    CARROT_ORANGE: '#ff5722',
-    CORN_STALK: '#8bc34a',
-    CORN_YELLOW: '#ffeb3b'
-};
+      const COLORS = {
+        GRASS: "#76c753",
+        SOIL: "#8d6e63",
+        SOIL_WET: "#5d4037",
+        WATER: "#4fc3f7",
+        MARKET_FLOOR: "#e0e0e0",
+        MARKET_ROOF: "#ef5350",
+        GOOSE_BODY: "#ffffff",
+        GOOSE_BEAK: "#ff9800",
+        TREE_TRUNK: "#795548",
+        TREE_LEAVES: "#2e7d32",
+        APPLE: "#d32f2f",
+        CARROT_LEAF: "#4caf50",
+        CARROT_ORANGE: "#ff5722",
+        CORN_STALK: "#8bc34a",
+        CORN_YELLOW: "#ffeb3b",
+      };
 
-const GROWTH_TIME = 600; // Frames per stage (approx 10 seconds)
+      const GROWTH_TIME = 600; // Frames per stage (approx 10 seconds)
 
-// --- STATE MANAGEMENT ---
-const GAME = {
-    canvas: null,
-    ctx: null,
-    frame: 0,
-    time: 1800, // Start at noon (dayLength is 3600)
-    dayLength: 3600, // 60 seconds per day
-    player: {
-        x: 10, // Grid coordinates
-        y: 8,
-        pixelX: 0,
-        pixelY: 0,
-        direction: 1, // 1: right, -1: left
-        moving: false,
-        waddleOffset: 0
-    },
-    inventory: {
-        coins: 1000,
-        apples: 0,
-        carrots: 0,
-        corn: 0,
-        seeds: 2,
-        carrotSeeds: 2,
-        cornSeeds: 2,
-        water: 100,
-        maxWater: 100,
-        hasSprinkler: false,
-        hasHarvester: false,
-        hasPickaxe: false,
-        hasPlow: false
-    },
-    sprinkler: {
-        active: false,
-        water: 0,
-        maxWater: 400
-    },
-    debug: false,
-    drone: {
-        x: 400, // Start center
-        y: 300,
-        target: null, // {r, c, x, y}
-        state: 'IDLE', // IDLE, MOVING_TO_TREE, HARVESTING, MOVING_HOME
-        timer: 0,
-        apples: 0,
-        capacity: 5
-    },
-    grid: [], // Will hold tile data
-    particles: [], // For effects
-    projectiles: [], // Water droplets
-    keys: {},
-    isMarketOpen: false,
-    activeTab: 'buy',
-    weather: 'sun', // 'sun', 'rain'
-    weatherTimer: 0,
-    selectedSeed: 'apple' // 'apple', 'carrot', 'corn'
-};
+      // --- STATE MANAGEMENT ---
+      const GAME = {
+        canvas: null,
+        ctx: null,
+        frame: 0,
+        time: 1800, // Start at noon (dayLength is 3600)
+        dayLength: 3600, // 60 seconds per day
+        player: {
+          x: 10, // Grid coordinates
+          y: 8,
+          pixelX: 0,
+          pixelY: 0,
+          direction: 1, // 1: right, -1: left
+          moving: false,
+          waddleOffset: 0,
+        },
+        inventory: {
+          coins: 1000,
+          apples: 0,
+          carrots: 0,
+          corn: 0,
+          seeds: 2,
+          carrotSeeds: 2,
+          cornSeeds: 2,
+          water: 100,
+          maxWater: 100,
+          hasSprinkler: false,
+          hasHarvester: false,
+          hasPickaxe: false,
+          hasPlow: false,
+        },
+        sprinkler: {
+          active: false,
+          water: 0,
+          maxWater: 400,
+        },
+        debug: false,
+        drone: {
+          x: 400, // Start center
+          y: 300,
+          target: null, // {r, c, x, y}
+          state: "IDLE", // IDLE, MOVING_TO_TREE, HARVESTING, MOVING_HOME
+          timer: 0,
+          apples: 0,
+          capacity: 5,
+        },
+        grid: [], // Will hold tile data
+        particles: [], // For effects
+        projectiles: [], // Water droplets
+        keys: {},
+        isMarketOpen: false,
+        activeTab: "buy",
+        weather: "sun", // 'sun', 'rain'
+        weatherTimer: 0,
+        selectedSeed: "apple", // 'apple', 'carrot', 'corn'
+      };
 
-// Tile Types
-const TILE_TYPE = {
-    GRASS: 0,
-    SOIL: 1,
-    WATER: 2,
-    MARKET: 3,
-    FENCE: 4,
-    SPRINKLER: 5,
-    ROCK: 6
-};
+      // Tile Types
+      const TILE_TYPE = {
+        GRASS: 0,
+        SOIL: 1,
+        WATER: 2,
+        MARKET: 3,
+        FENCE: 4,
+        SPRINKLER: 5,
+        ROCK: 6,
+      };
 
-// Plant States
-const PLANT_STATE = {
-    NONE: 0,
-    SEED: 1,
-    SAPLING: 2,
-    TREE: 3,
-    MATURE: 4, // Has apples
-    WITHERED: 5
-};
+      // Plant States
+      const PLANT_STATE = {
+        NONE: 0,
+        SEED: 1,
+        SAPLING: 2,
+        TREE: 3,
+        MATURE: 4, // Has apples
+        WITHERED: 5,
+      };
 
-const CROP_TYPE = {
-    APPLE: 'apple',
-    CARROT: 'carrot',
-    CORN: 'corn'
-};
+      const CROP_TYPE = {
+        APPLE: "apple",
+        CARROT: "carrot",
+        CORN: "corn",
+      };
 
-// --- INITIALIZATION ---
-window.onload = function() {
-    GAME.canvas = document.getElementById('gameCanvas');
-    GAME.ctx = GAME.canvas.getContext('2d');
-    
-    // Smooth pixel movement setup
-    GAME.player.pixelX = GAME.player.x * TILE_SIZE;
-    GAME.player.pixelY = GAME.player.y * TILE_SIZE;
+      // --- INITIALIZATION ---
+      window.onload = function () {
+        GAME.canvas = document.getElementById("gameCanvas");
+        GAME.ctx = GAME.canvas.getContext("2d");
 
-    initGrid();
-    loadGame(); // Load save if exists (overwrites grid)
-    setupInput();
-    updateUI();
-    
-    // Auto-save every 5 seconds
-    setInterval(saveGame, 5000);
+        // Smooth pixel movement setup
+        GAME.player.pixelX = GAME.player.x * TILE_SIZE;
+        GAME.player.pixelY = GAME.player.y * TILE_SIZE;
 
-    // Start Game Loop
-    requestAnimationFrame(gameLoop);
-};
+        initGrid();
+        loadGame(); // Load save if exists (overwrites grid)
+        setupInput();
+        updateUI();
 
-// --- SAVE SYSTEM ---
-function saveGame() {
-    const saveData = {
-        inventory: GAME.inventory,
-        sprinkler: GAME.sprinkler,
-        grid: GAME.grid,
-        time: GAME.time
-    };
-    localStorage.setItem('appleGooseSave', JSON.stringify(saveData));
-    console.log("Game Saved");
-}
+        // Auto-save every 5 seconds
+        setInterval(saveGame, 5000);
 
-function loadGame() {
-    const saveString = localStorage.getItem('appleGooseSave');
-    if (saveString) {
-        try {
+        // Start Game Loop
+        requestAnimationFrame(gameLoop);
+      };
+
+      // --- SAVE SYSTEM ---
+      function saveGame() {
+        const saveData = {
+          inventory: GAME.inventory,
+          sprinkler: GAME.sprinkler,
+          grid: GAME.grid,
+          time: GAME.time,
+        };
+        localStorage.setItem("appleGooseSave", JSON.stringify(saveData));
+        console.log("Game Saved");
+      }
+
+      function loadGame() {
+        const saveString = localStorage.getItem("appleGooseSave");
+        if (saveString) {
+          try {
             const saveData = JSON.parse(saveString);
-            
+
             if (saveData.inventory) {
-                // Merge loaded inventory with defaults to ensure new props exist
-                GAME.inventory = { ...GAME.inventory, ...saveData.inventory };
+              // Merge loaded inventory with defaults to ensure new props exist
+              GAME.inventory = { ...GAME.inventory, ...saveData.inventory };
             }
             if (saveData.sprinkler) GAME.sprinkler = saveData.sprinkler;
             if (saveData.grid) GAME.grid = saveData.grid;
             if (saveData.time !== undefined) GAME.time = saveData.time;
-            
-            console.log("Game Loaded");
-        } catch (e) {
-            console.error("Save file corrupted", e);
-        }
-    }
-    
-    // Check Debug Flag
-    const debugState = localStorage.getItem('appleGooseDebug');
-    if (debugState === 'true') {
-        GAME.debug = true;
-        applyDebug();
-    }
-}
 
-function initGrid() {
-    for (let r = 0; r < ROWS; r++) {
-        const row = [];
-        for (let c = 0; c < COLS; c++) {
+            console.log("Game Loaded");
+          } catch (e) {
+            console.error("Save file corrupted", e);
+          }
+        }
+
+        // Check Debug Flag
+        const debugState = localStorage.getItem("appleGooseDebug");
+        if (debugState === "true") {
+          GAME.debug = true;
+          applyDebug();
+        }
+      }
+
+      function initGrid() {
+        for (let r = 0; r < ROWS; r++) {
+          const row = [];
+          for (let c = 0; c < COLS; c++) {
             let type = TILE_TYPE.GRASS;
-            
+
             // Create a pond
             if (r > 10 && c > 14) type = TILE_TYPE.WATER;
-            
+
             // Create Market Area (Top Left)
             if (r < 4 && c < 4) type = TILE_TYPE.MARKET;
-            
+
             // Fences around market
             if ((r === 4 && c < 4) || (c === 4 && r < 4)) {
-                // Create a gate
-                if (!(r === 4 && c === 2)) {
-                    type = TILE_TYPE.FENCE;
-                }
+              // Create a gate
+              if (!(r === 4 && c === 2)) {
+                type = TILE_TYPE.FENCE;
+              }
             }
 
             // Soil patches (Orchard) removed - user creates their own farm
             if (type === TILE_TYPE.GRASS) {
-                 // Start with 3 pre-plowed areas near the center
-                 if ((r === 7 && c === 9) || (r === 7 && c === 10) || (r === 7 && c === 11)) {
-                     type = TILE_TYPE.SOIL;
-                 }
-                 // Random Rocks scattered
-                 else if (Math.random() < 0.05) {
-                     type = TILE_TYPE.ROCK;
-                 }
+              // Start with 3 pre-plowed areas near the center
+              if (
+                (r === 7 && c === 9) ||
+                (r === 7 && c === 10) ||
+                (r === 7 && c === 11)
+              ) {
+                type = TILE_TYPE.SOIL;
+              }
+              // Random Rocks scattered
+              else if (Math.random() < 0.05) {
+                type = TILE_TYPE.ROCK;
+              }
             }
 
             // Place Sprinkler Base (Middle of Orchard)
             if (r === 8 && c === 9) type = TILE_TYPE.SPRINKLER;
 
             row.push({
-                type: type,
-                plant: PLANT_STATE.NONE,
-                cropType: null,
-                growthTimer: 0,
-                watered: false,
-                wetTimer: 0,
-                yieldCount: 0 // New property to track harvests
+              type: type,
+              plant: PLANT_STATE.NONE,
+              cropType: null,
+              growthTimer: 0,
+              watered: false,
+              wetTimer: 0,
+              yieldCount: 0, // New property to track harvests
             });
+          }
+          GAME.grid.push(row);
         }
-        GAME.grid.push(row);
-    }
-}
+      }
 
-function setupInput() {
-    window.addEventListener('keydown', (e) => {
-        if (e.code === 'Escape') {
-            if (document.getElementById('settings-modal').style.display === 'flex') {
-                closeSettings();
-                return;
+      function setupInput() {
+        window.addEventListener("keydown", (e) => {
+          if (e.code === "Escape") {
+            if (
+              document.getElementById("settings-modal").style.display === "flex"
+            ) {
+              closeSettings();
+              return;
             }
             if (GAME.isMarketOpen) {
-                closeMarket();
-                return;
+              closeMarket();
+              return;
             }
-        }
-        
-        if (GAME.isMarketOpen) return; // Block game input
+          }
 
-        GAME.keys[e.code] = true;
-        if (e.code === 'Space') interact();
-        if (e.code === 'Tab') {
+          if (GAME.isMarketOpen) return; // Block game input
+
+          GAME.keys[e.code] = true;
+          if (e.code === "Space") interact();
+          if (e.code === "Tab") {
             e.preventDefault(); // Prevent focus switching
             cycleSeeds();
+          }
+        });
+        window.addEventListener("keyup", (e) => {
+          GAME.keys[e.code] = false;
+        });
+      }
+
+      function openSettings() {
+        GAME.isMarketOpen = true; // Pause input
+        GAME.keys = {};
+        document.getElementById("settings-modal").style.display = "flex";
+
+        // Update debug btn state
+        const btn = document.getElementById("debug-btn");
+        if (btn) {
+          btn.innerText = `Debug Mode: ${GAME.debug ? "ON" : "OFF"}`;
+          btn.style.background = GAME.debug ? "#4CAF50" : "#607d8b";
         }
-    });
-    window.addEventListener('keyup', (e) => {
-        GAME.keys[e.code] = false;
-    });
-}
+      }
 
-function openSettings() {
-    GAME.isMarketOpen = true; // Pause input
-    GAME.keys = {};
-    document.getElementById('settings-modal').style.display = 'flex';
-    
-    // Update debug btn state
-    const btn = document.getElementById('debug-btn');
-    if (btn) {
-        btn.innerText = `Debug Mode: ${GAME.debug ? 'ON' : 'OFF'}`;
-        btn.style.background = GAME.debug ? '#4CAF50' : '#607d8b';
-    }
-}
+      function closeSettings() {
+        GAME.isMarketOpen = false;
+        document.getElementById("settings-modal").style.display = "none";
+      }
 
-function closeSettings() {
-    GAME.isMarketOpen = false;
-    document.getElementById('settings-modal').style.display = 'none';
-}
+      function cycleSeeds() {
+        const seeds = ["apple", "carrot", "corn"];
+        let idx = seeds.indexOf(GAME.selectedSeed);
+        idx = (idx + 1) % seeds.length;
+        GAME.selectedSeed = seeds[idx];
+        updateUI();
 
-function cycleSeeds() {
-    const seeds = ['apple', 'carrot', 'corn'];
-    let idx = seeds.indexOf(GAME.selectedSeed);
-    idx = (idx + 1) % seeds.length;
-    GAME.selectedSeed = seeds[idx];
-    updateUI();
-    
-    // Visual feedback
-    const seedNames = { 'apple': 'Apple', 'carrot': 'Carrot', 'corn': 'Corn' };
-    showMessage(`Selected: ${seedNames[GAME.selectedSeed]} Seeds`, 500);
-}
+        // Visual feedback
+        const seedNames = { apple: "Apple", carrot: "Carrot", corn: "Corn" };
+        showMessage(`Selected: ${seedNames[GAME.selectedSeed]} Seeds`, 500);
+      }
 
-function toggleDebug() {
-    GAME.debug = !GAME.debug;
-    localStorage.setItem('appleGooseDebug', GAME.debug);
-    
-    if (GAME.debug) {
-        applyDebug();
-    } else {
-        alert("Debug disabled. Reloading to clear effects.");
-        location.reload();
-    }
-    
-    // Update Btn
-    const btn = document.getElementById('debug-btn');
-    btn.innerText = `Debug Mode: ${GAME.debug ? 'ON' : 'OFF'}`;
-    btn.style.background = GAME.debug ? '#4CAF50' : '#607d8b';
-}
+      function toggleDebug() {
+        GAME.debug = !GAME.debug;
+        localStorage.setItem("appleGooseDebug", GAME.debug);
 
-function applyDebug() {
-    // Maximize Resources
-    GAME.inventory.coins = 9999;
-    GAME.inventory.seeds = 100;
-    GAME.inventory.water = 200;
-    GAME.inventory.maxWater = 200;
-    
-    // Unlock Tools
-    GAME.inventory.hasSprinkler = true;
-    GAME.inventory.hasHarvester = true;
-    GAME.inventory.hasPickaxe = true;
-    GAME.inventory.hasPlow = true;
-    
-    // Fill Sprinkler
-    GAME.sprinkler.active = true;
-    GAME.sprinkler.water = 400;
-    
-    // Plant seeds in empty soil
-    for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
+        if (GAME.debug) {
+          applyDebug();
+        } else {
+          alert("Debug disabled. Reloading to clear effects.");
+          location.reload();
+        }
+
+        // Update Btn
+        const btn = document.getElementById("debug-btn");
+        btn.innerText = `Debug Mode: ${GAME.debug ? "ON" : "OFF"}`;
+        btn.style.background = GAME.debug ? "#4CAF50" : "#607d8b";
+      }
+
+      function applyDebug() {
+        // Maximize Resources
+        GAME.inventory.coins = 9999;
+        GAME.inventory.seeds = 100;
+        GAME.inventory.water = 200;
+        GAME.inventory.maxWater = 200;
+
+        // Unlock Tools
+        GAME.inventory.hasSprinkler = true;
+        GAME.inventory.hasHarvester = true;
+        GAME.inventory.hasPickaxe = true;
+        GAME.inventory.hasPlow = true;
+
+        // Fill Sprinkler
+        GAME.sprinkler.active = true;
+        GAME.sprinkler.water = 400;
+
+        // Plant seeds in empty soil
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
             const tile = GAME.grid[r][c];
-            if (tile.type === TILE_TYPE.SOIL && tile.plant === PLANT_STATE.NONE) {
-                tile.plant = PLANT_STATE.SEED;
-                tile.cropType = CROP_TYPE.APPLE;
+            if (
+              tile.type === TILE_TYPE.SOIL &&
+              tile.plant === PLANT_STATE.NONE
+            ) {
+              tile.plant = PLANT_STATE.SEED;
+              tile.cropType = CROP_TYPE.APPLE;
             }
+          }
         }
-    }
-    
-    updateUI();
-    console.log("Debug State Applied");
-}
 
-function resetGame() {
-    if (confirm("Are you sure? This will wipe all progress!")) {
-        localStorage.removeItem('appleGooseSave');
-        location.reload();
-    }
-}
+        updateUI();
+        console.log("Debug State Applied");
+      }
 
-function switchTab(tab) {
-    GAME.activeTab = tab;
-    
-    // Update Tab UI
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(`tab-${tab}`).classList.add('active');
-    
-    renderMarket();
-}
+      function resetGame() {
+        if (confirm("Are you sure? This will wipe all progress!")) {
+          localStorage.removeItem("appleGooseSave");
+          location.reload();
+        }
+      }
 
-function renderMarket() {
-    const container = document.getElementById('market-content');
-    let html = '<table><thead><tr><th>Item</th><th>Cost</th><th>Action</th></tr></thead><tbody>';
-    
-    if (GAME.activeTab === 'buy') {
-        // 1. Seeds
-        const seedCost = 10;
-        const canBuySeed = GAME.inventory.coins >= seedCost;
-        
-        const carrotSeedCost = 5;
-        const canBuyCarrot = GAME.inventory.coins >= carrotSeedCost;
-        
-        const cornSeedCost = 15;
-        const canBuyCorn = GAME.inventory.coins >= cornSeedCost;
+      function openMarket() {
+        GAME.isMarketOpen = true;
+        GAME.keys = {};
+        document.getElementById("market-modal").style.display = "flex";
+        renderMarket();
+      }
 
-        html += `
+      function closeMarket() {
+        GAME.isMarketOpen = false;
+        document.getElementById("market-modal").style.display = "none";
+      }
+
+      function switchTab(tab) {
+        GAME.activeTab = tab;
+
+        // Update Tab UI
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((b) => b.classList.remove("active"));
+        document.getElementById(`tab-${tab}`).classList.add("active");
+
+        renderMarket();
+      }
+
+      function renderMarket() {
+        const container = document.getElementById("market-content");
+        let html =
+          "<table><thead><tr><th>Item</th><th>Cost</th><th>Action</th></tr></thead><tbody>";
+
+        if (GAME.activeTab === "buy") {
+          // 1. Seeds
+          const seedCost = 10;
+          const canBuySeed = GAME.inventory.coins >= seedCost;
+
+          const carrotSeedCost = 5;
+          const canBuyCarrot = GAME.inventory.coins >= carrotSeedCost;
+
+          const cornSeedCost = 15;
+          const canBuyCorn = GAME.inventory.coins >= cornSeedCost;
+
+          html += `
             <tr>
                 <td>
                     🍎 Apple Seed<br>
@@ -623,8 +681,8 @@ function renderMarket() {
                 </td>
                 <td>${seedCost}💰</td>
                 <td>
-                    <button class="action-btn ${canBuySeed ? 'btn-buy' : 'btn-disabled'}" 
-                        onclick="${canBuySeed ? 'buyItem(\'seed\', 10)' : ''}">
+                    <button class="action-btn ${canBuySeed ? "btn-buy" : "btn-disabled"}" 
+                        onclick="${canBuySeed ? "buyItem('seed', 10)" : ""}">
                         Buy
                     </button>
                 </td>
@@ -636,8 +694,8 @@ function renderMarket() {
                 </td>
                 <td>${carrotSeedCost}💰</td>
                 <td>
-                    <button class="action-btn ${canBuyCarrot ? 'btn-buy' : 'btn-disabled'}" 
-                        onclick="${canBuyCarrot ? 'buyItem(\'carrotSeed\', 5)' : ''}">
+                    <button class="action-btn ${canBuyCarrot ? "btn-buy" : "btn-disabled"}" 
+                        onclick="${canBuyCarrot ? "buyItem('carrotSeed', 5)" : ""}">
                         Buy
                     </button>
                 </td>
@@ -649,16 +707,16 @@ function renderMarket() {
                 </td>
                 <td>${cornSeedCost}💰</td>
                 <td>
-                    <button class="action-btn ${canBuyCorn ? 'btn-buy' : 'btn-disabled'}" 
-                        onclick="${canBuyCorn ? 'buyItem(\'cornSeed\', 15)' : ''}">
+                    <button class="action-btn ${canBuyCorn ? "btn-buy" : "btn-disabled"}" 
+                        onclick="${canBuyCorn ? "buyItem('cornSeed', 15)" : ""}">
                         Buy
                     </button>
                 </td>
             </tr>
         `;
 
-        // 2. Super Can
-        if (GAME.inventory.maxWater < 200) {
+          // 2. Super Can
+          if (GAME.inventory.maxWater < 200) {
             const canCost = 50;
             const canBuyCan = GAME.inventory.coins >= canCost;
             html += `
@@ -669,17 +727,17 @@ function renderMarket() {
                     </td>
                     <td>${canCost}💰</td>
                     <td>
-                        <button class="action-btn ${canBuyCan ? 'btn-buy' : 'btn-disabled'}" 
-                            onclick="${canBuyCan ? 'buyItem(\'superCan\', 50)' : ''}">
+                        <button class="action-btn ${canBuyCan ? "btn-buy" : "btn-disabled"}" 
+                            onclick="${canBuyCan ? "buyItem('superCan', 50)" : ""}">
                             Buy
                         </button>
                     </td>
                 </tr>
             `;
-        }
+          }
 
-        // 3. Auto Sprinkler
-        if (!GAME.sprinkler.active) {
+          // 3. Auto Sprinkler
+          if (!GAME.sprinkler.active) {
             const sprinklerCost = 150;
             const canBuySprinkler = GAME.inventory.coins >= sprinklerCost;
             html += `
@@ -690,17 +748,17 @@ function renderMarket() {
                     </td>
                     <td>${sprinklerCost}💰</td>
                     <td>
-                        <button class="action-btn ${canBuySprinkler ? 'btn-buy' : 'btn-disabled'}" 
-                            onclick="${canBuySprinkler ? 'buyItem(\'sprinkler\', 150)' : ''}">
+                        <button class="action-btn ${canBuySprinkler ? "btn-buy" : "btn-disabled"}" 
+                            onclick="${canBuySprinkler ? "buyItem('sprinkler', 150)" : ""}">
                             Buy
                         </button>
                     </td>
                 </tr>
             `;
-        }
+          }
 
-        // 4. Auto Harvester
-        if (!GAME.inventory.hasHarvester) {
+          // 4. Auto Harvester
+          if (!GAME.inventory.hasHarvester) {
             const harvestCost = 300;
             const canBuyHarvester = GAME.inventory.coins >= harvestCost;
             html += `
@@ -711,17 +769,17 @@ function renderMarket() {
                     </td>
                     <td>${harvestCost}💰</td>
                     <td>
-                        <button class="action-btn ${canBuyHarvester ? 'btn-buy' : 'btn-disabled'}" 
-                            onclick="${canBuyHarvester ? 'buyItem(\'harvester\', 300)' : ''}">
+                        <button class="action-btn ${canBuyHarvester ? "btn-buy" : "btn-disabled"}" 
+                            onclick="${canBuyHarvester ? "buyItem('harvester', 300)" : ""}">
                             Buy
                         </button>
                     </td>
                 </tr>
             `;
-        }
+          }
 
-        // 5. Pickaxe
-        if (!GAME.inventory.hasPickaxe) {
+          // 5. Pickaxe
+          if (!GAME.inventory.hasPickaxe) {
             const pickCost = 500;
             const canBuyPick = GAME.inventory.coins >= pickCost;
             html += `
@@ -732,17 +790,17 @@ function renderMarket() {
                     </td>
                     <td>${pickCost}💰</td>
                     <td>
-                        <button class="action-btn ${canBuyPick ? 'btn-buy' : 'btn-disabled'}" 
-                            onclick="${canBuyPick ? 'buyItem(\'pickaxe\', 500)' : ''}">
+                        <button class="action-btn ${canBuyPick ? "btn-buy" : "btn-disabled"}" 
+                            onclick="${canBuyPick ? "buyItem('pickaxe', 500)" : ""}">
                             Buy
                         </button>
                     </td>
                 </tr>
             `;
-        }
+          }
 
-        // 6. Plow
-        if (!GAME.inventory.hasPlow) {
+          // 6. Plow
+          if (!GAME.inventory.hasPlow) {
             const plowCost = 200;
             const canBuyPlow = GAME.inventory.coins >= plowCost;
             html += `
@@ -753,32 +811,31 @@ function renderMarket() {
                     </td>
                     <td>${plowCost}💰</td>
                     <td>
-                        <button class="action-btn ${canBuyPlow ? 'btn-buy' : 'btn-disabled'}" 
-                            onclick="${canBuyPlow ? 'buyItem(\'plow\', 200)' : ''}">
+                        <button class="action-btn ${canBuyPlow ? "btn-buy" : "btn-disabled"}" 
+                            onclick="${canBuyPlow ? "buyItem('plow', 200)" : ""}">
                             Buy
                         </button>
                     </td>
                 </tr>
             `;
-        }
+          }
+        } else if (GAME.activeTab === "sell") {
+          const applePrice = 4;
+          const appleCount = GAME.inventory.apples;
 
-    } else if (GAME.activeTab === 'sell') {
-        const applePrice = 4;
-        const appleCount = GAME.inventory.apples;
-        
-        const carrotPrice = 8;
-        const carrotCount = GAME.inventory.carrots;
-        
-        const cornPrice = 12;
-        const cornCount = GAME.inventory.corn;
+          const carrotPrice = 8;
+          const carrotCount = GAME.inventory.carrots;
 
-        html += `
+          const cornPrice = 12;
+          const cornCount = GAME.inventory.corn;
+
+          html += `
             <tr>
                 <td>🍎 Apple (${appleCount})</td>
                 <td>${applePrice}💰</td>
                 <td>
-                    <button class="action-btn ${appleCount > 0 ? 'btn-sell' : 'btn-disabled'}" 
-                        onclick="${appleCount > 0 ? 'sellItem(\'apple\', 4)' : ''}">
+                    <button class="action-btn ${appleCount > 0 ? "btn-sell" : "btn-disabled"}" 
+                        onclick="${appleCount > 0 ? "sellItem('apple', 4)" : ""}">
                         Sell All
                     </button>
                 </td>
@@ -787,8 +844,8 @@ function renderMarket() {
                 <td>🥕 Carrot (${carrotCount})</td>
                 <td>${carrotPrice}💰</td>
                 <td>
-                    <button class="action-btn ${carrotCount > 0 ? 'btn-sell' : 'btn-disabled'}" 
-                        onclick="${carrotCount > 0 ? 'sellItem(\'carrot\', 8)' : ''}">
+                    <button class="action-btn ${carrotCount > 0 ? "btn-sell" : "btn-disabled"}" 
+                        onclick="${carrotCount > 0 ? "sellItem('carrot', 8)" : ""}">
                         Sell All
                     </button>
                 </td>
@@ -797,893 +854,990 @@ function renderMarket() {
                 <td>🌽 Corn (${cornCount})</td>
                 <td>${cornPrice}💰</td>
                 <td>
-                    <button class="action-btn ${cornCount > 0 ? 'btn-sell' : 'btn-disabled'}" 
-                        onclick="${cornCount > 0 ? 'sellItem(\'corn\', 12)' : ''}">
+                    <button class="action-btn ${cornCount > 0 ? "btn-sell" : "btn-disabled"}" 
+                        onclick="${cornCount > 0 ? "sellItem('corn', 12)" : ""}">
                         Sell All
                     </button>
                 </td>
             </tr>
         `;
-    }
-    
-    html += '</tbody></table>';
-    container.innerHTML = html;
-}
+        }
 
-function buyItem(type, cost) {
-    if (GAME.inventory.coins >= cost) {
-        GAME.inventory.coins -= cost;
-        
-        if (type === 'seed') {
+        html += "</tbody></table>";
+        container.innerHTML = html;
+      }
+
+      function buyItem(type, cost) {
+        if (GAME.inventory.coins >= cost) {
+          GAME.inventory.coins -= cost;
+
+          if (type === "seed") {
             GAME.inventory.seeds++;
-        } else if (type === 'carrotSeed') {
+          } else if (type === "carrotSeed") {
             GAME.inventory.carrotSeeds++;
-        } else if (type === 'cornSeed') {
+          } else if (type === "cornSeed") {
             GAME.inventory.cornSeeds++;
-        } else if (type === 'superCan') {
+          } else if (type === "superCan") {
             GAME.inventory.maxWater = 200;
             GAME.inventory.water = 200; // Refill on buy
             showMessage("Upgrade: Super Watering Can!", 2000);
-        } else if (type === 'sprinkler') {
+          } else if (type === "sprinkler") {
             GAME.sprinkler.active = true;
             showMessage("Upgrade: Sprinkler System Installed!", 2000);
-        } else if (type === 'harvester') {
+          } else if (type === "harvester") {
             GAME.inventory.hasHarvester = true;
             showMessage("Upgrade: Auto-Grabber Drone Active!", 2000);
-        } else if (type === 'pickaxe') {
+          } else if (type === "pickaxe") {
             GAME.inventory.hasPickaxe = true;
             showMessage("Upgrade: Pickaxe Acquired!", 2000);
-        } else if (type === 'plow') {
+          } else if (type === "plow") {
             GAME.inventory.hasPlow = true;
             showMessage("Upgrade: Hand Plow Acquired!", 2000);
+          }
+
+          updateUI();
+          renderMarket(); // Refresh buttons
         }
+      }
 
-        updateUI();
-        renderMarket(); // Refresh buttons
-    }
-}
-
-function sellItem(type, price) {
-    if (type === 'apple') {
-        const count = GAME.inventory.apples;
-        if (count > 0) {
+      function sellItem(type, price) {
+        if (type === "apple") {
+          const count = GAME.inventory.apples;
+          if (count > 0) {
             const total = count * price;
             GAME.inventory.coins += total;
             GAME.inventory.apples = 0;
             updateUI();
             renderMarket();
             showMessage(`Sold ${count} Apples for ${total} Coins!`, 1500);
-        }
-    } else if (type === 'carrot') {
-        const count = GAME.inventory.carrots;
-        if (count > 0) {
+          }
+        } else if (type === "carrot") {
+          const count = GAME.inventory.carrots;
+          if (count > 0) {
             const total = count * price;
             GAME.inventory.coins += total;
             GAME.inventory.carrots = 0;
             updateUI();
             renderMarket();
             showMessage(`Sold ${count} Carrots for ${total} Coins!`, 1500);
-        }
-    } else if (type === 'corn') {
-        const count = GAME.inventory.corn;
-        if (count > 0) {
+          }
+        } else if (type === "corn") {
+          const count = GAME.inventory.corn;
+          if (count > 0) {
             const total = count * price;
             GAME.inventory.coins += total;
             GAME.inventory.corn = 0;
             updateUI();
             renderMarket();
             showMessage(`Sold ${count} Corn for ${total} Coins!`, 1500);
+          }
         }
-    }
-}
+      }
 
-// --- LOGIC ---
-function gameLoop() {
-    update();
-    draw();
-    requestAnimationFrame(gameLoop);
-}
+      // --- LOGIC ---
+      function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+      }
 
-function update() {
-    GAME.frame++;
-    GAME.time = (GAME.time + 1) % GAME.dayLength;
-    
-    updateWeather();
-    handleMovement();
-    updatePlants();
-    updateDrone();
-    updateParticles();
-    updateProjectiles();
-    updateUI();
-}
+      function update() {
+        GAME.frame++;
+        GAME.time = (GAME.time + 1) % GAME.dayLength;
 
-function updateWeather() {
-    // Change weather randomly
-    if (Math.random() < 0.0005) { // Small chance every frame
-        if (GAME.weather === 'sun') {
-            GAME.weather = 'rain';
+        updateWeather();
+        handleMovement();
+        updatePlants();
+        updateDrone();
+        updateParticles();
+        updateProjectiles();
+        updateUI();
+      }
+
+      function updateWeather() {
+        // Change weather randomly
+        if (Math.random() < 0.0005) {
+          // Small chance every frame
+          if (GAME.weather === "sun") {
+            GAME.weather = "rain";
             showMessage("It started raining!", 2000);
-        } else {
-            GAME.weather = 'sun';
+          } else {
+            GAME.weather = "sun";
             showMessage("The rain stopped.", 2000);
+          }
         }
-    }
-    
-    if (GAME.weather === 'rain') {
-        // Rain particles
-        if (Math.random() < 0.5) {
+
+        if (GAME.weather === "rain") {
+          // Rain particles
+          if (Math.random() < 0.5) {
             GAME.particles.push({
-                x: Math.random() * GAME.canvas.width,
-                y: -10,
-                vx: 1, // Slight wind
-                vy: 5 + Math.random() * 5,
-                life: 100,
-                color: '#64b5f6',
-                type: 'rain'
+              x: Math.random() * GAME.canvas.width,
+              y: -10,
+              vx: 1, // Slight wind
+              vy: 5 + Math.random() * 5,
+              life: 100,
+              color: "#64b5f6",
+              type: "rain",
             });
-        }
-        
-        // Water plants slowly
-        if (GAME.frame % 60 === 0) { // Once per second
-            if (Math.random() < 0.3) { // 30% chance to water a random tile
-                const r = Math.floor(Math.random() * ROWS);
-                const c = Math.floor(Math.random() * COLS);
-                const tile = GAME.grid[r][c];
-                
-                if (tile.type === TILE_TYPE.SOIL && !tile.watered && tile.plant !== PLANT_STATE.WITHERED) {
-                    tile.watered = true;
-                    tile.wetTimer = 0;
-                    createParticles(c * TILE_SIZE + TILE_SIZE/2, r * TILE_SIZE + TILE_SIZE/2, '#4fc3f7', 3);
-                }
+          }
+
+          // Water plants slowly
+          if (GAME.frame % 60 === 0) {
+            // Once per second
+            if (Math.random() < 0.3) {
+              // 30% chance to water a random tile
+              const r = Math.floor(Math.random() * ROWS);
+              const c = Math.floor(Math.random() * COLS);
+              const tile = GAME.grid[r][c];
+
+              if (
+                tile.type === TILE_TYPE.SOIL &&
+                !tile.watered &&
+                tile.plant !== PLANT_STATE.WITHERED
+              ) {
+                tile.watered = true;
+                tile.wetTimer = 0;
+                createParticles(
+                  c * TILE_SIZE + TILE_SIZE / 2,
+                  r * TILE_SIZE + TILE_SIZE / 2,
+                  "#4fc3f7",
+                  3,
+                );
+              }
             }
+          }
         }
-    }
-}
+      }
 
-function handleMovement() {
-    if (GAME.isMarketOpen) return;
+      function handleMovement() {
+        if (GAME.isMarketOpen) return;
 
-    const speed = 3;
-    let dx = 0;
-    let dy = 0;
+        const speed = 3;
+        let dx = 0;
+        let dy = 0;
 
-    if (GAME.keys['ArrowUp'] || GAME.keys['KeyW']) dy = -speed;
-    if (GAME.keys['ArrowDown'] || GAME.keys['KeyS']) dy = speed;
-    if (GAME.keys['ArrowLeft'] || GAME.keys['KeyA']) {
-        dx = -speed;
-        GAME.player.direction = -1;
-    }
-    if (GAME.keys['ArrowRight'] || GAME.keys['KeyD']) {
-        dx = speed;
-        GAME.player.direction = 1;
-    }
+        if (GAME.keys["ArrowUp"] || GAME.keys["KeyW"]) dy = -speed;
+        if (GAME.keys["ArrowDown"] || GAME.keys["KeyS"]) dy = speed;
+        if (GAME.keys["ArrowLeft"] || GAME.keys["KeyA"]) {
+          dx = -speed;
+          GAME.player.direction = -1;
+        }
+        if (GAME.keys["ArrowRight"] || GAME.keys["KeyD"]) {
+          dx = speed;
+          GAME.player.direction = 1;
+        }
 
-    if (dx !== 0 || dy !== 0) {
-        GAME.player.moving = true;
-        GAME.player.waddleOffset = Math.sin(GAME.frame * 0.2) * 5;
-        
-        // Predictive collision detection
-        const nextX = GAME.player.pixelX + dx;
-        const nextY = GAME.player.pixelY + dy;
-        
-        // Simple bounding box for player (center point)
-        const pCenter = {
-            x: nextX + TILE_SIZE/2,
-            y: nextY + TILE_SIZE/2
-        };
-        
-        // Check map boundaries
-        if (nextX < 0 || nextX > GAME.canvas.width - TILE_SIZE || 
-            nextY < 0 || nextY > GAME.canvas.height - TILE_SIZE) {
+        if (dx !== 0 || dy !== 0) {
+          GAME.player.moving = true;
+          GAME.player.waddleOffset = Math.sin(GAME.frame * 0.2) * 5;
+
+          // Predictive collision detection
+          const nextX = GAME.player.pixelX + dx;
+          const nextY = GAME.player.pixelY + dy;
+
+          // Simple bounding box for player (center point)
+          const pCenter = {
+            x: nextX + TILE_SIZE / 2,
+            y: nextY + TILE_SIZE / 2,
+          };
+
+          // Check map boundaries
+          if (
+            nextX < 0 ||
+            nextX > GAME.canvas.width - TILE_SIZE ||
+            nextY < 0 ||
+            nextY > GAME.canvas.height - TILE_SIZE
+          ) {
             return;
-        }
+          }
 
-        // Check tile collision (Fence, Deep Water)
-        const tileC = Math.floor(pCenter.x / TILE_SIZE);
-        const tileR = Math.floor(pCenter.y / TILE_SIZE);
-        
-        if (GAME.grid[tileR] && GAME.grid[tileR][tileC]) {
+          // Check tile collision (Fence, Deep Water)
+          const tileC = Math.floor(pCenter.x / TILE_SIZE);
+          const tileR = Math.floor(pCenter.y / TILE_SIZE);
+
+          if (GAME.grid[tileR] && GAME.grid[tileR][tileC]) {
             const tileType = GAME.grid[tileR][tileC].type;
             if (tileType === TILE_TYPE.FENCE) return; // Solid object
+          }
+
+          GAME.player.pixelX = nextX;
+          GAME.player.pixelY = nextY;
+
+          // Update Grid Coordinates
+          GAME.player.x = Math.round(GAME.player.pixelX / TILE_SIZE);
+          GAME.player.y = Math.round(GAME.player.pixelY / TILE_SIZE);
+        } else {
+          GAME.player.moving = false;
+          GAME.player.waddleOffset = 0;
         }
+      }
 
-        GAME.player.pixelX = nextX;
-        GAME.player.pixelY = nextY;
-        
-        // Update Grid Coordinates
-        GAME.player.x = Math.round(GAME.player.pixelX / TILE_SIZE);
-        GAME.player.y = Math.round(GAME.player.pixelY / TILE_SIZE);
+      function updatePlants() {
+        let dryPlants = [];
 
-    } else {
-        GAME.player.moving = false;
-        GAME.player.waddleOffset = 0;
-    }
-}
-
-function updatePlants() {
-    let dryPlants = [];
-
-    for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
             const tile = GAME.grid[r][c];
-            
+
             // Dry out soil
             if (tile.watered) {
-                tile.wetTimer++;
-                if (tile.wetTimer > 1000) {
-                    tile.watered = false;
-                    tile.wetTimer = 0;
-                }
-            } else if (tile.plant !== PLANT_STATE.NONE && tile.plant !== PLANT_STATE.WITHERED && tile.type === TILE_TYPE.SOIL) {
-                // Collect dry plants for sprinkler - Ignore Withered and non-Soil
-                dryPlants.push({r, c});
+              tile.wetTimer++;
+              if (tile.wetTimer > 1000) {
+                tile.watered = false;
+                tile.wetTimer = 0;
+              }
+            } else if (
+              tile.plant !== PLANT_STATE.NONE &&
+              tile.plant !== PLANT_STATE.WITHERED &&
+              tile.type === TILE_TYPE.SOIL
+            ) {
+              // Collect dry plants for sprinkler - Ignore Withered and non-Soil
+              dryPlants.push({ r, c });
             }
 
             // Grow plants if watered
-            if (tile.plant !== PLANT_STATE.NONE && tile.plant !== PLANT_STATE.MATURE && tile.plant !== PLANT_STATE.TREE && tile.plant !== PLANT_STATE.WITHERED) {
-                if (tile.watered) {
-                    tile.growthTimer++;
-                    
-                    let growthRate = GROWTH_TIME;
-                    if (tile.cropType === CROP_TYPE.CARROT) growthRate = GROWTH_TIME * 0.7; // Carrots grow faster
-                    if (tile.cropType === CROP_TYPE.CORN) growthRate = GROWTH_TIME * 1.2; // Corn grows slower
+            if (
+              tile.plant !== PLANT_STATE.NONE &&
+              tile.plant !== PLANT_STATE.MATURE &&
+              tile.plant !== PLANT_STATE.TREE &&
+              tile.plant !== PLANT_STATE.WITHERED
+            ) {
+              if (tile.watered) {
+                tile.growthTimer++;
 
-                    if (tile.growthTimer > growthRate) {
-                        tile.plant++; // Level up plant
-                        tile.growthTimer = 0;
-                        tile.watered = false; // Consumes water
-                        createParticles(c * TILE_SIZE + TILE_SIZE/2, r * TILE_SIZE + TILE_SIZE/2, '#4CAF50', 5);
-                    }
+                let growthRate = GROWTH_TIME;
+                if (tile.cropType === CROP_TYPE.CARROT)
+                  growthRate = GROWTH_TIME * 0.7; // Carrots grow faster
+                if (tile.cropType === CROP_TYPE.CORN)
+                  growthRate = GROWTH_TIME * 1.2; // Corn grows slower
+
+                if (tile.growthTimer > growthRate) {
+                  tile.plant++; // Level up plant
+                  tile.growthTimer = 0;
+                  tile.watered = false; // Consumes water
+                  createParticles(
+                    c * TILE_SIZE + TILE_SIZE / 2,
+                    r * TILE_SIZE + TILE_SIZE / 2,
+                    "#4CAF50",
+                    5,
+                  );
                 }
+              }
             }
-            
+
             // Tree to Mature (Apples) doesn't need water, just time
             // Only for apples
-            if (tile.plant === PLANT_STATE.TREE && tile.cropType === CROP_TYPE.APPLE) {
-                tile.growthTimer++;
-                if (tile.growthTimer > GROWTH_TIME * 2) {
-                    tile.plant = PLANT_STATE.MATURE;
-                    tile.growthTimer = 0;
-                }
+            if (
+              tile.plant === PLANT_STATE.TREE &&
+              tile.cropType === CROP_TYPE.APPLE
+            ) {
+              tile.growthTimer++;
+              if (tile.growthTimer > GROWTH_TIME * 2) {
+                tile.plant = PLANT_STATE.MATURE;
+                tile.growthTimer = 0;
+              }
             }
+          }
         }
-    }
 
-    // Auto Sprinkler Logic (Uses Sprinkler Tank)
-    if (GAME.sprinkler.active && GAME.sprinkler.water >= 5 && dryPlants.length > 0) {
-        if (Math.random() < 0.05) { // Faster rate (approx 3 times per second)
-            const target = dryPlants[Math.floor(Math.random() * dryPlants.length)];
-            
+        // Auto Sprinkler Logic (Uses Sprinkler Tank)
+        if (
+          GAME.sprinkler.active &&
+          GAME.sprinkler.water >= 5 &&
+          dryPlants.length > 0
+        ) {
+          if (Math.random() < 0.05) {
+            // Faster rate (approx 3 times per second)
+            const target =
+              dryPlants[Math.floor(Math.random() * dryPlants.length)];
+
             GAME.sprinkler.water -= 5; // Costs water
-            
+
             // Spawn Projectile
             spawnProjectile(
-                9 * TILE_SIZE + TILE_SIZE/2, // Sprinkler X
-                8 * TILE_SIZE + TILE_SIZE/2, // Sprinkler Y
-                target.c * TILE_SIZE + TILE_SIZE/2, // Target X
-                target.r * TILE_SIZE + TILE_SIZE/2, // Target Y
-                target.r,
-                target.c,
-                'water'
+              9 * TILE_SIZE + TILE_SIZE / 2, // Sprinkler X
+              8 * TILE_SIZE + TILE_SIZE / 2, // Sprinkler Y
+              target.c * TILE_SIZE + TILE_SIZE / 2, // Target X
+              target.r * TILE_SIZE + TILE_SIZE / 2, // Target Y
+              target.r,
+              target.c,
+              "water",
             );
+          }
         }
-    }
-}
+      }
 
-function interact() {
-    const px = Math.floor((GAME.player.pixelX + TILE_SIZE/2) / TILE_SIZE);
-    const py = Math.floor((GAME.player.pixelY + TILE_SIZE/2) / TILE_SIZE);
-    
-    if (!GAME.grid[py] || !GAME.grid[py][px]) return;
-    
-    const tile = GAME.grid[py][px];
-    
-    // MARKET INTERACTION
-    if (tile.type === TILE_TYPE.MARKET) {
-        openMarket();
-        return;
-    }
+      function interact() {
+        const px = Math.floor((GAME.player.pixelX + TILE_SIZE / 2) / TILE_SIZE);
+        const py = Math.floor((GAME.player.pixelY + TILE_SIZE / 2) / TILE_SIZE);
 
-    // WATER INTERACTION (Refill)
-    if (tile.type === TILE_TYPE.WATER) {
-        GAME.inventory.water = GAME.inventory.maxWater;
-        updateUI();
-        // Just visual feedback, goose drinks or fills can
-        createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, '#fff', 5);
-        showMessage("Honk! (Refilled Water)", 1000);
-        return;
-    }
+        if (!GAME.grid[py] || !GAME.grid[py][px]) return;
 
-    // SPRINKLER INTERACTION (Refill)
-    if (tile.type === TILE_TYPE.SPRINKLER) {
-        if (!GAME.sprinkler.active) {
-            showMessage("It's a sprinkler base. Buy the part at the market!", 2000);
+        const tile = GAME.grid[py][px];
+
+        console.log(tile.type);
+        // MARKET INTERACTION
+        if (tile.type === TILE_TYPE.MARKET) {
+          openMarket();
+          return;
+        }
+
+        // WATER INTERACTION (Refill)
+        if (tile.type === TILE_TYPE.WATER) {
+          GAME.inventory.water = GAME.inventory.maxWater;
+          updateUI();
+          // Just visual feedback, goose drinks or fills can
+          createParticles(
+            px * TILE_SIZE + TILE_SIZE / 2,
+            py * TILE_SIZE + TILE_SIZE / 2,
+            "#fff",
+            5,
+          );
+          showMessage("Honk! (Refilled Water)", 1000);
+          return;
+        }
+
+        // SPRINKLER INTERACTION (Refill)
+        if (tile.type === TILE_TYPE.SPRINKLER) {
+          if (!GAME.sprinkler.active) {
+            showMessage(
+              "It's a sprinkler base. Buy the part at the market!",
+              2000,
+            );
             return;
-        }
-        
-        if (GAME.inventory.water > 0) {
+          }
+
+          if (GAME.inventory.water > 0) {
             const space = GAME.sprinkler.maxWater - GAME.sprinkler.water;
             if (space > 0) {
-                const amount = Math.min(space, GAME.inventory.water);
-                GAME.sprinkler.water += amount;
-                GAME.inventory.water -= amount;
-                updateUI();
-                showMessage(`Refilled Sprinkler: ${GAME.sprinkler.water}/${GAME.sprinkler.maxWater}`, 1000);
-                createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, '#4fc3f7', 8);
+              const amount = Math.min(space, GAME.inventory.water);
+              GAME.sprinkler.water += amount;
+              GAME.inventory.water -= amount;
+              updateUI();
+              showMessage(
+                `Refilled Sprinkler: ${GAME.sprinkler.water}/${GAME.sprinkler.maxWater}`,
+                1000,
+              );
+              createParticles(
+                px * TILE_SIZE + TILE_SIZE / 2,
+                py * TILE_SIZE + TILE_SIZE / 2,
+                "#4fc3f7",
+                8,
+              );
             } else {
-                showMessage("Sprinkler is full!", 1000);
+              showMessage("Sprinkler is full!", 1000);
             }
-        } else {
+          } else {
             showMessage("Your watering can is empty!", 1500);
+          }
+          return;
         }
-        return;
-    }
 
-    // ROCK INTERACTION
-    if (tile.type === TILE_TYPE.ROCK) {
-        if (GAME.inventory.hasPickaxe) {
+        // ROCK INTERACTION
+        if (tile.type === TILE_TYPE.ROCK) {
+          if (GAME.inventory.hasPickaxe) {
             tile.type = TILE_TYPE.GRASS;
-            createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, '#9e9e9e', 8);
+            createParticles(
+              px * TILE_SIZE + TILE_SIZE / 2,
+              py * TILE_SIZE + TILE_SIZE / 2,
+              "#9e9e9e",
+              8,
+            );
             showMessage("Cleared Rock!", 500);
-        } else {
+          } else {
             showMessage("Need a Pickaxe to clear this!", 1000);
+          }
+          return;
         }
-        return;
-    }
 
-    // PLOWING INTERACTION (Grass -> Soil)
-    if (tile.type === TILE_TYPE.GRASS) {
-        if (GAME.inventory.hasPlow) {
+        // PLOWING INTERACTION (Grass -> Soil)
+        if (tile.type === TILE_TYPE.GRASS) {
+          if (GAME.inventory.hasPlow) {
             tile.type = TILE_TYPE.SOIL;
-            createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, COLORS.SOIL, 8);
+            createParticles(
+              px * TILE_SIZE + TILE_SIZE / 2,
+              py * TILE_SIZE + TILE_SIZE / 2,
+              COLORS.SOIL,
+              8,
+            );
             showMessage("Honk! (Plowed Land)", 500);
-        } else {
-             showMessage("You need a Plow to dig here!", 1000);
+          } else {
+            showMessage("You need a Plow to dig here!", 1000);
+          }
+          return;
         }
-        return;
-    }
 
-    // CLEAR WITHERED TREE
-    if (tile.plant === PLANT_STATE.WITHERED) {
-        if (GAME.inventory.hasPlow) {
+        // CLEAR WITHERED TREE
+        if (tile.plant === PLANT_STATE.WITHERED) {
+          if (GAME.inventory.hasPlow) {
             tile.plant = PLANT_STATE.NONE;
             tile.yieldCount = 0;
-            createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, '#795548', 12);
+            createParticles(
+              px * TILE_SIZE + TILE_SIZE / 2,
+              py * TILE_SIZE + TILE_SIZE / 2,
+              "#795548",
+              12,
+            );
             showMessage("Cleared withered tree.", 1000);
-        } else {
+          } else {
             showMessage("Use a Plow to remove the dead tree.", 1000);
+          }
+          return;
         }
-        return;
-    }
 
-    // FARMING INTERACTIONS
-    if (tile.type === TILE_TYPE.SOIL) {
-        // 1. Harvest
-        if (tile.plant === PLANT_STATE.MATURE || (tile.plant === PLANT_STATE.TREE && tile.cropType !== CROP_TYPE.APPLE)) {
+        // FARMING INTERACTIONS
+        if (tile.type === TILE_TYPE.SOIL) {
+          // 1. Harvest
+          if (
+            tile.plant === PLANT_STATE.MATURE ||
+            (tile.plant === PLANT_STATE.TREE &&
+              tile.cropType !== CROP_TYPE.APPLE)
+          ) {
             // Check if it's a non-tree crop that is ready at TREE stage (3) or MATURE (4)
             // Carrots/Corn ready at TREE stage (visual shortcut for now, or we define mature for them)
             // Actually, let's say they reach MATURE state too.
-        }
-        
-        if (tile.plant === PLANT_STATE.MATURE) {
+          }
+
+          if (tile.plant === PLANT_STATE.MATURE) {
             let harvestColor = COLORS.APPLE;
-            
+
             if (tile.cropType === CROP_TYPE.APPLE) {
-                tile.plant = PLANT_STATE.TREE; // Returns to normal tree
-                tile.growthTimer = 0;
-                GAME.inventory.apples++;
-                // Handle yield life
-                if (!tile.yieldCount) tile.yieldCount = 0;
-                tile.yieldCount++;
-                if (tile.yieldCount >= 4) {
-                    tile.plant = PLANT_STATE.WITHERED;
-                    showMessage("The tree has withered.", 1000);
-                } else {
-                     showMessage(`Harvested Apple! (${4 - tile.yieldCount} left)`, 500);
-                }
+              tile.plant = PLANT_STATE.TREE; // Returns to normal tree
+              tile.growthTimer = 0;
+              GAME.inventory.apples++;
+              // Handle yield life
+              if (!tile.yieldCount) tile.yieldCount = 0;
+              tile.yieldCount++;
+              if (tile.yieldCount >= 4) {
+                tile.plant = PLANT_STATE.WITHERED;
+                showMessage("The tree has withered.", 1000);
+              } else {
+                showMessage(
+                  `Harvested Apple! (${4 - tile.yieldCount} left)`,
+                  500,
+                );
+              }
             } else if (tile.cropType === CROP_TYPE.CARROT) {
-                tile.plant = PLANT_STATE.NONE; // Consumed
-                tile.cropType = null;
-                GAME.inventory.carrots++;
-                harvestColor = COLORS.CARROT_ORANGE;
-                showMessage("Harvested Carrot!", 500);
+              tile.plant = PLANT_STATE.NONE; // Consumed
+              tile.cropType = null;
+              GAME.inventory.carrots++;
+              harvestColor = COLORS.CARROT_ORANGE;
+              showMessage("Harvested Carrot!", 500);
             } else if (tile.cropType === CROP_TYPE.CORN) {
-                tile.plant = PLANT_STATE.NONE; // Consumed
-                tile.cropType = null;
-                GAME.inventory.corn++;
-                harvestColor = COLORS.CORN_YELLOW;
-                showMessage("Harvested Corn!", 500);
+              tile.plant = PLANT_STATE.NONE; // Consumed
+              tile.cropType = null;
+              GAME.inventory.corn++;
+              harvestColor = COLORS.CORN_YELLOW;
+              showMessage("Harvested Corn!", 500);
             }
 
-            createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, harvestColor, 8);
+            createParticles(
+              px * TILE_SIZE + TILE_SIZE / 2,
+              py * TILE_SIZE + TILE_SIZE / 2,
+              harvestColor,
+              8,
+            );
             updateUI();
             return;
-        }
+          }
 
-        // 2. Plant
-        if (tile.plant === PLANT_STATE.NONE) {
+          // 2. Plant
+          if (tile.plant === PLANT_STATE.NONE) {
             // Plant based on selection
-            if (GAME.selectedSeed === 'apple') {
-                if (GAME.inventory.seeds > 0) {
-                    GAME.inventory.seeds--;
-                    tile.plant = PLANT_STATE.SEED;
-                    tile.cropType = CROP_TYPE.APPLE;
-                    updateUI();
-                } else {
-                    showMessage("No Apple seeds!", 1000);
-                }
-            } else if (GAME.selectedSeed === 'carrot') {
-                if (GAME.inventory.carrotSeeds > 0) {
-                    GAME.inventory.carrotSeeds--;
-                    tile.plant = PLANT_STATE.SEED;
-                    tile.cropType = CROP_TYPE.CARROT;
-                    updateUI();
-                } else {
-                    showMessage("No Carrot seeds!", 1000);
-                }
-            } else if (GAME.selectedSeed === 'corn') {
-                if (GAME.inventory.cornSeeds > 0) {
-                    GAME.inventory.cornSeeds--;
-                    tile.plant = PLANT_STATE.SEED;
-                    tile.cropType = CROP_TYPE.CORN;
-                    updateUI();
-                } else {
-                    showMessage("No Corn seeds!", 1000);
-                }
+            if (GAME.selectedSeed === "apple") {
+              if (GAME.inventory.seeds > 0) {
+                GAME.inventory.seeds--;
+                tile.plant = PLANT_STATE.SEED;
+                tile.cropType = CROP_TYPE.APPLE;
+                updateUI();
+              } else {
+                showMessage("No Apple seeds!", 1000);
+              }
+            } else if (GAME.selectedSeed === "carrot") {
+              if (GAME.inventory.carrotSeeds > 0) {
+                GAME.inventory.carrotSeeds--;
+                tile.plant = PLANT_STATE.SEED;
+                tile.cropType = CROP_TYPE.CARROT;
+                updateUI();
+              } else {
+                showMessage("No Carrot seeds!", 1000);
+              }
+            } else if (GAME.selectedSeed === "corn") {
+              if (GAME.inventory.cornSeeds > 0) {
+                GAME.inventory.cornSeeds--;
+                tile.plant = PLANT_STATE.SEED;
+                tile.cropType = CROP_TYPE.CORN;
+                updateUI();
+              } else {
+                showMessage("No Corn seeds!", 1000);
+              }
             }
             return;
-        }
+          }
 
-        // 3. Water (Water everything except mature trees and withered)
-        if (tile.plant !== PLANT_STATE.NONE && tile.plant !== PLANT_STATE.MATURE && tile.plant !== PLANT_STATE.WITHERED) {
+          // 3. Water (Water everything except mature trees and withered)
+          if (
+            tile.plant !== PLANT_STATE.NONE &&
+            tile.plant !== PLANT_STATE.MATURE &&
+            tile.plant !== PLANT_STATE.WITHERED
+          ) {
             if (!tile.watered) {
-                if (GAME.inventory.water >= 10) {
-                    GAME.inventory.water -= 10;
-                    tile.watered = true;
-                    tile.wetTimer = 0;
-                    createParticles(px * TILE_SIZE + TILE_SIZE/2, py * TILE_SIZE + TILE_SIZE/2, COLORS.WATER, 5);
-                    updateUI();
-                } else {
-                    showMessage("No water! Honk at the pond.", 1500);
-                }
+              if (GAME.inventory.water >= 10) {
+                GAME.inventory.water -= 10;
+                tile.watered = true;
+                tile.wetTimer = 0;
+                createParticles(
+                  px * TILE_SIZE + TILE_SIZE / 2,
+                  py * TILE_SIZE + TILE_SIZE / 2,
+                  COLORS.WATER,
+                  5,
+                );
+                updateUI();
+              } else {
+                showMessage("No water! Honk at the pond.", 1500);
+              }
             }
+          }
         }
-    }
-}
+      }
 
-function updateParticles() {
-    for (let i = GAME.particles.length - 1; i >= 0; i--) {
-        const p = GAME.particles[i];
-        p.life--;
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.life <= 0) GAME.particles.splice(i, 1);
-    }
-}
+      function updateParticles() {
+        for (let i = GAME.particles.length - 1; i >= 0; i--) {
+          const p = GAME.particles[i];
+          p.life--;
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.life <= 0) GAME.particles.splice(i, 1);
+        }
+      }
 
-function createParticles(x, y, color, count) {
-    for (let i = 0; i < count; i++) {
-        GAME.particles.push({
+      function createParticles(x, y, color, count) {
+        for (let i = 0; i < count; i++) {
+          GAME.particles.push({
             x: x,
             y: y,
             vx: (Math.random() - 0.5) * 2,
             vy: (Math.random() - 0.5) * 2,
             life: 30,
-            color: color
+            color: color,
+          });
+        }
+      }
+
+      function spawnProjectile(sx, sy, tx, ty, r, c, type) {
+        const speed = 8;
+        const dx = tx - sx;
+        const dy = ty - sy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        GAME.projectiles.push({
+          x: sx,
+          y: sy,
+          vx: (dx / dist) * speed,
+          vy: (dy / dist) * speed,
+          tx: tx,
+          ty: ty,
+          r: r,
+          c: c,
+          type: type, // 'water' or 'apple'
         });
-    }
-}
+      }
 
-function spawnProjectile(sx, sy, tx, ty, r, c, type) {
-    const speed = 8;
-    const dx = tx - sx;
-    const dy = ty - sy;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    
-    GAME.projectiles.push({
-        x: sx,
-        y: sy,
-        vx: (dx / dist) * speed,
-        vy: (dy / dist) * speed,
-        tx: tx,
-        ty: ty,
-        r: r,
-        c: c,
-        type: type // 'water' or 'apple'
-    });
-}
+      function updateProjectiles() {
+        for (let i = GAME.projectiles.length - 1; i >= 0; i--) {
+          const p = GAME.projectiles[i];
+          p.x += p.vx;
+          p.y += p.vy;
 
-function updateProjectiles() {
-    for (let i = GAME.projectiles.length - 1; i >= 0; i--) {
-        const p = GAME.projectiles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        
-        // Distance check
-        const dx = p.x - p.tx;
-        const dy = p.y - p.ty;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        
-        if (dist < 10) { // Hit
-            if (p.type === 'water') {
-                // Apply water effect
-                const tile = GAME.grid[p.r][p.c];
-                // Only water if not withered
-                if (tile.plant !== PLANT_STATE.WITHERED) {
-                    tile.watered = true;
-                    tile.wetTimer = 0;
-                    createParticles(p.tx, p.ty, '#4fc3f7', 5);
-                }
-            } else if (p.type === 'apple') {
-                // Harvest effect (Add to inventory)
-                // Determine what was harvested based on the source tile... 
-                // But the projectile doesn't know. 
-                // The drone logic handles inventory add. Visual only?
-                // Wait, projectile 'apple' was used for harvesting.
-                // It was used in updateDrone -> spawnProjectile -> but wait, drone update modifies inventory directly?
-                // Actually drone logic in updateDrone does: drone.apples++
-                // This projectile is just visual travel? No, updateProjectiles does: GAME.inventory.apples++
-                
-                // Correction: The projectile logic below handles the "hit" at the drone or player?
-                // Actually spawnProjectile sends it FROM tree TO somewhere.
-                // In updateDrone, we handle the logic when timer ends.
-                
-                // In 'updateProjectiles' below, it ADDS to inventory. This duplicates logic if drone also adds.
-                // Let's check updateDrone.
-                // updateDrone: drone.apples++. It does NOT spawn a projectile to home.
-                // It moves to home and calls depositApples().
-                
-                // The sprinkler spawns 'water' projectiles.
-                // Where is 'apple' projectile used? 
-                // It seems it wasn't used in the original code I read, only defined types.
-                // Let's assume it's not used yet or I missed it.
-                // Ah, autoHarvest (deprecated) might have used it.
-                
-                // Safe to ignore for now, or just leave as visual.
-                createParticles(p.tx, p.ty, COLORS.APPLE, 5);
+          // Distance check
+          const dx = p.x - p.tx;
+          const dy = p.y - p.ty;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < 10) {
+            // Hit
+            if (p.type === "water") {
+              // Apply water effect
+              const tile = GAME.grid[p.r][p.c];
+              // Only water if not withered
+              if (tile.plant !== PLANT_STATE.WITHERED) {
+                tile.watered = true;
+                tile.wetTimer = 0;
+                createParticles(p.tx, p.ty, "#4fc3f7", 5);
+              }
+            } else if (p.type === "apple") {
+              // Harvest effect (Add to inventory)
+              // Determine what was harvested based on the source tile...
+              // But the projectile doesn't know.
+              // The drone logic handles inventory add. Visual only?
+              // Wait, projectile 'apple' was used for harvesting.
+              // It was used in updateDrone -> spawnProjectile -> but wait, drone update modifies inventory directly?
+              // Actually drone logic in updateDrone does: drone.apples++
+              // This projectile is just visual travel? No, updateProjectiles does: GAME.inventory.apples++
+
+              // Correction: The projectile logic below handles the "hit" at the drone or player?
+              // Actually spawnProjectile sends it FROM tree TO somewhere.
+              // In updateDrone, we handle the logic when timer ends.
+
+              // In 'updateProjectiles' below, it ADDS to inventory. This duplicates logic if drone also adds.
+              // Let's check updateDrone.
+              // updateDrone: drone.apples++. It does NOT spawn a projectile to home.
+              // It moves to home and calls depositApples().
+
+              // The sprinkler spawns 'water' projectiles.
+              // Where is 'apple' projectile used?
+              // It seems it wasn't used in the original code I read, only defined types.
+              // Let's assume it's not used yet or I missed it.
+              // Ah, autoHarvest (deprecated) might have used it.
+
+              // Safe to ignore for now, or just leave as visual.
+              createParticles(p.tx, p.ty, COLORS.APPLE, 5);
             }
-            
+
             // Remove projectile
             GAME.projectiles.splice(i, 1);
+          }
         }
-    }
-}
+      }
 
-function updateDrone() {
-    if (!GAME.inventory.hasHarvester) return;
+      function updateDrone() {
+        if (!GAME.inventory.hasHarvester) return;
 
-    const drone = GAME.drone;
-    const speed = 4;
-    const homeX = 40; // Near market
-    const homeY = 40;
+        const drone = GAME.drone;
+        const speed = 4;
+        const homeX = 40; // Near market
+        const homeY = 40;
 
-    // State Machine
-    if (drone.state === 'IDLE') {
-        
-        // If full, force go home
-        if (drone.apples >= drone.capacity) {
-            drone.state = 'MOVING_HOME';
+        // State Machine
+        if (drone.state === "IDLE") {
+          // If full, force go home
+          if (drone.apples >= drone.capacity) {
+            drone.state = "MOVING_HOME";
             return;
-        }
+          }
 
-        // Find ripe tree
-        let matureTrees = [];
-        for (let r = 0; r < ROWS; r++) {
+          // Find ripe tree
+          let matureTrees = [];
+          for (let r = 0; r < ROWS; r++) {
             for (let c = 0; c < COLS; c++) {
-                if (GAME.grid[r][c].plant === PLANT_STATE.MATURE) {
-                    matureTrees.push({r, c});
-                }
+              if (GAME.grid[r][c].plant === PLANT_STATE.MATURE) {
+                matureTrees.push({ r, c });
+              }
             }
-        }
+          }
 
-        if (matureTrees.length > 0) {
+          if (matureTrees.length > 0) {
             // Pick random target
-            const target = matureTrees[Math.floor(Math.random() * matureTrees.length)];
+            const target =
+              matureTrees[Math.floor(Math.random() * matureTrees.length)];
             drone.target = {
-                r: target.r,
-                c: target.c,
-                x: target.c * TILE_SIZE + TILE_SIZE/2,
-                y: target.r * TILE_SIZE + TILE_SIZE/2
+              r: target.r,
+              c: target.c,
+              x: target.c * TILE_SIZE + TILE_SIZE / 2,
+              y: target.r * TILE_SIZE + TILE_SIZE / 2,
             };
-            drone.state = 'MOVING_TO_TREE';
-        } else {
+            drone.state = "MOVING_TO_TREE";
+          } else {
             // Go home if nothing to do
             const dx = homeX - drone.x;
             const dy = homeY - drone.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
+            const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist > 5) {
-                drone.x += (dx / dist) * speed;
-                drone.y += (dy / dist) * speed;
+              drone.x += (dx / dist) * speed;
+              drone.y += (dy / dist) * speed;
             } else if (drone.apples > 0) {
-                // Deposit if idle at home with apples
-                 depositApples();
+              // Deposit if idle at home with apples
+              depositApples();
             }
-        }
+          }
+        } else if (drone.state === "MOVING_TO_TREE") {
+          const dx = drone.target.x - drone.x;
+          const dy = drone.target.y - drone.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
 
-    } else if (drone.state === 'MOVING_TO_TREE') {
-        const dx = drone.target.x - drone.x;
-        const dy = drone.target.y - drone.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-
-        if (dist < speed) {
+          if (dist < speed) {
             drone.x = drone.target.x;
             drone.y = drone.target.y;
-            drone.state = 'HARVESTING';
+            drone.state = "HARVESTING";
             drone.timer = 30; // 0.5s harvest time
-        } else {
+          } else {
             drone.x += (dx / dist) * speed;
             drone.y += (dy / dist) * speed;
-        }
-
-    } else if (drone.state === 'HARVESTING') {
-        drone.timer--;
-        if (drone.timer <= 0) {
+          }
+        } else if (drone.state === "HARVESTING") {
+          drone.timer--;
+          if (drone.timer <= 0) {
             // Harvest logic
             const tile = GAME.grid[drone.target.r][drone.target.c];
             if (tile.plant === PLANT_STATE.MATURE) {
-                // Only harvest Apples for now with Drone, or all?
-                // Let's allow all.
-                
-                if (tile.cropType === CROP_TYPE.APPLE) {
-                    tile.plant = PLANT_STATE.TREE;
-                    tile.growthTimer = 0;
-                    // Handle yield life (Drone)
-                    if (!tile.yieldCount) tile.yieldCount = 0;
-                    tile.yieldCount++;
-                    if (tile.yieldCount >= 4) {
-                         tile.plant = PLANT_STATE.WITHERED;
-                    }
-                } else {
-                    // Carrots/Corn - single harvest
-                    tile.plant = PLANT_STATE.NONE;
-                    tile.cropType = null;
+              // Only harvest Apples for now with Drone, or all?
+              // Let's allow all.
+
+              if (tile.cropType === CROP_TYPE.APPLE) {
+                tile.plant = PLANT_STATE.TREE;
+                tile.growthTimer = 0;
+                // Handle yield life (Drone)
+                if (!tile.yieldCount) tile.yieldCount = 0;
+                tile.yieldCount++;
+                if (tile.yieldCount >= 4) {
+                  tile.plant = PLANT_STATE.WITHERED;
                 }
-                
-                drone.apples++; // Generalized capacity
-                createParticles(drone.x, drone.y, COLORS.APPLE, 3);
+              } else {
+                // Carrots/Corn - single harvest
+                tile.plant = PLANT_STATE.NONE;
+                tile.cropType = null;
+              }
+
+              drone.apples++; // Generalized capacity
+              createParticles(drone.x, drone.y, COLORS.APPLE, 3);
             }
-            
+
             if (drone.apples >= drone.capacity) {
-                drone.state = 'MOVING_HOME';
+              drone.state = "MOVING_HOME";
             } else {
-                drone.state = 'IDLE'; // Look for next tree immediately
+              drone.state = "IDLE"; // Look for next tree immediately
             }
-        }
-    } else if (drone.state === 'MOVING_HOME') {
-        const dx = homeX - drone.x;
-        const dy = homeY - drone.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        
-        if (dist < speed) {
+          }
+        } else if (drone.state === "MOVING_HOME") {
+          const dx = homeX - drone.x;
+          const dy = homeY - drone.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < speed) {
             drone.x = homeX;
             drone.y = homeY;
             depositApples();
-            drone.state = 'IDLE';
-        } else {
+            drone.state = "IDLE";
+          } else {
             drone.x += (dx / dist) * speed;
             drone.y += (dy / dist) * speed;
+          }
         }
-    }
-}
+      }
 
-function depositApples() {
-    if (GAME.drone.apples > 0) {
-        // Simple conversion: drone carries "items", we add as apples for now to simplify
-        // Or we could track what it picked up. For now, assume it converts all to apples or cash?
-        // Let's just add to apples to avoid complex drone inventory.
-        // Ideally drone should return specific crops.
-        // For this update: Drone only targets Apples? 
-        // Logic in IDLE state checks for PLANT_STATE.MATURE.
-        // It will pick up carrots/corn too.
-        // Let's just add them as apples for simplicity or split.
-        // Splitting is hard without tracking. 
-        // Quick fix: Add as Coins directly? No.
-        // Let's just add to apples. The "Universal Crop Drone".
-        GAME.inventory.apples += GAME.drone.apples;
-        showMessage(`Drone deposited ${GAME.drone.apples} items`, 1000);
-        GAME.drone.apples = 0;
-        updateUI();
-    }
-}
+      function depositApples() {
+        if (GAME.drone.apples > 0) {
+          // Simple conversion: drone carries "items", we add as apples for now to simplify
+          // Or we could track what it picked up. For now, assume it converts all to apples or cash?
+          // Let's just add to apples to avoid complex drone inventory.
+          // Ideally drone should return specific crops.
+          // For this update: Drone only targets Apples?
+          // Logic in IDLE state checks for PLANT_STATE.MATURE.
+          // It will pick up carrots/corn too.
+          // Let's just add them as apples for simplicity or split.
+          // Splitting is hard without tracking.
+          // Quick fix: Add as Coins directly? No.
+          // Let's just add to apples. The "Universal Crop Drone".
+          GAME.inventory.apples += GAME.drone.apples;
+          showMessage(`Drone deposited ${GAME.drone.apples} items`, 1000);
+          GAME.drone.apples = 0;
+          updateUI();
+        }
+      }
 
-function autoHarvest() {
-    // Deprecated in favor of updateDrone
-}
+      function autoHarvest() {
+        // Deprecated in favor of updateDrone
+      }
 
-// --- RENDERING ---
-function draw() {
-    // Clear
-    GAME.ctx.fillStyle = COLORS.GRASS;
-    GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
+      // --- RENDERING ---
+      function draw() {
+        // Clear
+        GAME.ctx.fillStyle = COLORS.GRASS;
+        GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
 
-    // Draw Map
-    for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
+        // Draw Map
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
             const tile = GAME.grid[r][c];
             const x = c * TILE_SIZE;
             const y = r * TILE_SIZE;
 
             // Base Tile
             if (tile.type === TILE_TYPE.SOIL) {
-                GAME.ctx.fillStyle = tile.watered ? COLORS.SOIL_WET : COLORS.SOIL;
-                GAME.ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+              GAME.ctx.fillStyle = tile.watered ? COLORS.SOIL_WET : COLORS.SOIL;
+              GAME.ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
             } else if (tile.type === TILE_TYPE.WATER) {
-                GAME.ctx.fillStyle = COLORS.WATER;
-                GAME.ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                // Water ripples
-                GAME.ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                if ((GAME.frame + c * 10) % 60 < 10) {
-                    GAME.ctx.fillRect(x + 5, y + 10, 10, 2);
-                }
+              GAME.ctx.fillStyle = COLORS.WATER;
+              GAME.ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+              // Water ripples
+              GAME.ctx.fillStyle = "rgba(255,255,255,0.3)";
+              if ((GAME.frame + c * 10) % 60 < 10) {
+                GAME.ctx.fillRect(x + 5, y + 10, 10, 2);
+              }
             } else if (tile.type === TILE_TYPE.MARKET) {
-                GAME.ctx.fillStyle = COLORS.MARKET_FLOOR;
-                GAME.ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+              GAME.ctx.fillStyle = COLORS.MARKET_FLOOR;
+              GAME.ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
             } else if (tile.type === TILE_TYPE.FENCE) {
-                GAME.ctx.fillStyle = '#5d4037';
-                GAME.ctx.fillRect(x + 10, y + 10, 20, 20);
-                GAME.ctx.strokeStyle = '#3e2723';
-                GAME.ctx.lineWidth = 2;
-                GAME.ctx.strokeRect(x+10, y+10, 20, 20);
+              GAME.ctx.fillStyle = "#5d4037";
+              GAME.ctx.fillRect(x + 10, y + 10, 20, 20);
+              GAME.ctx.strokeStyle = "#3e2723";
+              GAME.ctx.lineWidth = 2;
+              GAME.ctx.strokeRect(x + 10, y + 10, 20, 20);
             } else if (tile.type === TILE_TYPE.SPRINKLER) {
-                if (GAME.sprinkler.active) {
-                    GAME.ctx.fillStyle = '#90a4ae'; // Base
-                    GAME.ctx.fillRect(x + 5, y + 5, 30, 30);
-                    GAME.ctx.fillStyle = '#4fc3f7'; // Tank water level
-                    const fillHeight = (GAME.sprinkler.water / GAME.sprinkler.maxWater) * 20;
-                    GAME.ctx.fillRect(x + 10, y + 25 - fillHeight, 20, fillHeight);
-                    GAME.ctx.strokeRect(x + 10, y + 5, 20, 20); // Tank Outline
-                    
-                    // Top spinner
-                    GAME.ctx.fillStyle = '#37474f';
-                    GAME.ctx.fillRect(x + 15, y, 10, 5);
-                } else {
-                    // Placeholder / Foundation
-                    GAME.ctx.fillStyle = '#bdbdbd';
-                    GAME.ctx.fillRect(x + 5, y + 30, 30, 5);
-                }
+              if (GAME.sprinkler.active) {
+                GAME.ctx.fillStyle = "#90a4ae"; // Base
+                GAME.ctx.fillRect(x + 5, y + 5, 30, 30);
+                GAME.ctx.fillStyle = "#4fc3f7"; // Tank water level
+                const fillHeight =
+                  (GAME.sprinkler.water / GAME.sprinkler.maxWater) * 20;
+                GAME.ctx.fillRect(x + 10, y + 25 - fillHeight, 20, fillHeight);
+                GAME.ctx.strokeRect(x + 10, y + 5, 20, 20); // Tank Outline
+
+                // Top spinner
+                GAME.ctx.fillStyle = "#37474f";
+                GAME.ctx.fillRect(x + 15, y, 10, 5);
+              } else {
+                // Placeholder / Foundation
+                GAME.ctx.fillStyle = "#bdbdbd";
+                GAME.ctx.fillRect(x + 5, y + 30, 30, 5);
+              }
             } else if (tile.type === TILE_TYPE.ROCK) {
-                // Rock Shape
-                GAME.ctx.fillStyle = '#757575'; // Darker grey
-                GAME.ctx.beginPath();
-                const cx = x + TILE_SIZE/2;
-                const cy = y + TILE_SIZE/2;
-                
-                // Jagged polygon
-                GAME.ctx.moveTo(cx - 5, cy - 10);
-                GAME.ctx.lineTo(cx + 8, cy - 8);
-                GAME.ctx.lineTo(cx + 12, cy + 5);
-                GAME.ctx.lineTo(cx + 2, cy + 12);
-                GAME.ctx.lineTo(cx - 10, cy + 8);
-                GAME.ctx.lineTo(cx - 12, cy - 2);
-                GAME.ctx.closePath();
-                GAME.ctx.fill();
-                
-                // Highlight/Texture
-                GAME.ctx.fillStyle = '#9e9e9e';
-                GAME.ctx.beginPath();
-                GAME.ctx.moveTo(cx - 5, cy - 5);
-                GAME.ctx.lineTo(cx + 5, cy - 5);
-                GAME.ctx.lineTo(cx, cy + 5);
-                GAME.ctx.fill();
+              // Rock Shape
+              GAME.ctx.fillStyle = "#757575"; // Darker grey
+              GAME.ctx.beginPath();
+              const cx = x + TILE_SIZE / 2;
+              const cy = y + TILE_SIZE / 2;
+
+              // Jagged polygon
+              GAME.ctx.moveTo(cx - 5, cy - 10);
+              GAME.ctx.lineTo(cx + 8, cy - 8);
+              GAME.ctx.lineTo(cx + 12, cy + 5);
+              GAME.ctx.lineTo(cx + 2, cy + 12);
+              GAME.ctx.lineTo(cx - 10, cy + 8);
+              GAME.ctx.lineTo(cx - 12, cy - 2);
+              GAME.ctx.closePath();
+              GAME.ctx.fill();
+
+              // Highlight/Texture
+              GAME.ctx.fillStyle = "#9e9e9e";
+              GAME.ctx.beginPath();
+              GAME.ctx.moveTo(cx - 5, cy - 5);
+              GAME.ctx.lineTo(cx + 5, cy - 5);
+              GAME.ctx.lineTo(cx, cy + 5);
+              GAME.ctx.fill();
             }
 
             // Plants
             drawPlant(tile, x, y);
+          }
         }
-    }
 
-    // Draw Market Roof (visual only, drawn over tiles)
-    // Simple text label for market
-    GAME.ctx.fillStyle = "rgba(0,0,0,0.3)";
-    GAME.ctx.font = "bold 14px sans-serif";
-    GAME.ctx.fillText("MARKET", 15, 30);
+        // Draw Market Roof (visual only, drawn over tiles)
+        // Simple text label for market
+        GAME.ctx.fillStyle = "rgba(0,0,0,0.3)";
+        GAME.ctx.font = "bold 14px sans-serif";
+        GAME.ctx.fillText("MARKET", 15, 30);
 
-    // Draw Player (Goose)
-    drawGoose();
+        // Draw Player (Goose)
+        drawGoose();
 
-    // Draw Particles
-    GAME.particles.forEach(p => {
-        GAME.ctx.fillStyle = p.color;
-        if (p.type === 'rain') {
-             GAME.ctx.fillRect(p.x, p.y, 2, 8);
-        } else {
-             GAME.ctx.fillRect(p.x, p.y, 3, 3);
+        // Draw Particles
+        GAME.particles.forEach((p) => {
+          GAME.ctx.fillStyle = p.color;
+          if (p.type === "rain") {
+            GAME.ctx.fillRect(p.x, p.y, 2, 8);
+          } else {
+            GAME.ctx.fillRect(p.x, p.y, 3, 3);
+          }
+        });
+
+        // Draw Projectiles
+        GAME.projectiles.forEach((p) => {
+          GAME.ctx.beginPath();
+          GAME.ctx.fillStyle = p.type === "apple" ? COLORS.APPLE : "#4fc3f7";
+          GAME.ctx.arc(p.x, p.y, p.type === "apple" ? 6 : 4, 0, Math.PI * 2);
+          GAME.ctx.fill();
+        });
+
+        // Draw Drone
+        if (GAME.inventory.hasHarvester) {
+          const dx = GAME.drone.x;
+          const dy = GAME.drone.y;
+
+          // Drone Body
+          GAME.ctx.fillStyle = "#607d8b";
+          GAME.ctx.beginPath();
+          GAME.ctx.arc(dx, dy, 8, 0, Math.PI * 2);
+          GAME.ctx.fill();
+
+          // Rotors
+          GAME.ctx.fillStyle = "#cfd8dc";
+          const offset = GAME.frame % 10 < 5 ? 10 : 0; // Simple spin anim
+          GAME.ctx.fillRect(dx - 12, dy - 2, 8, 4);
+          GAME.ctx.fillRect(dx + 4, dy - 2, 8, 4);
+          GAME.ctx.fillRect(dx - 2, dy - 12, 4, 8);
+          GAME.ctx.fillRect(dx - 2, dy + 4, 4, 8);
+
+          // Light
+          GAME.ctx.fillStyle =
+            GAME.drone.state === "HARVESTING" ? "#ffeb3b" : "#f44336";
+          GAME.ctx.beginPath();
+          GAME.ctx.arc(dx, dy, 3, 0, Math.PI * 2);
+          GAME.ctx.fill();
         }
-    });
 
-    // Draw Projectiles
-    GAME.projectiles.forEach(p => {
-        GAME.ctx.beginPath();
-        GAME.ctx.fillStyle = p.type === 'apple' ? COLORS.APPLE : '#4fc3f7';
-        GAME.ctx.arc(p.x, p.y, p.type === 'apple' ? 6 : 4, 0, Math.PI * 2);
-        GAME.ctx.fill();
-    });
+        drawDayNightOverlay();
+      }
 
-    // Draw Drone
-    if (GAME.inventory.hasHarvester) {
-        const dx = GAME.drone.x;
-        const dy = GAME.drone.y;
-        
-        // Drone Body
-        GAME.ctx.fillStyle = '#607d8b';
-        GAME.ctx.beginPath();
-        GAME.ctx.arc(dx, dy, 8, 0, Math.PI * 2);
-        GAME.ctx.fill();
+      function drawDayNightOverlay() {
+        const hour = (GAME.time / GAME.dayLength) * 24;
+        let overlayColor = null;
 
-        // Rotors
-        GAME.ctx.fillStyle = '#cfd8dc';
-        const offset = (GAME.frame % 10) < 5 ? 10 : 0; // Simple spin anim
-        GAME.ctx.fillRect(dx - 12, dy - 2, 8, 4);
-        GAME.ctx.fillRect(dx + 4, dy - 2, 8, 4);
-        GAME.ctx.fillRect(dx - 2, dy - 12, 4, 8);
-        GAME.ctx.fillRect(dx - 2, dy + 4, 4, 8);
-        
-        // Light
-        GAME.ctx.fillStyle = GAME.drone.state === 'HARVESTING' ? '#ffeb3b' : '#f44336';
-        GAME.ctx.beginPath();
-        GAME.ctx.arc(dx, dy, 3, 0, Math.PI * 2);
-        GAME.ctx.fill();
-    }
-    
-    drawDayNightOverlay();
-}
+        if (hour >= 20 || hour < 5) {
+          // Night (8PM - 5AM)
+          overlayColor = "rgba(0, 0, 40, 0.6)";
+        } else if (hour >= 18) {
+          // Sunset (6PM - 8PM)
+          const intensity = (hour - 18) / 2; // 0 to 1
+          overlayColor = `rgba(0, 0, 40, ${intensity * 0.6})`;
+          // Mix in orange
+          GAME.ctx.fillStyle = `rgba(255, 100, 0, ${(1 - intensity) * 0.3})`;
+          GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
+        } else if (hour < 7) {
+          // Sunrise (5AM - 7AM)
+          const intensity = (hour - 5) / 2; // 0 to 1
+          overlayColor = `rgba(0, 0, 40, ${(1 - intensity) * 0.6})`;
+          // Mix in orange
+          GAME.ctx.fillStyle = `rgba(255, 100, 0, ${intensity * 0.3})`;
+          GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
+        }
 
-function drawDayNightOverlay() {
-    const hour = (GAME.time / GAME.dayLength) * 24;
-    let overlayColor = null;
+        // Weather Overlay (Rain darkens the sky)
+        if (GAME.weather === "rain") {
+          GAME.ctx.fillStyle = "rgba(0, 0, 20, 0.2)"; // Dark blue tint
+          GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
+        }
 
-    if (hour >= 20 || hour < 5) {
-        // Night (8PM - 5AM)
-        overlayColor = 'rgba(0, 0, 40, 0.6)';
-    } else if (hour >= 18) {
-        // Sunset (6PM - 8PM)
-        const intensity = (hour - 18) / 2; // 0 to 1
-        overlayColor = `rgba(0, 0, 40, ${intensity * 0.6})`;
-        // Mix in orange
-        GAME.ctx.fillStyle = `rgba(255, 100, 0, ${(1-intensity) * 0.3})`;
-        GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
-    } else if (hour < 7) {
-        // Sunrise (5AM - 7AM)
-        const intensity = (hour - 5) / 2; // 0 to 1
-        overlayColor = `rgba(0, 0, 40, ${(1-intensity) * 0.6})`;
-        // Mix in orange
-        GAME.ctx.fillStyle = `rgba(255, 100, 0, ${intensity * 0.3})`;
-        GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
-    }
-    
-    // Weather Overlay (Rain darkens the sky)
-    if (GAME.weather === 'rain') {
-        GAME.ctx.fillStyle = 'rgba(0, 0, 20, 0.2)'; // Dark blue tint
-        GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
-    }
-    
-    if (overlayColor) {
-        GAME.ctx.fillStyle = overlayColor;
-        GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
-    }
-}
+        if (overlayColor) {
+          GAME.ctx.fillStyle = overlayColor;
+          GAME.ctx.fillRect(0, 0, GAME.canvas.width, GAME.canvas.height);
+        }
+      }
 
-function drawPlant(tile, x, y) {
-    const cx = x + TILE_SIZE / 2;
-    const cy = y + TILE_SIZE / 2;
+      function drawPlant(tile, x, y) {
+        const cx = x + TILE_SIZE / 2;
+        const cy = y + TILE_SIZE / 2;
 
-    if (tile.plant === PLANT_STATE.SEED) {
-        GAME.ctx.fillStyle = '#3e2723';
-        GAME.ctx.beginPath();
-        GAME.ctx.arc(cx, cy, 3, 0, Math.PI * 2);
-        GAME.ctx.fill();
-    } else if (tile.plant === PLANT_STATE.SAPLING) {
-        GAME.ctx.fillStyle = COLORS.TREE_LEAVES;
-        GAME.ctx.fillRect(cx - 2, cy - 10, 4, 15);
-        GAME.ctx.beginPath();
-        GAME.ctx.arc(cx, cy - 10, 5, 0, Math.PI * 2);
-        GAME.ctx.fill();
-    } else if (tile.plant === PLANT_STATE.TREE || tile.plant === PLANT_STATE.MATURE) {
-        if (tile.cropType === CROP_TYPE.APPLE) {
+        if (tile.plant === PLANT_STATE.SEED) {
+          GAME.ctx.fillStyle = "#3e2723";
+          GAME.ctx.beginPath();
+          GAME.ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+          GAME.ctx.fill();
+        } else if (tile.plant === PLANT_STATE.SAPLING) {
+          GAME.ctx.fillStyle = COLORS.TREE_LEAVES;
+          GAME.ctx.fillRect(cx - 2, cy - 10, 4, 15);
+          GAME.ctx.beginPath();
+          GAME.ctx.arc(cx, cy - 10, 5, 0, Math.PI * 2);
+          GAME.ctx.fill();
+        } else if (
+          tile.plant === PLANT_STATE.TREE ||
+          tile.plant === PLANT_STATE.MATURE
+        ) {
+          if (tile.cropType === CROP_TYPE.APPLE) {
             // Trunk
             GAME.ctx.fillStyle = COLORS.TREE_TRUNK;
             GAME.ctx.fillRect(cx - 4, cy - 5, 8, 15);
-            
+
             // Leaves
             GAME.ctx.fillStyle = COLORS.TREE_LEAVES;
             GAME.ctx.beginPath();
@@ -1692,14 +1846,14 @@ function drawPlant(tile, x, y) {
 
             // Apples
             if (tile.plant === PLANT_STATE.MATURE) {
-                GAME.ctx.fillStyle = COLORS.APPLE;
-                GAME.ctx.beginPath();
-                GAME.ctx.arc(cx - 5, cy - 15, 4, 0, Math.PI * 2);
-                GAME.ctx.arc(cx + 5, cy - 18, 4, 0, Math.PI * 2);
-                GAME.ctx.arc(cx, cy - 8, 4, 0, Math.PI * 2);
-                GAME.ctx.fill();
+              GAME.ctx.fillStyle = COLORS.APPLE;
+              GAME.ctx.beginPath();
+              GAME.ctx.arc(cx - 5, cy - 15, 4, 0, Math.PI * 2);
+              GAME.ctx.arc(cx + 5, cy - 18, 4, 0, Math.PI * 2);
+              GAME.ctx.arc(cx, cy - 8, 4, 0, Math.PI * 2);
+              GAME.ctx.fill();
             }
-        } else if (tile.cropType === CROP_TYPE.CARROT) {
+          } else if (tile.cropType === CROP_TYPE.CARROT) {
             // Carrot Tops
             GAME.ctx.fillStyle = COLORS.CARROT_LEAF;
             GAME.ctx.beginPath();
@@ -1707,119 +1861,132 @@ function drawPlant(tile, x, y) {
             GAME.ctx.lineTo(cx - 5, cy - 10);
             GAME.ctx.lineTo(cx + 5, cy - 10);
             GAME.ctx.fill();
-            
+
             if (tile.plant === PLANT_STATE.MATURE) {
-                // Show Orange Top
-                GAME.ctx.fillStyle = COLORS.CARROT_ORANGE;
-                GAME.ctx.beginPath();
-                GAME.ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-                GAME.ctx.fill();
+              // Show Orange Top
+              GAME.ctx.fillStyle = COLORS.CARROT_ORANGE;
+              GAME.ctx.beginPath();
+              GAME.ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+              GAME.ctx.fill();
             }
-        } else if (tile.cropType === CROP_TYPE.CORN) {
+          } else if (tile.cropType === CROP_TYPE.CORN) {
             // Corn Stalk
             GAME.ctx.fillStyle = COLORS.CORN_STALK;
             GAME.ctx.fillRect(cx - 2, cy - 15, 4, 20);
-            
+
             if (tile.plant === PLANT_STATE.MATURE) {
-                // Corn Cob
-                GAME.ctx.fillStyle = COLORS.CORN_YELLOW;
-                GAME.ctx.beginPath();
-                GAME.ctx.ellipse(cx, cy - 8, 3, 6, 0, 0, Math.PI * 2);
-                GAME.ctx.fill();
+              // Corn Cob
+              GAME.ctx.fillStyle = COLORS.CORN_YELLOW;
+              GAME.ctx.beginPath();
+              GAME.ctx.ellipse(cx, cy - 8, 3, 6, 0, 0, Math.PI * 2);
+              GAME.ctx.fill();
             }
+          }
+        } else if (tile.plant === PLANT_STATE.WITHERED) {
+          // Withered Tree
+          GAME.ctx.fillStyle = "#5d4037"; // Dark Brown
+          GAME.ctx.fillRect(cx - 3, cy - 5, 6, 15); // Trunk
+
+          GAME.ctx.strokeStyle = "#4e342e";
+          GAME.ctx.lineWidth = 2;
+          GAME.ctx.beginPath();
+          // Dead branches
+          GAME.ctx.moveTo(cx, cy - 5);
+          GAME.ctx.lineTo(cx - 10, cy - 15);
+          GAME.ctx.moveTo(cx, cy - 2);
+          GAME.ctx.lineTo(cx + 10, cy - 12);
+          GAME.ctx.moveTo(cx, cy - 8);
+          GAME.ctx.lineTo(cx - 5, cy - 20);
+          GAME.ctx.stroke();
         }
-        
-    } else if (tile.plant === PLANT_STATE.WITHERED) {
-        // Withered Tree
-        GAME.ctx.fillStyle = '#5d4037'; // Dark Brown
-        GAME.ctx.fillRect(cx - 3, cy - 5, 6, 15); // Trunk
-        
-        GAME.ctx.strokeStyle = '#4e342e';
-        GAME.ctx.lineWidth = 2;
-        GAME.ctx.beginPath();
-        // Dead branches
-        GAME.ctx.moveTo(cx, cy - 5);
-        GAME.ctx.lineTo(cx - 10, cy - 15);
-        GAME.ctx.moveTo(cx, cy - 2);
-        GAME.ctx.lineTo(cx + 10, cy - 12);
-        GAME.ctx.moveTo(cx, cy - 8);
-        GAME.ctx.lineTo(cx - 5, cy - 20);
-        GAME.ctx.stroke();
-    }
-}
+      }
 
-function drawGoose() {
-    GAME.ctx.save();
-    
-    const x = GAME.player.pixelX + TILE_SIZE/2;
-    const y = GAME.player.pixelY + TILE_SIZE/2;
-    
-    GAME.ctx.translate(x, y);
-    
-    // Flip if facing right
-    if (GAME.player.direction === 1) {
-        GAME.ctx.scale(-1, 1);
-    }
+      function drawGoose() {
+        GAME.ctx.save();
 
-    // Waddle rotation
-    GAME.ctx.rotate(GAME.player.waddleOffset * Math.PI / 180);
+        const x = GAME.player.pixelX + TILE_SIZE / 2;
+        const y = GAME.player.pixelY + TILE_SIZE / 2;
 
-    // Draw Emoji Goose
-    GAME.ctx.font = "30px Segoe UI Emoji, Arial"; // Ensure emoji font support
-    GAME.ctx.textAlign = "center";
-    GAME.ctx.textBaseline = "middle";
-    GAME.ctx.fillStyle = "#ffffff"; // Just in case, though emoji has own color
-    GAME.ctx.fillText("🪿", 0, 0);
+        GAME.ctx.translate(x, y);
 
-    GAME.ctx.restore();
-}
+        // Flip if facing right
+        if (GAME.player.direction === 1) {
+          GAME.ctx.scale(-1, 1);
+        }
 
-function updateUI() {
-    document.getElementById('coins-display').innerText = GAME.inventory.coins;
-    document.getElementById('apples-display').innerText = GAME.inventory.apples;
-    document.getElementById('carrots-display').innerText = GAME.inventory.carrots || 0;
-    document.getElementById('corn-display').innerText = GAME.inventory.corn || 0;
-    
-    // Update Seed Selector
-    let icon = '❓';
-    let count = 0;
-    if (GAME.selectedSeed === 'apple') { icon = '🍎'; count = GAME.inventory.seeds; }
-    else if (GAME.selectedSeed === 'carrot') { icon = '🥕'; count = GAME.inventory.carrotSeeds || 0; }
-    else if (GAME.selectedSeed === 'corn') { icon = '🌽'; count = GAME.inventory.cornSeeds || 0; }
-    
-    document.getElementById('current-seed-icon').innerText = icon;
-    document.getElementById('current-seed-count').innerText = count;
+        // Waddle rotation
+        GAME.ctx.rotate((GAME.player.waddleOffset * Math.PI) / 180);
 
-    document.getElementById('water-display').innerText = Math.floor((GAME.inventory.water / GAME.inventory.maxWater) * 100);
-    
-    const totalMinutes = Math.floor((GAME.time / GAME.dayLength) * 24 * 60);
-    const snappedMinutes = Math.floor(totalMinutes / 30) * 30;
-    
-    const hour = Math.floor(snappedMinutes / 60);
-    const minute = snappedMinutes % 60;
-    
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 || 12;
-    const displayMinute = minute === 0 ? '00' : '30';
-    document.getElementById('time-display').innerText = `${displayHour}:${displayMinute} ${ampm}`;
-}
+        // Draw Emoji Goose
+        GAME.ctx.font = "30px Segoe UI Emoji, Arial"; // Ensure emoji font support
+        GAME.ctx.textAlign = "center";
+        GAME.ctx.textBaseline = "middle";
+        GAME.ctx.fillStyle = "#ffffff"; // Just in case, though emoji has own color
+        GAME.ctx.fillText("🪿", 0, 0);
 
-let msgTimeout;
-function showMessage(text, duration = 2000) {
-    const el = document.getElementById('message-overlay');
-    const title = document.getElementById('msg-title');
-    const body = document.getElementById('msg-body');
-    
-    el.style.display = 'block';
-    title.style.display = 'none'; // Only using body for simple messages
-    body.innerText = text;
-    
-    clearTimeout(msgTimeout);
-    msgTimeout = setTimeout(() => {
-        el.style.display = 'none';
-    }, duration);
-}
+        GAME.ctx.restore();
+      }
 
-</script>
-</body>
+      function updateUI() {
+        document.getElementById("coins-display").innerText =
+          GAME.inventory.coins;
+        document.getElementById("apples-display").innerText =
+          GAME.inventory.apples;
+        document.getElementById("carrots-display").innerText =
+          GAME.inventory.carrots || 0;
+        document.getElementById("corn-display").innerText =
+          GAME.inventory.corn || 0;
+
+        // Update Seed Selector
+        let icon = "❓";
+        let count = 0;
+        if (GAME.selectedSeed === "apple") {
+          icon = "🍎";
+          count = GAME.inventory.seeds;
+        } else if (GAME.selectedSeed === "carrot") {
+          icon = "🥕";
+          count = GAME.inventory.carrotSeeds || 0;
+        } else if (GAME.selectedSeed === "corn") {
+          icon = "🌽";
+          count = GAME.inventory.cornSeeds || 0;
+        }
+
+        document.getElementById("current-seed-icon").innerText = icon;
+        document.getElementById("current-seed-count").innerText = count;
+
+        document.getElementById("water-display").innerText = Math.floor(
+          (GAME.inventory.water / GAME.inventory.maxWater) * 100,
+        );
+
+        const totalMinutes = Math.floor((GAME.time / GAME.dayLength) * 24 * 60);
+        const snappedMinutes = Math.floor(totalMinutes / 30) * 30;
+
+        const hour = Math.floor(snappedMinutes / 60);
+        const minute = snappedMinutes % 60;
+
+        const ampm = hour >= 12 ? "PM" : "AM";
+        const displayHour = hour % 12 || 12;
+        const displayMinute = minute === 0 ? "00" : "30";
+        document.getElementById("time-display").innerText =
+          `${displayHour}:${displayMinute} ${ampm}`;
+      }
+
+      let msgTimeout;
+      function showMessage(text, duration = 2000) {
+        const el = document.getElementById("message-overlay");
+        const title = document.getElementById("msg-title");
+        const body = document.getElementById("msg-body");
+
+        el.style.display = "block";
+        title.style.display = "none"; // Only using body for simple messages
+        body.innerText = text;
+
+        clearTimeout(msgTimeout);
+        msgTimeout = setTimeout(() => {
+          el.style.display = "none";
+        }, duration);
+      }
+    </script>
+  </body>
 </html>
+
