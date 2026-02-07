@@ -360,7 +360,11 @@
           target: null, // {r, c, x, y}
           state: "IDLE", // IDLE, MOVING_TO_TREE, HARVESTING, MOVING_HOME
           timer: 0,
-          apples: 0,
+          inventory: {
+            apple: 0,
+            carrot: 0,
+            corn: 0,
+          },
           capacity: 5,
         },
         grid: [], // Will hold tile data
@@ -592,11 +596,13 @@
       }
 
       function applyDebug() {
-        // Maximize Resources
-        GAME.inventory.coins = 9999;
-        GAME.inventory.seeds = 100;
-        GAME.inventory.water = 200;
-        GAME.inventory.maxWater = 200;
+        // Set resources to "infinite"
+        GAME.inventory.coins = 999999;
+        GAME.inventory.seeds = 999999;
+        GAME.inventory.carrotSeeds = 999999;
+        GAME.inventory.cornSeeds = 999999;
+        GAME.inventory.water = 999999;
+        GAME.inventory.maxWater = 999999;
 
         // Unlock Tools
         GAME.inventory.hasSprinkler = true;
@@ -606,18 +612,57 @@
 
         // Fill Sprinkler
         GAME.sprinkler.active = true;
-        GAME.sprinkler.water = 400;
+        GAME.sprinkler.water = 999999;
+        GAME.sprinkler.maxWater = 999999;
 
-        // Plant seeds in empty soil
+        // --- New Top-Center 3x3 Grid Logic ---
+
+        // 1. Clear all farm plots and rocks from the map
         for (let r = 0; r < ROWS; r++) {
           for (let c = 0; c < COLS; c++) {
             const tile = GAME.grid[r][c];
-            if (
-              tile.type === TILE_TYPE.SOIL &&
-              tile.plant === PLANT_STATE.NONE
-            ) {
+            if (tile.type === TILE_TYPE.SOIL || tile.type === TILE_TYPE.ROCK) {
+              // Do not remove the sprinkler base tile
+              if (r === 8 && c === 9) continue;
+
+              tile.type = TILE_TYPE.GRASS;
+              tile.plant = PLANT_STATE.NONE;
+              tile.cropType = null;
+              tile.growthTimer = 0;
+              tile.watered = false;
+              tile.wetTimer = 0;
+              tile.yieldCount = 0;
+            }
+          }
+        }
+
+        // 2. Define top-center position and plant the 3x3 grid
+        const startRow = 2; // Top of the map
+        const startCol = Math.floor(COLS / 2) - 1; // Centered
+
+        const cropsToPlant = [
+          CROP_TYPE.APPLE,
+          CROP_TYPE.CARROT,
+          CROP_TYPE.CORN,
+        ];
+
+        for (let rowOffset = 0; rowOffset < 3; rowOffset++) {
+          const r = startRow + rowOffset;
+          const cropType = cropsToPlant[rowOffset];
+          for (let colOffset = 0; colOffset < 3; colOffset++) {
+            const c = startCol + colOffset;
+
+            if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+              const tile = GAME.grid[r][c];
+
+              // Convert tile to soil and plant it
+              tile.type = TILE_TYPE.SOIL;
               tile.plant = PLANT_STATE.SEED;
-              tile.cropType = CROP_TYPE.APPLE;
+              tile.cropType = cropType;
+              tile.watered = true; // Start watered
+              tile.growthTimer = 0;
+              tile.wetTimer = 0;
+              tile.yieldCount = 0;
             }
           }
         }
@@ -1126,10 +1171,9 @@
             }
 
             // Tree to Mature (Apples) doesn't need water, just time
-            // Only for apples
+
             if (
-              tile.plant === PLANT_STATE.TREE &&
-              tile.cropType === CROP_TYPE.APPLE
+              tile.plant === PLANT_STATE.TREE
             ) {
               tile.growthTimer++;
               if (tile.growthTimer > GROWTH_TIME * 2) {
@@ -1288,15 +1332,7 @@
         // FARMING INTERACTIONS
         if (tile.type === TILE_TYPE.SOIL) {
           // 1. Harvest
-          if (
-            tile.plant === PLANT_STATE.MATURE ||
-            (tile.plant === PLANT_STATE.TREE &&
-              tile.cropType !== CROP_TYPE.APPLE)
-          ) {
-            // Check if it's a non-tree crop that is ready at TREE stage (3) or MATURE (4)
-            // Carrots/Corn ready at TREE stage (visual shortcut for now, or we define mature for them)
-            // Actually, let's say they reach MATURE state too.
-          }
+
 
           if (tile.plant === PLANT_STATE.MATURE) {
             let harvestColor = COLORS.APPLE;
@@ -1322,13 +1358,25 @@
               tile.cropType = null;
               GAME.inventory.carrots++;
               harvestColor = COLORS.CARROT_ORANGE;
-              showMessage("Harvested Carrot!", 500);
+              tile.yieldCount = (tile.yieldCount || 0) + 1;
+              if (tile.yieldCount >= 1) {
+                tile.plant = PLANT_STATE.WITHERED;
+                showMessage("The plant has withered.", 1000);
+              } else {
+                showMessage("Harvested Carrot!", 500);
+              }
             } else if (tile.cropType === CROP_TYPE.CORN) {
               tile.plant = PLANT_STATE.NONE; // Consumed
               tile.cropType = null;
               GAME.inventory.corn++;
               harvestColor = COLORS.CORN_YELLOW;
-              showMessage("Harvested Corn!", 500);
+              tile.yieldCount = (tile.yieldCount || 0) + 1;
+              if (tile.yieldCount >= 1) {
+                tile.plant = PLANT_STATE.WITHERED;
+                showMessage("The plant has withered.", 1000);
+              } else {
+                showMessage("Harvested Corn!", 500);
+              }
             }
 
             createParticles(
@@ -1482,7 +1530,7 @@
               // In 'updateProjectiles' below, it ADDS to inventory. This duplicates logic if drone also adds.
               // Let's check updateDrone.
               // updateDrone: drone.apples++. It does NOT spawn a projectile to home.
-              // It moves to home and calls depositApples().
+              // It moves to home and calls depositCrops().
 
               // The sprinkler spawns 'water' projectiles.
               // Where is 'apple' projectile used?
@@ -1511,7 +1559,11 @@
         // State Machine
         if (drone.state === "IDLE") {
           // If full, force go home
-          if (drone.apples >= drone.capacity) {
+          const totalItems = Object.values(drone.inventory).reduce(
+            (sum, count) => sum + count,
+            0,
+          );
+          if (totalItems >= drone.capacity) {
             drone.state = "MOVING_HOME";
             return;
           }
@@ -1547,7 +1599,7 @@
               drone.y += (dy / dist) * speed;
             } else if (drone.apples > 0) {
               // Deposit if idle at home with apples
-              depositApples();
+              depositCrops();
             }
           }
         } else if (drone.state === "MOVING_TO_TREE") {
@@ -1573,29 +1625,36 @@
               // Only harvest Apples for now with Drone, or all?
               // Let's allow all.
 
+              let harvestedType = null;
               if (tile.cropType === CROP_TYPE.APPLE) {
                 tile.plant = PLANT_STATE.TREE;
                 tile.growthTimer = 0;
-                // Handle yield life (Drone)
                 if (!tile.yieldCount) tile.yieldCount = 0;
                 tile.yieldCount++;
                 if (tile.yieldCount >= 4) {
                   tile.plant = PLANT_STATE.WITHERED;
                 }
+                harvestedType = "apple";
               } else {
-                // Carrots/Corn - single harvest
+                harvestedType = tile.cropType; // "carrot" or "corn"
                 tile.plant = PLANT_STATE.NONE;
                 tile.cropType = null;
               }
 
-              drone.apples++; // Generalized capacity
-              createParticles(drone.x, drone.y, COLORS.APPLE, 3);
+              if (harvestedType && drone.inventory[harvestedType] < drone.capacity) {
+                drone.inventory[harvestedType]++;
+                createParticles(drone.x, drone.y, COLORS.APPLE, 3);
+              }
             }
 
-            if (drone.apples >= drone.capacity) {
+            const totalItems = Object.values(drone.inventory).reduce(
+              (sum, count) => sum + count,
+              0,
+            );
+            if (totalItems >= drone.capacity) {
               drone.state = "MOVING_HOME";
             } else {
-              drone.state = "IDLE"; // Look for next tree immediately
+              drone.state = "IDLE";
             }
           }
         } else if (drone.state === "MOVING_HOME") {
@@ -1606,7 +1665,7 @@
           if (dist < speed) {
             drone.x = homeX;
             drone.y = homeY;
-            depositApples();
+            depositCrops();
             drone.state = "IDLE";
           } else {
             drone.x += (dx / dist) * speed;
@@ -1615,28 +1674,21 @@
         }
       }
 
-      function depositApples() {
-        if (GAME.drone.apples > 0) {
-          // Simple conversion: drone carries "items", we add as apples for now to simplify
-          // Or we could track what it picked up. For now, assume it converts all to apples or cash?
-          // Let's just add to apples to avoid complex drone inventory.
-          // Ideally drone should return specific crops.
-          // For this update: Drone only targets Apples?
-          // Logic in IDLE state checks for PLANT_STATE.MATURE.
-          // It will pick up carrots/corn too.
-          // Let's just add them as apples for simplicity or split.
-          // Splitting is hard without tracking.
-          // Quick fix: Add as Coins directly? No.
-          // Let's just add to apples. The "Universal Crop Drone".
-          GAME.inventory.apples += GAME.drone.apples;
-          showMessage(`Drone deposited ${GAME.drone.apples} items`, 1000);
-          GAME.drone.apples = 0;
+      function depositCrops() {
+        let deposited = false;
+        for (const [type, count] of Object.entries(GAME.drone.inventory)) {
+          if (count > 0) {
+            if (type === "apple") GAME.inventory.apples += count;
+            if (type === "carrot") GAME.inventory.carrots += count;
+            if (type === "corn") GAME.inventory.corn += count;
+            GAME.drone.inventory[type] = 0;
+            deposited = true;
+          }
+        }
+        if (deposited) {
+          showMessage("Drone deposited crops at the market!", 1500);
           updateUI();
         }
-      }
-
-      function autoHarvest() {
-        // Deprecated in favor of updateDrone
       }
 
       // --- RENDERING ---
@@ -1989,4 +2041,3 @@
     </script>
   </body>
 </html>
-
