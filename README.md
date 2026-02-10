@@ -1,3 +1,3 @@
 # applegeese.com
 
-A home for all the goose related items I build. 
+Your one stop shop for Goose related games created by various AI models.
