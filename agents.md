@@ -46,5 +46,3 @@ Example (first commit on a branch for APP-15):
 
 - Indent with 4 spaces (as used throughout this project's HTML/CSS/JS)
 - All pages share a consistent dark/light mode pattern driven by `prefers-color-scheme`
-- Keep styles inline in each HTML file (no external stylesheet)
-- Keep JavaScript inline in each HTML file (no external scripts)
