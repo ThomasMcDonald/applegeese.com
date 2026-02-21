@@ -113,7 +113,7 @@
                 border-radius: 8px;
                 padding: 12px 20px;
                 min-width: 200px;
-                max-width: 320px;
+                max-width: 360px;
                 z-index: 20;
                 backdrop-filter: blur(6px);
                 display: none;
@@ -159,6 +159,13 @@
             .info-train-btn:disabled {
                 background: #444;
                 cursor: not-allowed;
+            }
+
+            .info-build-btn {
+                margin: 3px 0;
+                display: block;
+                width: 100%;
+                text-align: left;
             }
 
             /* ── Controls hint ───────────────────────── */
@@ -251,7 +258,7 @@
         <div id="controls-hint">
             WASD / ↑↓←→: Pan &nbsp;|&nbsp; Scroll: Zoom &nbsp;|&nbsp;
             Left-drag: Select &nbsp;|&nbsp; Right-click: Move / Gather &nbsp;|&nbsp;
-            T: Train Goose
+            Click 🏠: Build menu
         </div>
 
         <div id="info-panel">
@@ -289,6 +296,16 @@
             const MAX_CARRY = 10; // apples per goose
             const TRAIN_TIME = 10; // seconds to train a goose
             const TRAIN_COST = 20; // apples to train
+
+            // Building type definitions
+            const BUILDING_DEFS = {
+                NEST:     { name: "Goose Nest",  emoji: "🏠", maxHp: 200, buildCost: 0,  trainTime: TRAIN_TIME, canTrain: true, desc: "The heart of your flock" },
+                GRANARY:  { name: "Granary",     emoji: "🌾", maxHp: 150, buildCost: 40, incomeRate: 2,                         desc: "Generates +2 🍎 per second" },
+                BARRACKS: { name: "Barracks",    emoji: "⛺", maxHp: 180, buildCost: 50, trainTime: 5,  canTrain: true,          desc: "Trains geese in 5s" },
+                TOWER:    { name: "Watchtower",  emoji: "🗼", maxHp: 120, buildCost: 30,                                         desc: "Surveys the orchard" },
+            };
+            // Building types the player can construct
+            const BUILDABLE = ["GRANARY", "BARRACKS", "TOWER"];
 
             // Prevents the game loop from spiral-of-death when the tab is
             // backgrounded or the device stalls — caps one logical step to 100ms.
@@ -563,19 +580,24 @@
             }
 
             class Building extends Entity {
-                constructor(tx, ty) {
+                constructor(tx, ty, type = "NEST") {
                     super((tx + 0.5) * TILE_SIZE, (ty + 0.5) * TILE_SIZE);
                     this.tx = tx;
                     this.ty = ty;
-                    this.hp = 200;
-                    this.maxHp = 200;
+                    this.type = type;
+                    const def = BUILDING_DEFS[type];
+                    this.hp = def.maxHp;
+                    this.maxHp = def.maxHp;
                     this.selected = false;
                     this.radius = 16;
                     this.training = false;
                     this.trainTimer = 0;
+                    this.incomeTimer = 0;
                 }
 
                 startTraining(resources) {
+                    const def = BUILDING_DEFS[this.type];
+                    if (!def.canTrain) return false;
                     if (!this.training && resources.apples >= TRAIN_COST) {
                         resources.apples -= TRAIN_COST;
                         this.training = true;
@@ -585,10 +607,20 @@
                     return false;
                 }
 
-                update(dt) {
+                update(dt, resources) {
+                    const def = BUILDING_DEFS[this.type];
+                    // Passive apple income (e.g. Granary)
+                    if (def.incomeRate != null) {
+                        this.incomeTimer += dt;
+                        if (this.incomeTimer >= 1.0) {
+                            this.incomeTimer -= 1.0;
+                            resources.apples += def.incomeRate;
+                        }
+                    }
                     if (this.training) {
                         this.trainTimer += dt;
-                        if (this.trainTimer >= TRAIN_TIME) {
+                        const tt = def.trainTime || TRAIN_TIME;
+                        if (this.trainTimer >= tt) {
                             this.training = false;
                             this.trainTimer = 0;
                             return true; // signal: spawn unit
@@ -753,6 +785,8 @@
                 selectedUnits: [],
                 selectedBuilding: null,
                 camera: null,
+                placingType: null,
+                mouseWorld: { x: 0, y: 0 },
 
                 init(canvasW, canvasH) {
                     this.map = new GameMap(MAP_W, MAP_H);
@@ -780,7 +814,7 @@
                         unit.update(dt, this.map, this.resources);
                     }
                     for (const building of this.buildings) {
-                        const spawned = building.update(dt);
+                        const spawned = building.update(dt, this.resources);
                         if (spawned) {
                             const angle = Math.random() * Math.PI * 2;
                             const off = TILE_SIZE * 1.8;
@@ -829,6 +863,15 @@
                     this.selectedUnits = [];
                     this.selectedBuilding = null;
                 },
+
+                canPlaceBuilding(tx, ty, type) {
+                    const def = BUILDING_DEFS[type];
+                    return (
+                        this.map.isWalkable(tx, ty) &&
+                        !this.buildings.some(b => b.tx === tx && b.ty === ty) &&
+                        this.resources.apples >= def.buildCost
+                    );
+                },
             };
 
             // ============================================================
@@ -854,6 +897,7 @@
                     this._resourceNodes(game.map.resourceNodes);
                     this._buildings(game.buildings);
                     this._units(game.units);
+                    if (game.placingType) this._placementGhost();
 
                     ctx.restore();
 
@@ -943,14 +987,16 @@
                             );
                             ctx.stroke();
                         }
-                        ctx.fillText("🏠", b.x, b.y);
+                        ctx.fillText(BUILDING_DEFS[b.type].emoji, b.x, b.y);
 
                         // HP bar
                         this._hpBar(b.x, b.y + b.radius + 4, b.hp, b.maxHp);
 
                         // Train progress bar
                         if (b.training) {
-                            const prog = b.trainTimer / TRAIN_TIME;
+                            const def = BUILDING_DEFS[b.type];
+                            const tt = def.trainTime || TRAIN_TIME;
+                            const prog = b.trainTimer / tt;
                             ctx.fillStyle = "rgba(0,0,0,0.55)";
                             ctx.fillRect(b.x - 18, b.y + b.radius + 10, 36, 4);
                             ctx.fillStyle = "#4caf50";
@@ -1022,6 +1068,26 @@
                     ctx.strokeStyle = "#4caf50";
                     ctx.lineWidth = 1;
                     ctx.strokeRect(rx, ry, rw, rh);
+                }
+
+                _placementGhost() {
+                    const { ctx } = this;
+                    const def = BUILDING_DEFS[game.placingType];
+                    const tx = Math.floor(game.mouseWorld.x / TILE_SIZE);
+                    const ty = Math.floor(game.mouseWorld.y / TILE_SIZE);
+                    const valid = game.canPlaceBuilding(tx, ty, game.placingType);
+                    // Tile highlight
+                    ctx.fillStyle = valid
+                        ? "rgba(76,175,80,0.25)"
+                        : "rgba(244,67,54,0.30)";
+                    ctx.fillRect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    // Ghost emoji
+                    ctx.globalAlpha = 0.65;
+                    ctx.font = `${TILE_SIZE}px serif`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(def.emoji, (tx + 0.5) * TILE_SIZE, (ty + 0.5) * TILE_SIZE);
+                    ctx.globalAlpha = 1;
                 }
 
                 _moveIndicators(indicators) {
@@ -1207,6 +1273,7 @@
 
                 _move(e) {
                     const p = this._pos(e);
+                    game.mouseWorld = game.camera.screenToWorld(p.x, p.y);
                     if (this.panning) {
                         const dx = p.x - this.panStart.x;
                         const dy = p.y - this.panStart.y;
@@ -1239,6 +1306,27 @@
                     const cam = game.camera;
 
                     if (e.button === 0) {
+                        if (game.placingType) {
+                            // Placement mode: click to place building
+                            if (!this.dragging) {
+                                const w = cam.screenToWorld(p.x, p.y);
+                                const tx = Math.floor(w.x / TILE_SIZE);
+                                const ty = Math.floor(w.y / TILE_SIZE);
+                                const def = BUILDING_DEFS[game.placingType];
+                                if (game.canPlaceBuilding(tx, ty, game.placingType)) {
+                                    game.resources.apples -= def.buildCost;
+                                    game.buildings.push(
+                                        new Building(tx, ty, game.placingType)
+                                    );
+                                    game.placingType = null;
+                                }
+                            }
+                            this.dragging = false;
+                            this.sel.active = false;
+                            updateInfoPanel();
+                            this.mouse = p;
+                            return;
+                        }
                         if (this.dragging) {
                             // Box select
                             const w1 = cam.screenToWorld(
@@ -1285,6 +1373,11 @@
                 }
 
                 _rightClick(e) {
+                    if (game.placingType) {
+                        game.placingType = null;
+                        updateInfoPanel();
+                        return;
+                    }
                     if (game.selectedUnits.length === 0) return;
                     const p = this._pos(e);
                     const w = game.camera.screenToWorld(p.x, p.y);
@@ -1346,6 +1439,11 @@
                     }
 
                     if (e.code === "Escape") {
+                        if (game.placingType) {
+                            game.placingType = null;
+                            updateInfoPanel();
+                            return;
+                        }
                         game.clearSelection();
                         updateInfoPanel();
                     }
@@ -1375,6 +1473,9 @@
                     if (this.mouse.y > ch - edge) game.camera.y += esc;
                     game.camera.clamp();
 
+                    // Update cursor for placement mode
+                    this.canvas.style.cursor = game.placingType ? "crosshair" : "default";
+
                     // Advance move indicators
                     this.moveIndicators = this.moveIndicators.filter(
                         (m) => {
@@ -1392,23 +1493,46 @@
                 const panel = document.getElementById("info-panel");
                 const content = document.getElementById("info-content");
 
-                if (game.selectedBuilding) {
+                if (game.placingType) {
+                    const def = BUILDING_DEFS[game.placingType];
+                    let html = `<div class="info-name">Placing ${def.emoji} ${def.name}</div>`;
+                    html += `<div class="info-hint">Click on the map to place<br>Right-click or Esc to cancel</div>`;
+                    content.innerHTML = html;
+                    panel.style.display = "block";
+                } else if (game.selectedBuilding) {
                     const b = game.selectedBuilding;
-                    const canAfford =
-                        game.resources.apples >= TRAIN_COST;
-                    let html = `<div class="info-name">🏠 Goose Nest</div>`;
+                    const def = BUILDING_DEFS[b.type];
+                    let html = `<div class="info-name">${def.emoji} ${def.name}</div>`;
                     html += `<div class="info-stat">HP: ${b.hp} / ${b.maxHp}</div>`;
-                    if (b.training) {
-                        const rem = Math.ceil(
-                            TRAIN_TIME - b.trainTimer
-                        );
-                        html += `<div class="info-stat">Training… ${rem}s</div>`;
-                    } else {
-                        html += `<button class="info-train-btn" onclick="onTrainClick()" ${canAfford ? "" : "disabled"}>
-                            Train Goose 🪿 (${TRAIN_COST} 🍎)
-                        </button>`;
+                    if (def.incomeRate) {
+                        html += `<div class="info-stat">Income: +${def.incomeRate} 🍎/s</div>`;
                     }
-                    html += `<div class="info-hint">Press T to train</div>`;
+                    if (def.canTrain) {
+                        const canAfford = game.resources.apples >= TRAIN_COST;
+                        if (b.training) {
+                            const tt = def.trainTime || TRAIN_TIME;
+                            const rem = Math.ceil(tt - b.trainTimer);
+                            html += `<div class="info-stat">Training… ${rem}s</div>`;
+                        } else {
+                            html += `<button class="info-train-btn" onclick="onTrainClick()" ${canAfford ? "" : "disabled"}>
+                                Train Goose 🪿 (${TRAIN_COST} 🍎)
+                            </button>`;
+                        }
+                        html += `<div class="info-hint">Press T to train</div>`;
+                    }
+                    // Build menu: only the Goose Nest shows new building options
+                    if (b.type === "NEST") {
+                        html += `<div class="info-hint" style="margin-top:10px;color:rgba(255,255,255,0.7);font-size:12px">🔨 Construct building:</div>`;
+                        for (const type of BUILDABLE) {
+                            const bdef = BUILDING_DEFS[type];
+                            const canAfford = game.resources.apples >= bdef.buildCost;
+                        html += `<button class="info-train-btn info-build-btn"
+                                onclick="onBuildClick('${type}')" ${canAfford ? "" : "disabled"}>
+                                ${bdef.emoji} ${bdef.name} — ${bdef.buildCost} 🍎<br>
+                                <span style="font-size:10px;font-weight:400;opacity:0.8">${bdef.desc}</span>
+                            </button>`;
+                        }
+                    }
                     content.innerHTML = html;
                     panel.style.display = "block";
                 } else if (game.selectedUnits.length > 0) {
@@ -1437,6 +1561,12 @@
                     game.selectedBuilding.startTraining(game.resources);
                     updateInfoPanel();
                 }
+            }
+
+            function onBuildClick(type) {
+                game.clearSelection();
+                game.placingType = type;
+                updateInfoPanel();
             }
 
             // ============================================================
