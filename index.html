@@ -152,6 +152,83 @@
             .mr-4 {
                 margin-right: 1rem;
             }
+
+            .goose-link {
+                text-decoration: none;
+                cursor: pointer;
+                display: inline-block;
+                transition: transform 0.15s ease;
+            }
+
+            .goose-link:hover {
+                transform: scale(1.2);
+            }
+
+            .preview-boxes {
+                display: flex;
+                gap: 1rem;
+                opacity: 0;
+                transform: translateY(16px);
+                pointer-events: none;
+                transition:
+                    opacity 0.6s ease,
+                    transform 0.6s ease;
+            }
+
+            .preview-boxes.visible {
+                opacity: 1;
+                transform: translateY(0);
+                pointer-events: auto;
+            }
+
+            .preview-card {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0.75rem 1.25rem;
+                border-radius: 12px;
+                text-decoration: none;
+                font-size: 0.85rem;
+                font-weight: 500;
+                transition:
+                    background-color 0.2s,
+                    transform 0.15s ease,
+                    color 0.2s;
+            }
+
+            body.light-mode .preview-card {
+                background-color: #e5e7eb;
+                color: var(--text-light);
+            }
+
+            body.dark-mode .preview-card {
+                background-color: rgba(255, 255, 255, 0.08);
+                color: var(--text-dark);
+            }
+
+            .preview-card:hover {
+                transform: translateY(-3px);
+            }
+
+            body.light-mode .preview-card:hover {
+                background-color: #d1d5db;
+            }
+
+            body.dark-mode .preview-card:hover {
+                background-color: rgba(255, 255, 255, 0.14);
+            }
+
+            .preview-card .preview-emoji {
+                font-size: 1.75rem;
+            }
+
+            @media (max-width: 480px) {
+                .preview-boxes {
+                    flex-direction: column;
+                    align-items: center;
+                }
+            }
         </style>
     </head>
 
@@ -165,20 +242,35 @@
                     ></span
                 >
                 <span class="fade-in delay-2" id="geese"
-                    >🪿<a
+                    ><a href="farm.html" class="goose-link">🪿</a
+                    ><a
                         href="goose.html"
-                        style="text-decoration: none"
+                        class="goose-link"
                         id="playableGoose"
                         >🪿</a
-                    ><a href="idle.html" style="text-decoration: none"
-                        >🪿</a
+                    ><a href="idle.html" class="goose-link">🪿</a
                     ></span
                 >
+            </div>
+            <div class="preview-boxes" id="previewBoxes">
+                <a href="farm.html" class="preview-card">
+                    <span class="preview-emoji">🪿</span>
+                    <span>Farm</span>
+                </a>
+                <a href="goose.html" class="preview-card">
+                    <span class="preview-emoji">🪿</span>
+                    <span>Goose</span>
+                </a>
+                <a href="idle.html" class="preview-card">
+                    <span class="preview-emoji">🪿</span>
+                    <span>Idle</span>
+                </a>
             </div>
         </main>
 
         <script>
             document.addEventListener("DOMContentLoaded", () => {
+                const PREVIEW_DELAY_MS = 30000;
                 const body = document.body;
 
                 function updateTheme() {
@@ -201,6 +293,15 @@
                 window
                     .matchMedia("(prefers-color-scheme: dark)")
                     .addEventListener("change", updateTheme);
+
+                // Show preview boxes after 30 seconds
+                setTimeout(() => {
+                    const previewBoxes =
+                        document.getElementById("previewBoxes");
+                    if (previewBoxes) {
+                        previewBoxes.classList.add("visible");
+                    }
+                }, PREVIEW_DELAY_MS);
 
                 // Add wiggle animation to the playable goose every 3 seconds
                 setInterval(() => {
