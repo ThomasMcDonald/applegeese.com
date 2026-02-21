@@ -22,12 +22,6 @@
         />
         <meta property="og:url" content="https://applegeese.com/about.html" />
         <meta property="og:type" content="website" />
-        <link
-            rel="stylesheet"
-            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
-            crossorigin="anonymous"
-            referrerpolicy="no-referrer"
-        />
         <style>
             * {
                 margin: 0;
@@ -70,49 +64,12 @@
                 color: #34495e;
             }
 
-            .social-links {
-                display: flex;
-                justify-content: center;
-                gap: 30px;
+            .disclaimer {
+                font-size: 0.9em;
+                line-height: 1.5;
                 margin-bottom: 40px;
-            }
-
-            .social-link {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 15px 25px;
-                background: rgba(255, 255, 255, 0.8);
-                border-radius: 10px;
-                text-decoration: none;
-                color: #333;
-                transition: all 0.3s ease;
-                border: 2px solid #e9ecef;
-                font-weight: bold;
-            }
-
-            .social-link:hover {
-                transform: translateY(-3px);
-                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            }
-
-            .github-link:hover {
-                border-color: #333;
-                background: #f6f8fa;
-            }
-
-            .bluesky-link:hover {
-                border-color: #0085ff;
-                background: #e6f3ff;
-            }
-
-            .social-icon {
-                width: 24px;
-                height: 24px;
-            }
-            /* Adjust Font Awesome icons if needed */
-            .social-link .fa-brands {
-                font-size: 24px; /* Ensure FA icons match original SVG size */
+                color: #6b7280;
+                font-style: italic;
             }
 
             .back-link {
@@ -159,24 +116,8 @@
                     color: #d1d5db;
                 }
 
-                .social-link {
-                    background: rgba(55, 65, 81, 0.8);
-                    border-color: #4b5563;
-                    color: #f1f5f9;
-                }
-
-                .social-link:hover {
-                    background: rgba(75, 85, 99, 0.8);
-                }
-
-                .github-link:hover {
-                    border-color: #9ca3af;
-                    background: rgba(55, 65, 81, 0.9);
-                }
-
-                .bluesky-link:hover {
-                    border-color: #3b82f6;
-                    background: rgba(59, 130, 246, 0.1);
+                .disclaimer {
+                    color: #9ca3af;
                 }
 
                 .back-button {
@@ -201,17 +142,6 @@
                 .description {
                     font-size: 1.1em;
                 }
-
-                .social-links {
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 15px;
-                }
-
-                .social-link {
-                    width: 200px;
-                    justify-content: center;
-                }
             }
         </style>
     </head>
@@ -224,26 +154,8 @@
                 involvement. Mostly brought to you by AI slop generators.
             </div>
 
-            <div class="social-links">
-                <a
-                    href="https://github.com/thomasmcdonald/applegeese.com"
-                    class="social-link github-link"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    <i class="fa-brands fa-github social-icon"></i>
-                    GitHub
-                </a>
-
-                <a
-                    href="https://bsky.app/profile/applegeese.com"
-                    class="social-link bluesky-link"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    <i class="fa-brands fa-bluesky social-icon"></i>
-                    Bluesky
-                </a>
+            <div class="disclaimer">
+                This website was created with the use of AI.
             </div>
 
             <div class="back-link">
