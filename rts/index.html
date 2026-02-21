@@ -1,0 +1,1504 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+        <link rel="icon" type="image/png" sizes="32x32" href="../favicon.svg" />
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.svg" />
+        <link rel="apple-touch-icon" sizes="180x180" href="../favicon.svg" />
+        <link rel="shortcut icon" href="../favicon.svg" />
+        <title>Orchard Warfare</title>
+        <meta property="og:title" content="Orchard Warfare by AppleGeese!" />
+        <meta
+            property="og:description"
+            content="Command your geese in Orchard Warfare — a goose-themed real-time strategy game!"
+        />
+        <meta property="og:url" content="https://applegeese.com/rts/" />
+        <meta property="og:type" content="game" />
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                user-select: none;
+                -webkit-user-select: none;
+            }
+
+            body {
+                overflow: hidden;
+                background: #1a1a2e;
+                font-family: "Arial", sans-serif;
+                color: #e4e4e7;
+            }
+
+            #gameCanvas {
+                display: block;
+                position: fixed;
+                top: 44px;
+                left: 0;
+                cursor: default;
+            }
+
+            /* ── HUD ─────────────────────────────────── */
+            #hud {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 44px;
+                background: rgba(0, 0, 0, 0.78);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 16px;
+                z-index: 20;
+                backdrop-filter: blur(6px);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            #hud-left {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+            }
+
+            #hud-right {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .hud-item {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 14px;
+                font-weight: 600;
+            }
+
+            .hud-icon {
+                font-size: 16px;
+            }
+
+            .hud-title {
+                font-size: 15px;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+            }
+
+            .hud-back {
+                text-decoration: none;
+                color: rgba(255, 255, 255, 0.6);
+                font-size: 12px;
+                padding: 4px 10px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 4px;
+                transition: background 0.2s, color 0.2s;
+            }
+
+            .hud-back:hover {
+                background: rgba(255, 255, 255, 0.1);
+                color: #fff;
+            }
+
+            /* ── Info panel ──────────────────────────── */
+            #info-panel {
+                position: fixed;
+                bottom: 16px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.82);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 8px;
+                padding: 12px 20px;
+                min-width: 200px;
+                max-width: 320px;
+                z-index: 20;
+                backdrop-filter: blur(6px);
+                display: none;
+                text-align: center;
+            }
+
+            .info-name {
+                font-size: 16px;
+                font-weight: 700;
+                margin-bottom: 6px;
+            }
+
+            .info-stat {
+                font-size: 13px;
+                color: rgba(255, 255, 255, 0.72);
+                margin: 2px 0;
+            }
+
+            .info-hint {
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.38);
+                margin-top: 6px;
+                line-height: 1.5;
+            }
+
+            .info-train-btn {
+                margin-top: 8px;
+                padding: 6px 16px;
+                background: #4caf50;
+                color: #fff;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 600;
+                transition: background 0.2s;
+            }
+
+            .info-train-btn:hover:not(:disabled) {
+                background: #45a049;
+            }
+
+            .info-train-btn:disabled {
+                background: #444;
+                cursor: not-allowed;
+            }
+
+            /* ── Controls hint ───────────────────────── */
+            #controls-hint {
+                position: fixed;
+                top: 52px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.65);
+                border-radius: 6px;
+                padding: 5px 14px;
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.5);
+                z-index: 20;
+                pointer-events: none;
+                white-space: nowrap;
+                animation: fadeOutHint 3s 6s forwards;
+            }
+
+            @keyframes fadeOutHint {
+                to {
+                    opacity: 0;
+                    visibility: hidden;
+                }
+            }
+
+            /* ── Light mode ──────────────────────────── */
+            @media (prefers-color-scheme: light) {
+                body {
+                    background: #3a5a3a;
+                }
+
+                #hud {
+                    background: rgba(255, 255, 255, 0.88);
+                    border-bottom-color: rgba(0, 0, 0, 0.1);
+                    color: #1a1a1a;
+                }
+
+                .hud-back {
+                    color: rgba(0, 0, 0, 0.5);
+                    border-color: rgba(0, 0, 0, 0.2);
+                }
+
+                .hud-back:hover {
+                    background: rgba(0, 0, 0, 0.08);
+                    color: #000;
+                }
+
+                #info-panel {
+                    background: rgba(255, 255, 255, 0.92);
+                    border-color: rgba(0, 0, 0, 0.12);
+                    color: #1a1a1a;
+                }
+
+                .info-stat {
+                    color: rgba(0, 0, 0, 0.62);
+                }
+
+                .info-hint {
+                    color: rgba(0, 0, 0, 0.38);
+                }
+
+                #controls-hint {
+                    background: rgba(255, 255, 255, 0.78);
+                    color: rgba(0, 0, 0, 0.5);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="hud">
+            <div id="hud-left">
+                <div class="hud-item">
+                    <span class="hud-icon">🍎</span>
+                    <span id="apple-count">50</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-icon">🪿</span>
+                    <span id="unit-count">3</span>
+                </div>
+            </div>
+            <div class="hud-title">⚔️ Orchard Warfare</div>
+            <div id="hud-right">
+                <a href="../" class="hud-back">← Home</a>
+            </div>
+        </div>
+
+        <div id="controls-hint">
+            WASD / ↑↓←→: Pan &nbsp;|&nbsp; Scroll: Zoom &nbsp;|&nbsp;
+            Left-drag: Select &nbsp;|&nbsp; Right-click: Move / Gather &nbsp;|&nbsp;
+            T: Train Goose
+        </div>
+
+        <div id="info-panel">
+            <div id="info-content"></div>
+        </div>
+
+        <script>
+            "use strict";
+
+            // ============================================================
+            // CONSTANTS
+            // ============================================================
+            const TILE_SIZE = 32;
+            const MAP_W = 64;
+            const MAP_H = 44;
+            const HUD_H = 44;
+
+            const TILE = Object.freeze({ GRASS: 0, DIRT: 1, WATER: 2 });
+
+            const TILE_COLOR = Object.freeze({
+                0: "#4a8c5e",
+                1: "#b07840",
+                2: "#3a7bd5",
+            });
+
+            const TILE_BORDER = Object.freeze({
+                0: "rgba(0,0,0,0.06)",
+                1: "rgba(0,0,0,0.10)",
+                2: "rgba(0,0,80,0.12)",
+            });
+
+            const UNIT_SPEED = 72; // px/s
+            const GATHER_TICK = 1.0; // seconds per gather pulse
+            const GATHER_AMOUNT = 5; // apples per pulse
+            const MAX_CARRY = 10; // apples per goose
+            const TRAIN_TIME = 10; // seconds to train a goose
+            const TRAIN_COST = 20; // apples to train
+
+            // Prevents the game loop from spiral-of-death when the tab is
+            // backgrounded or the device stalls — caps one logical step to 100ms.
+            const MAX_FRAME_DT = 0.1;
+
+            // A* hard iteration cap — keeps pathfinding O(bounded) for large
+            // or impossible routes on the 64×44 grid.
+            const MAX_PATH_ITERS = 2000;
+
+            // Camera edge-scroll constants
+            const EDGE_SCROLL_ZONE = 20; // px from canvas edge that triggers scroll
+            const EDGE_SCROLL_SPEED = 220; // world-px per second during edge scroll
+
+            // ============================================================
+            // UTILITY
+            // ============================================================
+            function clamp(v, lo, hi) {
+                return v < lo ? lo : v > hi ? hi : v;
+            }
+
+            function dist2(ax, ay, bx, by) {
+                const dx = ax - bx,
+                    dy = ay - by;
+                return dx * dx + dy * dy;
+            }
+
+            // ============================================================
+            // GAME MAP
+            // ============================================================
+            class GameMap {
+                constructor(w, h) {
+                    this.w = w;
+                    this.h = h;
+                    this.tiles = this._generate();
+                    this.resourceNodes = [];
+                    this._placeResources();
+                }
+
+                _generate() {
+                    const tiles = new Uint8Array(this.w * this.h).fill(
+                        TILE.GRASS
+                    );
+
+                    // Guarantee walkable start zone (tiles 1–10 in each axis)
+                    for (let ty = 1; ty < 10; ty++) {
+                        for (let tx = 1; tx < 10; tx++) {
+                            tiles[ty * this.w + tx] = TILE.GRASS;
+                        }
+                    }
+
+                    // Scatter water lakes
+                    for (let l = 0; l < 4; l++) {
+                        const cx =
+                            12 +
+                            Math.floor(Math.random() * (this.w - 24));
+                        const cy =
+                            8 + Math.floor(Math.random() * (this.h - 16));
+                        const r = 2 + Math.floor(Math.random() * 3);
+                        for (let dy = -r; dy <= r; dy++) {
+                            for (let dx = -r; dx <= r; dx++) {
+                                if (dx * dx + dy * dy <= r * r) {
+                                    const tx = cx + dx,
+                                        ty = cy + dy;
+                                    if (
+                                        tx >= 0 &&
+                                        tx < this.w &&
+                                        ty >= 0 &&
+                                        ty < this.h
+                                    ) {
+                                        tiles[ty * this.w + tx] = TILE.WATER;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Scatter dirt paths
+                    for (let p = 0; p < 5; p++) {
+                        let x = Math.floor(Math.random() * this.w);
+                        let y = Math.floor(Math.random() * this.h);
+                        const len = 10 + Math.floor(Math.random() * 14);
+                        for (let i = 0; i < len; i++) {
+                            if (
+                                x >= 0 &&
+                                x < this.w &&
+                                y >= 0 &&
+                                y < this.h &&
+                                tiles[y * this.w + x] === TILE.GRASS
+                            ) {
+                                tiles[y * this.w + x] = TILE.DIRT;
+                            }
+                            x += Math.floor(Math.random() * 3) - 1;
+                            y += Math.floor(Math.random() * 3) - 1;
+                        }
+                    }
+
+                    // Restore start zone walkability after path placement
+                    for (let ty = 1; ty < 10; ty++) {
+                        for (let tx = 1; tx < 10; tx++) {
+                            if (tiles[ty * this.w + tx] === TILE.WATER) {
+                                tiles[ty * this.w + tx] = TILE.GRASS;
+                            }
+                        }
+                    }
+
+                    return tiles;
+                }
+
+                _placeResources() {
+                    let placed = 0;
+                    let attempts = 0;
+                    while (placed < 18 && attempts < 1000) {
+                        attempts++;
+                        const x =
+                            3 + Math.floor(Math.random() * (this.w - 6));
+                        const y =
+                            3 + Math.floor(Math.random() * (this.h - 6));
+                        if (this.tiles[y * this.w + x] !== TILE.GRASS)
+                            continue;
+                        // Keep clear of start zone
+                        if (x < 10 && y < 10) continue;
+                        let tooClose = false;
+                        for (const t of this.resourceNodes) {
+                            if (dist2(x, y, t.tx, t.ty) < 16) {
+                                tooClose = true;
+                                break;
+                            }
+                        }
+                        if (!tooClose) {
+                            this.resourceNodes.push(new ResourceNode(x, y));
+                            placed++;
+                        }
+                    }
+                }
+
+                isWalkable(tx, ty) {
+                    if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h)
+                        return false;
+                    return this.tiles[ty * this.w + tx] !== TILE.WATER;
+                }
+
+                getTile(tx, ty) {
+                    if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h)
+                        return TILE.GRASS;
+                    return this.tiles[ty * this.w + tx];
+                }
+            }
+
+            // ============================================================
+            // ENTITIES
+            // ============================================================
+            let _nextId = 1;
+
+            class Entity {
+                constructor(x, y) {
+                    this.id = _nextId++;
+                    this.x = x;
+                    this.y = y;
+                }
+            }
+
+            class ResourceNode extends Entity {
+                constructor(tx, ty) {
+                    super((tx + 0.5) * TILE_SIZE, (ty + 0.5) * TILE_SIZE);
+                    this.tx = tx;
+                    this.ty = ty;
+                    this.apples = 40 + Math.floor(Math.random() * 40);
+                    this.maxApples = this.apples;
+                    this.radius = 12;
+                }
+            }
+
+            class Unit extends Entity {
+                constructor(x, y) {
+                    super(x, y);
+                    this.hp = 100;
+                    this.maxHp = 100;
+                    this.selected = false;
+                    this.state = "IDLE"; // IDLE | MOVING | GATHERING
+                    this.path = [];
+                    this.targetNode = null;
+                    this.gatherTimer = 0;
+                    this.carriedApples = 0;
+                    this.radius = 10;
+                }
+
+                update(dt, map, resources) {
+                    if (
+                        this.state === "MOVING" &&
+                        this.path.length > 0
+                    ) {
+                        const wp = this.path[0];
+                        const dx = wp.x - this.x,
+                            dy = wp.y - this.y;
+                        const d = Math.sqrt(dx * dx + dy * dy);
+                        if (d < 2) {
+                            this.x = wp.x;
+                            this.y = wp.y;
+                            this.path.shift();
+                            if (this.path.length === 0) {
+                                this.state = this.targetNode
+                                    ? "GATHERING"
+                                    : "IDLE";
+                                this.gatherTimer = 0;
+                            }
+                        } else {
+                            const spd = UNIT_SPEED * dt;
+                            this.x += (dx / d) * spd;
+                            this.y += (dy / d) * spd;
+                        }
+                    } else if (
+                        this.state === "GATHERING" &&
+                        this.targetNode
+                    ) {
+                        this.gatherTimer += dt;
+                        if (this.gatherTimer >= GATHER_TICK) {
+                            this.gatherTimer = 0;
+                            const amt = Math.min(
+                                GATHER_AMOUNT,
+                                this.targetNode.apples,
+                                MAX_CARRY - this.carriedApples
+                            );
+                            this.carriedApples += amt;
+                            this.targetNode.apples -= amt;
+                            if (
+                                this.carriedApples >= MAX_CARRY ||
+                                this.targetNode.apples <= 0
+                            ) {
+                                resources.apples += this.carriedApples;
+                                this.carriedApples = 0;
+                                this.targetNode = null;
+                                this.state = "IDLE";
+                            }
+                        }
+                    }
+                }
+
+                sendTo(tx, ty, map) {
+                    this.targetNode = null;
+                    const path = aStar(
+                        map,
+                        Math.floor(this.x / TILE_SIZE),
+                        Math.floor(this.y / TILE_SIZE),
+                        tx,
+                        ty
+                    );
+                    if (path.length > 0) {
+                        this.path = path;
+                        this.state = "MOVING";
+                    }
+                }
+
+                gatherFrom(node, map) {
+                    this.targetNode = node;
+                    const path = aStar(
+                        map,
+                        Math.floor(this.x / TILE_SIZE),
+                        Math.floor(this.y / TILE_SIZE),
+                        node.tx,
+                        node.ty
+                    );
+                    if (path.length > 0) {
+                        this.path = path;
+                        this.state = "MOVING";
+                    } else {
+                        // Already adjacent — gather immediately
+                        this.path = [];
+                        this.state = "GATHERING";
+                        this.gatherTimer = 0;
+                    }
+                }
+            }
+
+            class Building extends Entity {
+                constructor(tx, ty) {
+                    super((tx + 0.5) * TILE_SIZE, (ty + 0.5) * TILE_SIZE);
+                    this.tx = tx;
+                    this.ty = ty;
+                    this.hp = 200;
+                    this.maxHp = 200;
+                    this.selected = false;
+                    this.radius = 16;
+                    this.training = false;
+                    this.trainTimer = 0;
+                }
+
+                startTraining(resources) {
+                    if (!this.training && resources.apples >= TRAIN_COST) {
+                        resources.apples -= TRAIN_COST;
+                        this.training = true;
+                        this.trainTimer = 0;
+                        return true;
+                    }
+                    return false;
+                }
+
+                update(dt) {
+                    if (this.training) {
+                        this.trainTimer += dt;
+                        if (this.trainTimer >= TRAIN_TIME) {
+                            this.training = false;
+                            this.trainTimer = 0;
+                            return true; // signal: spawn unit
+                        }
+                    }
+                    return false;
+                }
+            }
+
+            // ============================================================
+            // A* PATHFINDING
+            // ============================================================
+            function aStar(map, x0, y0, x1, y1) {
+                if (!map.isWalkable(x1, y1)) return [];
+                if (x0 === x1 && y0 === y1) return [];
+
+                const key = (x, y) => x + y * map.w;
+                const heur = (x, y) =>
+                    Math.abs(x - x1) + Math.abs(y - y1);
+
+                // open: Map<key, {x,y,f}>
+                const open = new Map();
+                const closed = new Set();
+                const parent = new Map(); // child_key -> parent {x,y}
+                const gCost = new Map();
+
+                const sk = key(x0, y0);
+                open.set(sk, { x: x0, y: y0, f: heur(x0, y0) });
+                gCost.set(sk, 0);
+
+                const DIRS = [
+                    [-1, 0, 1],
+                    [1, 0, 1],
+                    [0, -1, 1],
+                    [0, 1, 1],
+                    [-1, -1, 1.4],
+                    [1, -1, 1.4],
+                    [-1, 1, 1.4],
+                    [1, 1, 1.4],
+                ];
+
+                let iters = 0;
+                while (open.size > 0 && iters++ < MAX_PATH_ITERS) {
+                    // Find lowest-f node
+                    let curKey = null,
+                        curF = Infinity;
+                    for (const [k, v] of open) {
+                        if (v.f < curF) {
+                            curF = v.f;
+                            curKey = k;
+                        }
+                    }
+                    const cur = open.get(curKey);
+                    open.delete(curKey);
+                    closed.add(curKey);
+
+                    if (cur.x === x1 && cur.y === y1) {
+                        // Reconstruct — walk parent chain from goal to start
+                        const path = [];
+                        let ck = curKey;
+                        while (parent.has(ck)) {
+                            const p = parent.get(ck);
+                            path.unshift({
+                                x: (p.x + 0.5) * TILE_SIZE,
+                                y: (p.y + 0.5) * TILE_SIZE,
+                            });
+                            ck = key(p.x, p.y);
+                        }
+                        path.push({
+                            x: (x1 + 0.5) * TILE_SIZE,
+                            y: (y1 + 0.5) * TILE_SIZE,
+                        });
+                        // Drop first waypoint (unit already at start tile)
+                        if (path.length > 1) path.shift();
+                        return path;
+                    }
+
+                    for (const [dx, dy, cost] of DIRS) {
+                        const nx = cur.x + dx,
+                            ny = cur.y + dy;
+                        if (!map.isWalkable(nx, ny)) continue;
+                        const nk = key(nx, ny);
+                        if (closed.has(nk)) continue;
+                        const ng = (gCost.get(curKey) || 0) + cost;
+                        if (!open.has(nk) || ng < (gCost.get(nk) || Infinity)) {
+                            gCost.set(nk, ng);
+                            parent.set(nk, cur);
+                            open.set(nk, {
+                                x: nx,
+                                y: ny,
+                                f: ng + heur(nx, ny),
+                            });
+                        }
+                    }
+                }
+                return [];
+            }
+
+            // ============================================================
+            // CAMERA
+            // ============================================================
+            class Camera {
+                constructor(w, h) {
+                    this.x = 0;
+                    this.y = 0;
+                    this.zoom = 1.0;
+                    this.w = w;
+                    this.h = h;
+                }
+
+                worldToScreen(wx, wy) {
+                    return {
+                        x: (wx - this.x) * this.zoom,
+                        y: (wy - this.y) * this.zoom,
+                    };
+                }
+
+                screenToWorld(sx, sy) {
+                    return {
+                        x: sx / this.zoom + this.x,
+                        y: sy / this.zoom + this.y,
+                    };
+                }
+
+                clamp() {
+                    const maxX =
+                        MAP_W * TILE_SIZE - this.w / this.zoom;
+                    const maxY =
+                        MAP_H * TILE_SIZE - this.h / this.zoom;
+                    this.x = clamp(this.x, 0, Math.max(0, maxX));
+                    this.y = clamp(this.y, 0, Math.max(0, maxY));
+                }
+
+                pan(dx, dy) {
+                    this.x += dx / this.zoom;
+                    this.y += dy / this.zoom;
+                    this.clamp();
+                }
+
+                zoomAt(sx, sy, delta) {
+                    const wb = this.screenToWorld(sx, sy);
+                    this.zoom = clamp(
+                        this.zoom * (1 - delta * 0.001),
+                        0.4,
+                        2.5
+                    );
+                    const wa = this.screenToWorld(sx, sy);
+                    this.x += wb.x - wa.x;
+                    this.y += wb.y - wa.y;
+                    this.clamp();
+                }
+            }
+
+            // ============================================================
+            // GAME STATE
+            // ============================================================
+            const game = {
+                map: null,
+                units: [],
+                buildings: [],
+                resources: { apples: 50 },
+                selectedUnits: [],
+                selectedBuilding: null,
+                camera: null,
+
+                init(canvasW, canvasH) {
+                    this.map = new GameMap(MAP_W, MAP_H);
+                    this.camera = new Camera(canvasW, canvasH);
+
+                    // Starting geese
+                    for (let i = 0; i < 3; i++) {
+                        this.units.push(
+                            new Unit(
+                                (5 + i * 2 + 0.5) * TILE_SIZE,
+                                (5 + 0.5) * TILE_SIZE
+                            )
+                        );
+                    }
+                    // Starting nest
+                    this.buildings.push(new Building(4, 4));
+
+                    // Focus camera on start
+                    this.camera.x = 2 * TILE_SIZE;
+                    this.camera.y = 2 * TILE_SIZE;
+                },
+
+                update(dt) {
+                    for (const unit of this.units) {
+                        unit.update(dt, this.map, this.resources);
+                    }
+                    for (const building of this.buildings) {
+                        const spawned = building.update(dt);
+                        if (spawned) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const off = TILE_SIZE * 1.8;
+                            this.units.push(
+                                new Unit(
+                                    building.x + Math.cos(angle) * off,
+                                    building.y + Math.sin(angle) * off
+                                )
+                            );
+                        }
+                    }
+                    // Remove exhausted resource nodes from selectedUnits targets
+                    for (const unit of this.units) {
+                        if (
+                            unit.targetNode &&
+                            unit.targetNode.apples <= 0
+                        ) {
+                            unit.targetNode = null;
+                            unit.state = "IDLE";
+                        }
+                    }
+                },
+
+                entityAt(wx, wy, hitRadius = 16) {
+                    for (const u of this.units) {
+                        if (dist2(u.x, u.y, wx, wy) <= hitRadius * hitRadius)
+                            return u;
+                    }
+                    for (const b of this.buildings) {
+                        if (dist2(b.x, b.y, wx, wy) <= hitRadius * hitRadius)
+                            return b;
+                    }
+                    for (const n of this.map.resourceNodes) {
+                        if (
+                            n.apples > 0 &&
+                            dist2(n.x, n.y, wx, wy) <= hitRadius * hitRadius
+                        )
+                            return n;
+                    }
+                    return null;
+                },
+
+                clearSelection() {
+                    for (const u of this.units) u.selected = false;
+                    for (const b of this.buildings) b.selected = false;
+                    this.selectedUnits = [];
+                    this.selectedBuilding = null;
+                },
+            };
+
+            // ============================================================
+            // RENDERER
+            // ============================================================
+            class Renderer {
+                constructor(canvas) {
+                    this.canvas = canvas;
+                    this.ctx = canvas.getContext("2d");
+                }
+
+                render(sel, moveIndicators) {
+                    const { ctx, canvas } = this;
+                    const cam = game.camera;
+
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    ctx.save();
+                    ctx.scale(cam.zoom, cam.zoom);
+                    ctx.translate(-cam.x, -cam.y);
+
+                    this._tiles(game.map, cam);
+                    this._resourceNodes(game.map.resourceNodes);
+                    this._buildings(game.buildings);
+                    this._units(game.units);
+
+                    ctx.restore();
+
+                    // Screen-space overlays
+                    if (sel.active) this._selectionBox(sel);
+                    this._moveIndicators(moveIndicators);
+                    this._minimap();
+                }
+
+                _tiles(map, cam) {
+                    const { ctx } = this;
+                    const ts = TILE_SIZE;
+                    const startX = Math.max(0, Math.floor(cam.x / ts));
+                    const startY = Math.max(0, Math.floor(cam.y / ts));
+                    const endX = Math.min(
+                        map.w,
+                        Math.ceil(
+                            (cam.x + this.canvas.width / cam.zoom) / ts
+                        )
+                    );
+                    const endY = Math.min(
+                        map.h,
+                        Math.ceil(
+                            (cam.y + this.canvas.height / cam.zoom) / ts
+                        )
+                    );
+
+                    for (let ty = startY; ty < endY; ty++) {
+                        for (let tx = startX; tx < endX; tx++) {
+                            const t = map.getTile(tx, ty);
+                            ctx.fillStyle = TILE_COLOR[t];
+                            ctx.fillRect(
+                                tx * ts,
+                                ty * ts,
+                                ts,
+                                ts
+                            );
+                            ctx.strokeStyle = TILE_BORDER[t];
+                            ctx.lineWidth = 0.5;
+                            ctx.strokeRect(tx * ts, ty * ts, ts, ts);
+                        }
+                    }
+                }
+
+                _resourceNodes(nodes) {
+                    const { ctx } = this;
+                    const ts = TILE_SIZE;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = `${ts * 0.78}px serif`;
+
+                    for (const node of nodes) {
+                        if (node.apples <= 0) continue;
+                        const frac = node.apples / node.maxApples;
+                        ctx.globalAlpha = 0.35 + 0.65 * frac;
+                        ctx.fillText("🌳", node.x, node.y);
+                        ctx.globalAlpha = 1;
+                        // Apple count badge
+                        ctx.font = "9px Arial";
+                        ctx.fillStyle = "#fff";
+                        ctx.strokeStyle = "#000";
+                        ctx.lineWidth = 2;
+                        ctx.strokeText(node.apples, node.x, node.y + 16);
+                        ctx.fillText(node.apples, node.x, node.y + 16);
+                        ctx.font = `${ts * 0.78}px serif`;
+                    }
+                    ctx.globalAlpha = 1;
+                }
+
+                _buildings(buildings) {
+                    const { ctx } = this;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = `${TILE_SIZE}px serif`;
+
+                    for (const b of buildings) {
+                        if (b.selected) {
+                            ctx.strokeStyle = "#4caf50";
+                            ctx.lineWidth = 2.5;
+                            ctx.beginPath();
+                            ctx.arc(
+                                b.x,
+                                b.y,
+                                b.radius + 5,
+                                0,
+                                Math.PI * 2
+                            );
+                            ctx.stroke();
+                        }
+                        ctx.fillText("🏠", b.x, b.y);
+
+                        // HP bar
+                        this._hpBar(b.x, b.y + b.radius + 4, b.hp, b.maxHp);
+
+                        // Train progress bar
+                        if (b.training) {
+                            const prog = b.trainTimer / TRAIN_TIME;
+                            ctx.fillStyle = "rgba(0,0,0,0.55)";
+                            ctx.fillRect(b.x - 18, b.y + b.radius + 10, 36, 4);
+                            ctx.fillStyle = "#4caf50";
+                            ctx.fillRect(
+                                b.x - 18,
+                                b.y + b.radius + 10,
+                                36 * prog,
+                                4
+                            );
+                        }
+                    }
+                }
+
+                _units(units) {
+                    const { ctx } = this;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = `${TILE_SIZE * 0.72}px serif`;
+
+                    for (const u of units) {
+                        if (u.selected) {
+                            ctx.strokeStyle = "#4caf50";
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.arc(u.x, u.y, u.radius + 3, 0, Math.PI * 2);
+                            ctx.stroke();
+                        }
+                        ctx.fillText("🪿", u.x, u.y);
+                        this._hpBar(u.x, u.y - u.radius - 5, u.hp, u.maxHp);
+
+                        // Carry indicator
+                        if (u.carriedApples > 0) {
+                            ctx.font = "9px Arial";
+                            ctx.fillStyle = "#FFD700";
+                            ctx.strokeStyle = "#000";
+                            ctx.lineWidth = 2;
+                            const lbl = `🍎${u.carriedApples}`;
+                            ctx.strokeText(lbl, u.x + 10, u.y - 14);
+                            ctx.fillText(lbl, u.x + 10, u.y - 14);
+                            ctx.font = `${TILE_SIZE * 0.72}px serif`;
+                        }
+                    }
+                }
+
+                _hpBar(cx, cy, hp, maxHp) {
+                    const { ctx } = this;
+                    const w = 24,
+                        h = 3;
+                    const frac = hp / maxHp;
+                    ctx.fillStyle = "rgba(0,0,0,0.5)";
+                    ctx.fillRect(cx - w / 2, cy, w, h);
+                    ctx.fillStyle =
+                        frac > 0.6
+                            ? "#4caf50"
+                            : frac > 0.3
+                            ? "#ffc107"
+                            : "#f44336";
+                    ctx.fillRect(cx - w / 2, cy, w * frac, h);
+                }
+
+                _selectionBox(sel) {
+                    const { ctx } = this;
+                    const rx = Math.min(sel.x1, sel.x2),
+                        ry = Math.min(sel.y1, sel.y2);
+                    const rw = Math.abs(sel.x2 - sel.x1),
+                        rh = Math.abs(sel.y2 - sel.y1);
+                    ctx.fillStyle = "rgba(76,175,80,0.08)";
+                    ctx.fillRect(rx, ry, rw, rh);
+                    ctx.strokeStyle = "#4caf50";
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(rx, ry, rw, rh);
+                }
+
+                _moveIndicators(indicators) {
+                    const { ctx } = this;
+                    for (const m of indicators) {
+                        const alpha = 1 - m.t / m.dur;
+                        const r = m.t * 40 + 4;
+                        ctx.strokeStyle = `rgba(76,175,80,${alpha})`;
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.arc(m.x, m.y, r, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                }
+
+                _minimap() {
+                    const { ctx, canvas } = this;
+                    const MM_W = 120,
+                        MM_H = 82;
+                    const mx = canvas.width - MM_W - 8;
+                    const my = canvas.height - MM_H - 8;
+                    const sx = MM_W / MAP_W,
+                        sy = MM_H / MAP_H;
+
+                    // Border
+                    ctx.fillStyle = "rgba(0,0,0,0.75)";
+                    ctx.fillRect(mx - 2, my - 2, MM_W + 4, MM_H + 4);
+
+                    // Tiles
+                    for (let ty = 0; ty < MAP_H; ty++) {
+                        for (let tx = 0; tx < MAP_W; tx++) {
+                            const t = game.map.getTile(tx, ty);
+                            ctx.fillStyle = TILE_COLOR[t];
+                            ctx.fillRect(
+                                mx + tx * sx,
+                                my + ty * sy,
+                                sx + 0.5,
+                                sy + 0.5
+                            );
+                        }
+                    }
+
+                    // Resource nodes
+                    ctx.fillStyle = "#27ae60";
+                    for (const n of game.map.resourceNodes) {
+                        if (n.apples > 0) {
+                            ctx.fillRect(
+                                mx + n.tx * sx - 1,
+                                my + n.ty * sy - 1,
+                                2,
+                                2
+                            );
+                        }
+                    }
+
+                    // Buildings
+                    ctx.fillStyle = "#e67e22";
+                    for (const b of game.buildings) {
+                        ctx.fillRect(
+                            mx + (b.x / TILE_SIZE) * sx - 2,
+                            my + (b.y / TILE_SIZE) * sy - 2,
+                            4,
+                            4
+                        );
+                    }
+
+                    // Units
+                    ctx.fillStyle = "#f1c40f";
+                    for (const u of game.units) {
+                        ctx.fillRect(
+                            mx + (u.x / TILE_SIZE) * sx - 1,
+                            my + (u.y / TILE_SIZE) * sy - 1,
+                            2,
+                            2
+                        );
+                    }
+
+                    // Viewport rect
+                    const cam = game.camera;
+                    const vpX = mx + (cam.x / TILE_SIZE) * sx;
+                    const vpY = my + (cam.y / TILE_SIZE) * sy;
+                    const vpW = (canvas.width / cam.zoom / TILE_SIZE) * sx;
+                    const vpH = (canvas.height / cam.zoom / TILE_SIZE) * sy;
+                    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(vpX, vpY, vpW, vpH);
+
+                    // Label
+                    ctx.fillStyle = "rgba(255,255,255,0.45)";
+                    ctx.font = "9px Arial";
+                    ctx.textAlign = "left";
+                    ctx.textBaseline = "top";
+                    ctx.fillText("MAP", mx + 3, my + 3);
+                }
+            }
+
+            // ============================================================
+            // INPUT HANDLER
+            // ============================================================
+            class InputHandler {
+                constructor(canvas) {
+                    this.canvas = canvas;
+                    this.keys = {};
+                    this.mouse = { x: 0, y: 0 };
+                    this.dragStart = { x: 0, y: 0 };
+                    this.dragging = false;
+                    this.panning = false;
+                    this.panStart = { x: 0, y: 0, cx: 0, cy: 0 };
+
+                    this.sel = {
+                        active: false,
+                        x1: 0,
+                        y1: 0,
+                        x2: 0,
+                        y2: 0,
+                    };
+                    this.moveIndicators = [];
+
+                    this._bind();
+                }
+
+                _pos(e) {
+                    const r = this.canvas.getBoundingClientRect();
+                    return {
+                        x: e.clientX - r.left,
+                        y: e.clientY - r.top,
+                    };
+                }
+
+                _bind() {
+                    const c = this.canvas;
+                    c.addEventListener("mousedown", (e) =>
+                        this._down(e)
+                    );
+                    c.addEventListener("mousemove", (e) =>
+                        this._move(e)
+                    );
+                    c.addEventListener("mouseup", (e) => this._up(e));
+                    c.addEventListener("contextmenu", (e) => {
+                        e.preventDefault();
+                        this._rightClick(e);
+                    });
+                    c.addEventListener(
+                        "wheel",
+                        (e) => {
+                            e.preventDefault();
+                            const p = this._pos(e);
+                            game.camera.zoomAt(p.x, p.y, e.deltaY);
+                        },
+                        { passive: false }
+                    );
+                    window.addEventListener("keydown", (e) =>
+                        this._keydown(e)
+                    );
+                    window.addEventListener("keyup", (e) => {
+                        this.keys[e.code] = false;
+                    });
+                }
+
+                _down(e) {
+                    const p = this._pos(e);
+                    if (e.button === 0) {
+                        this.dragStart = p;
+                        this.dragging = false;
+                        this.sel = {
+                            active: false,
+                            x1: p.x,
+                            y1: p.y,
+                            x2: p.x,
+                            y2: p.y,
+                        };
+                    } else if (e.button === 1) {
+                        this.panning = true;
+                        this.panStart = {
+                            x: p.x,
+                            y: p.y,
+                            cx: game.camera.x,
+                            cy: game.camera.y,
+                        };
+                    }
+                    this.mouse = p;
+                }
+
+                _move(e) {
+                    const p = this._pos(e);
+                    if (this.panning) {
+                        const dx = p.x - this.panStart.x;
+                        const dy = p.y - this.panStart.y;
+                        game.camera.x =
+                            this.panStart.cx - dx / game.camera.zoom;
+                        game.camera.y =
+                            this.panStart.cy - dy / game.camera.zoom;
+                        game.camera.clamp();
+                    }
+                    if (e.buttons === 1) {
+                        const dx = p.x - this.dragStart.x;
+                        const dy = p.y - this.dragStart.y;
+                        if (
+                            !this.dragging &&
+                            (Math.abs(dx) > 4 || Math.abs(dy) > 4)
+                        ) {
+                            this.dragging = true;
+                            this.sel.active = true;
+                        }
+                        if (this.dragging) {
+                            this.sel.x2 = p.x;
+                            this.sel.y2 = p.y;
+                        }
+                    }
+                    this.mouse = p;
+                }
+
+                _up(e) {
+                    const p = this._pos(e);
+                    const cam = game.camera;
+
+                    if (e.button === 0) {
+                        if (this.dragging) {
+                            // Box select
+                            const w1 = cam.screenToWorld(
+                                Math.min(this.sel.x1, this.sel.x2),
+                                Math.min(this.sel.y1, this.sel.y2)
+                            );
+                            const w2 = cam.screenToWorld(
+                                Math.max(this.sel.x1, this.sel.x2),
+                                Math.max(this.sel.y1, this.sel.y2)
+                            );
+                            if (!e.shiftKey) game.clearSelection();
+                            for (const u of game.units) {
+                                if (
+                                    u.x >= w1.x &&
+                                    u.x <= w2.x &&
+                                    u.y >= w1.y &&
+                                    u.y <= w2.y
+                                ) {
+                                    u.selected = true;
+                                    if (!game.selectedUnits.includes(u))
+                                        game.selectedUnits.push(u);
+                                }
+                            }
+                            this.dragging = false;
+                            this.sel.active = false;
+                        } else {
+                            // Single click
+                            const w = cam.screenToWorld(p.x, p.y);
+                            const ent = game.entityAt(w.x, w.y);
+                            if (!e.shiftKey) game.clearSelection();
+                            if (ent instanceof Unit) {
+                                ent.selected = true;
+                                game.selectedUnits.push(ent);
+                            } else if (ent instanceof Building) {
+                                ent.selected = true;
+                                game.selectedBuilding = ent;
+                            }
+                        }
+                        updateInfoPanel();
+                    } else if (e.button === 1) {
+                        this.panning = false;
+                    }
+                    this.mouse = p;
+                }
+
+                _rightClick(e) {
+                    if (game.selectedUnits.length === 0) return;
+                    const p = this._pos(e);
+                    const w = game.camera.screenToWorld(p.x, p.y);
+                    const tx = Math.floor(w.x / TILE_SIZE);
+                    const ty = Math.floor(w.y / TILE_SIZE);
+                    const ent = game.entityAt(w.x, w.y);
+
+                    if (
+                        ent instanceof ResourceNode &&
+                        ent.apples > 0
+                    ) {
+                        for (const u of game.selectedUnits)
+                            u.gatherFrom(ent, game.map);
+                    } else if (game.map.isWalkable(tx, ty)) {
+                        const n = game.selectedUnits.length;
+                        const cols = Math.ceil(Math.sqrt(n));
+                        game.selectedUnits.forEach((u, i) => {
+                            const ox = (i % cols) - Math.floor(cols / 2);
+                            const oy =
+                                Math.floor(i / cols) -
+                                Math.floor(cols / 2);
+                            const dtx = clamp(tx + ox, 0, MAP_W - 1);
+                            const dty = clamp(ty + oy, 0, MAP_H - 1);
+                            const dest = game.map.isWalkable(dtx, dty)
+                                ? { tx: dtx, ty: dty }
+                                : { tx, ty };
+                            u.sendTo(dest.tx, dest.ty, game.map);
+                        });
+                        this.moveIndicators.push({
+                            x: p.x,
+                            y: p.y,
+                            t: 0,
+                            dur: 0.55,
+                        });
+                    }
+                }
+
+                _keydown(e) {
+                    this.keys[e.code] = true;
+
+                    if (e.code === "KeyT" && game.selectedBuilding) {
+                        game.selectedBuilding.startTraining(
+                            game.resources
+                        );
+                        updateInfoPanel();
+                    }
+
+                    if (
+                        (e.code === "KeyA" && e.ctrlKey) ||
+                        (e.code === "KeyA" && e.metaKey)
+                    ) {
+                        e.preventDefault();
+                        game.clearSelection();
+                        for (const u of game.units) {
+                            u.selected = true;
+                            game.selectedUnits.push(u);
+                        }
+                        updateInfoPanel();
+                    }
+
+                    if (e.code === "Escape") {
+                        game.clearSelection();
+                        updateInfoPanel();
+                    }
+                }
+
+                update(dt) {
+                    // WASD / Arrow camera pan
+                    const spd = 280 * dt;
+                    if (this.keys["KeyW"] || this.keys["ArrowUp"])
+                        game.camera.y -= spd;
+                    if (this.keys["KeyS"] || this.keys["ArrowDown"])
+                        game.camera.y += spd;
+                    if (this.keys["KeyA"] || this.keys["ArrowLeft"])
+                        game.camera.x -= spd;
+                    if (this.keys["KeyD"] || this.keys["ArrowRight"])
+                        game.camera.x += spd;
+                    game.camera.clamp();
+
+                    // Edge scroll
+                    const edge = EDGE_SCROLL_ZONE,
+                        esc = EDGE_SCROLL_SPEED * dt;
+                    const cw = this.canvas.width,
+                        ch = this.canvas.height;
+                    if (this.mouse.x < edge) game.camera.x -= esc;
+                    if (this.mouse.x > cw - edge) game.camera.x += esc;
+                    if (this.mouse.y < edge) game.camera.y -= esc;
+                    if (this.mouse.y > ch - edge) game.camera.y += esc;
+                    game.camera.clamp();
+
+                    // Advance move indicators
+                    this.moveIndicators = this.moveIndicators.filter(
+                        (m) => {
+                            m.t += dt;
+                            return m.t < m.dur;
+                        }
+                    );
+                }
+            }
+
+            // ============================================================
+            // INFO PANEL
+            // ============================================================
+            function updateInfoPanel() {
+                const panel = document.getElementById("info-panel");
+                const content = document.getElementById("info-content");
+
+                if (game.selectedBuilding) {
+                    const b = game.selectedBuilding;
+                    const canAfford =
+                        game.resources.apples >= TRAIN_COST;
+                    let html = `<div class="info-name">🏠 Goose Nest</div>`;
+                    html += `<div class="info-stat">HP: ${b.hp} / ${b.maxHp}</div>`;
+                    if (b.training) {
+                        const rem = Math.ceil(
+                            TRAIN_TIME - b.trainTimer
+                        );
+                        html += `<div class="info-stat">Training… ${rem}s</div>`;
+                    } else {
+                        html += `<button class="info-train-btn" onclick="onTrainClick()" ${canAfford ? "" : "disabled"}>
+                            Train Goose 🪿 (${TRAIN_COST} 🍎)
+                        </button>`;
+                    }
+                    html += `<div class="info-hint">Press T to train</div>`;
+                    content.innerHTML = html;
+                    panel.style.display = "block";
+                } else if (game.selectedUnits.length > 0) {
+                    const count = game.selectedUnits.length;
+                    let html =
+                        count === 1
+                            ? `<div class="info-name">🪿 Goose</div>`
+                            : `<div class="info-name">${count}× 🪿 Geese</div>`;
+                    if (count === 1) {
+                        const u = game.selectedUnits[0];
+                        html += `<div class="info-stat">HP: ${u.hp} / ${u.maxHp}</div>`;
+                        html += `<div class="info-stat">State: ${u.state}</div>`;
+                        if (u.carriedApples > 0)
+                            html += `<div class="info-stat">Carrying: ${u.carriedApples} 🍎</div>`;
+                    }
+                    html += `<div class="info-hint">Right-click to move<br>Right-click 🌳 to gather apples</div>`;
+                    content.innerHTML = html;
+                    panel.style.display = "block";
+                } else {
+                    panel.style.display = "none";
+                }
+            }
+
+            function onTrainClick() {
+                if (game.selectedBuilding) {
+                    game.selectedBuilding.startTraining(game.resources);
+                    updateInfoPanel();
+                }
+            }
+
+            // ============================================================
+            // MAIN LOOP
+            // ============================================================
+            let renderer, input;
+            let lastTs = 0;
+            let infoPanelTick = 0;
+
+            function loop(ts) {
+                const dt = Math.min((ts - lastTs) / 1000, MAX_FRAME_DT);
+                lastTs = ts;
+
+                input.update(dt);
+                game.update(dt);
+                renderer.render(input.sel, input.moveIndicators);
+
+                // Update HUD counters
+                document.getElementById("apple-count").textContent =
+                    Math.floor(game.resources.apples);
+                document.getElementById("unit-count").textContent =
+                    game.units.length;
+
+                // Refresh info panel periodically (catches training timer)
+                infoPanelTick += dt;
+                if (infoPanelTick >= 0.5) {
+                    infoPanelTick = 0;
+                    if (
+                        game.selectedBuilding ||
+                        game.selectedUnits.length > 0
+                    )
+                        updateInfoPanel();
+                }
+
+                requestAnimationFrame(loop);
+            }
+
+            // ============================================================
+            // BOOT
+            // ============================================================
+            window.addEventListener("DOMContentLoaded", () => {
+                const canvas = document.getElementById("gameCanvas");
+
+                function resize() {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight - HUD_H;
+                    if (game.camera) {
+                        game.camera.w = canvas.width;
+                        game.camera.h = canvas.height;
+                        game.camera.clamp();
+                    }
+                }
+
+                resize();
+                window.addEventListener("resize", resize);
+
+                game.init(canvas.width, canvas.height);
+                renderer = new Renderer(canvas);
+                input = new InputHandler(canvas);
+
+                requestAnimationFrame(loop);
+            });
+        </script>
+    </body>
+</html>
