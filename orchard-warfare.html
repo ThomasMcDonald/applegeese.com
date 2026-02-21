@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Orchard Warfare</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+                background-color: #1a2e1a;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                overflow: hidden;
+                color: white;
+            }
+
+            @media (prefers-color-scheme: light) {
+                body {
+                    background-color: #c8e6c9;
+                    color: #1a1a1a;
+                }
+            }
+
+            #game-container {
+                position: relative;
+                box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+            }
+
+            canvas {
+                display: block;
+                border-radius: 4px;
+            }
+
+            #hud {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                pointer-events: none;
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                padding: 10px;
+                gap: 8px;
+            }
+
+            #hud-left {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+
+            #hud-right {
+                pointer-events: auto;
+            }
+
+            .stat-box {
+                background: rgba(0, 0, 0, 0.55);
+                padding: 5px 12px;
+                border-radius: 4px;
+                font-weight: bold;
+                font-size: 15px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                text-shadow: 1px 1px 0 #000;
+            }
+
+            @media (prefers-color-scheme: light) {
+                .stat-box {
+                    background: rgba(255, 255, 255, 0.75);
+                    color: #1a1a1a;
+                    text-shadow: none;
+                }
+            }
+
+            #spawn-btn {
+                background: #4caf50;
+                color: white;
+                border: none;
+                padding: 7px 14px;
+                border-radius: 4px;
+                font-size: 14px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: background 0.15s;
+            }
+
+            #spawn-btn:hover {
+                background: #388e3c;
+            }
+
+            #spawn-btn:disabled {
+                background: #555;
+                cursor: not-allowed;
+            }
+
+            #back-link {
+                position: absolute;
+                bottom: 10px;
+                left: 10px;
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 13px;
+                text-decoration: none;
+            }
+
+            #back-link:hover {
+                color: white;
+            }
+
+            @media (prefers-color-scheme: light) {
+                #back-link {
+                    color: rgba(0, 0, 0, 0.5);
+                }
+
+                #back-link:hover {
+                    color: #1a1a1a;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="game-container">
+            <canvas id="canvas" width="800" height="500"></canvas>
+            <div id="hud">
+                <div id="hud-left">
+                    <div class="stat-box">
+                        🍎 <span id="apple-count">0</span>
+                    </div>
+                    <div class="stat-box">
+                        🪿 <span id="unit-count">0</span>
+                    </div>
+                </div>
+                <div id="hud-right">
+                    <button id="spawn-btn">Spawn Unit</button>
+                </div>
+            </div>
+            <a href="index.html" id="back-link">← Back</a>
+        </div>
+
+        <script src="src/ui/HUD.js"></script>
+        <script>
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+
+            const engine = {
+                frame: 0,
+                resources: { apples: 0 },
+                unitCost: 20,
+                units: [],
+
+                spawnUnit() {
+                    this.resources.apples -= this.unitCost;
+                    this.units.push({
+                        x: 40 + Math.random() * (canvas.width - 80),
+                        y: 40 + Math.random() * (canvas.height - 80),
+                        dx: (Math.random() - 0.5) * 1.2,
+                        dy: (Math.random() - 0.5) * 1.2,
+                    });
+                },
+
+                update() {
+                    this.frame++;
+
+                    // Apples accumulate from the orchard over time
+                    if (this.frame % 90 === 0) {
+                        this.resources.apples++;
+                    }
+
+                    // Move units
+                    for (const unit of this.units) {
+                        unit.x += unit.dx;
+                        unit.y += unit.dy;
+                        if (unit.x < 20 || unit.x > canvas.width - 20) {
+                            unit.dx *= -1;
+                        }
+                        if (unit.y < 20 || unit.y > canvas.height - 20) {
+                            unit.dy *= -1;
+                        }
+                    }
+                },
+
+                draw() {
+                    // Ground
+                    ctx.fillStyle = '#4a7c3f';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // Orchard trees
+                    const treePositions = [
+                        [120, 100], [280, 100], [440, 100], [600, 100], [720, 100],
+                        [120, 250], [280, 250], [440, 250], [600, 250], [720, 250],
+                        [120, 390], [280, 390], [440, 390], [600, 390], [720, 390],
+                    ];
+                    for (const [tx, ty] of treePositions) {
+                        // Trunk
+                        ctx.fillStyle = '#6d4c41';
+                        ctx.fillRect(tx - 5, ty + 8, 10, 18);
+                        // Canopy
+                        ctx.fillStyle = '#2e7d32';
+                        ctx.beginPath();
+                        ctx.arc(tx, ty, 22, 0, Math.PI * 2);
+                        ctx.fill();
+                        // Apple dots
+                        ctx.fillStyle = '#e53935';
+                        ctx.beginPath();
+                        ctx.arc(tx - 8, ty - 4, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.beginPath();
+                        ctx.arc(tx + 7, ty + 2, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // Units (geese)
+                    for (const unit of this.units) {
+                        ctx.font = '22px serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('🪿', unit.x, unit.y);
+                    }
+                },
+            };
+
+            const hud = new HUD(engine);
+            hud.bindSpawnButton('spawn-btn');
+
+            function gameLoop() {
+                engine.update();
+                engine.draw();
+                hud.update();
+                requestAnimationFrame(gameLoop);
+            }
+
+            gameLoop();
+        </script>
+    </body>
+</html>
