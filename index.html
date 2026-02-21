@@ -152,12 +152,80 @@
             .mr-4 {
                 margin-right: 1rem;
             }
+
+            .goose-link {
+                text-decoration: none;
+                cursor: pointer;
+                display: inline-block;
+                transition: transform 0.15s ease;
+            }
+
+            .goose-link:hover {
+                transform: scale(1.2);
+            }
+
+            .game-nav {
+                display: flex;
+                gap: 0.5rem;
+                opacity: 0;
+                transform: translateY(-10px);
+                pointer-events: none;
+                transition:
+                    opacity 0.6s ease,
+                    transform 0.6s ease;
+            }
+
+            .game-nav.visible {
+                opacity: 1;
+                transform: translateY(0);
+                pointer-events: auto;
+            }
+
+            .game-nav-link {
+                text-decoration: none;
+                font-size: 0.8rem;
+                font-weight: 600;
+                padding: 0.35rem 0.9rem;
+                border-radius: 999px;
+                letter-spacing: 0.03em;
+                transition:
+                    background-color 0.2s,
+                    color 0.2s,
+                    transform 0.15s ease;
+            }
+
+            body.light-mode .game-nav-link {
+                background-color: rgba(0, 0, 0, 0.07);
+                color: var(--text-light);
+            }
+
+            body.dark-mode .game-nav-link {
+                background-color: rgba(255, 255, 255, 0.1);
+                color: var(--text-dark);
+            }
+
+            .game-nav-link:hover {
+                transform: scale(1.05);
+            }
+
+            body.light-mode .game-nav-link:hover {
+                background-color: rgba(0, 0, 0, 0.13);
+            }
+
+            body.dark-mode .game-nav-link:hover {
+                background-color: rgba(255, 255, 255, 0.18);
+            }
         </style>
     </head>
 
     <body>
         <!-- Main Content Section -->
         <main class="content-container">
+            <nav class="game-nav" id="gameNav">
+                <a href="farm.html" class="game-nav-link">Farm</a>
+                <a href="goose.html" class="game-nav-link">Goose</a>
+                <a href="idle.html" class="game-nav-link">Idle</a>
+            </nav>
             <div class="emoji-container" id="emojiContainer">
                 <span class="mr-4 fade-in delay-1" id="apple"
                     ><a href="about.html" style="text-decoration: none"
@@ -165,13 +233,13 @@
                     ></span
                 >
                 <span class="fade-in delay-2" id="geese"
-                    >🪿<a
+                    ><a href="farm.html" class="goose-link">🪿</a
+                    ><a
                         href="goose.html"
-                        style="text-decoration: none"
+                        class="goose-link"
                         id="playableGoose"
                         >🪿</a
-                    ><a href="idle.html" style="text-decoration: none"
-                        >🪿</a
+                    ><a href="idle.html" class="goose-link">🪿</a
                     ></span
                 >
             </div>
@@ -179,6 +247,7 @@
 
         <script>
             document.addEventListener("DOMContentLoaded", () => {
+                const PREVIEW_DELAY_MS = 15000;
                 const body = document.body;
 
                 function updateTheme() {
@@ -201,6 +270,14 @@
                 window
                     .matchMedia("(prefers-color-scheme: dark)")
                     .addEventListener("change", updateTheme);
+
+                // Show game nav above geese after 15 seconds
+                setTimeout(() => {
+                    const gameNav = document.getElementById("gameNav");
+                    if (gameNav) {
+                        gameNav.classList.add("visible");
+                    }
+                }, PREVIEW_DELAY_MS);
 
                 // Add wiggle animation to the playable goose every 3 seconds
                 setInterval(() => {
