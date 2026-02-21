@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+        <title>Orchard Warfare</title>
+        <meta property="og:title" content="Orchard Warfare by AppleGeese!" />
+        <meta
+            property="og:description"
+            content="Assign workers to harvest Apple Trees in this RTS orchard!"
+        />
+        <meta property="og:url" content="https://applegeese.com/orchard.html" />
+        <meta property="og:type" content="game" />
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: 'Arial', sans-serif;
+                background: #1a2e1a;
+                color: #e4e4e7;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                min-height: 100vh;
+                padding: 16px;
+                user-select: none;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+                margin-bottom: 8px;
+                letter-spacing: 0.04em;
+            }
+
+            #hud {
+                display: flex;
+                gap: 16px;
+                margin-bottom: 10px;
+                font-size: 1rem;
+                background: rgba(0, 0, 0, 0.4);
+                border-radius: 8px;
+                padding: 6px 16px;
+            }
+
+            #hud span {
+                font-weight: bold;
+            }
+
+            #game-container {
+                position: relative;
+            }
+
+            canvas {
+                display: block;
+                border-radius: 8px;
+                border: 2px solid rgba(255, 255, 255, 0.15);
+                cursor: pointer;
+                background: #2a4a2a;
+            }
+
+            #instructions {
+                margin-top: 10px;
+                font-size: 0.8rem;
+                color: rgba(255, 255, 255, 0.55);
+                text-align: center;
+                max-width: 600px;
+            }
+
+            #back-link {
+                margin-top: 14px;
+                font-size: 0.8rem;
+                color: rgba(255, 255, 255, 0.45);
+                text-decoration: none;
+            }
+
+            #back-link:hover {
+                color: rgba(255, 255, 255, 0.8);
+            }
+
+            @media (prefers-color-scheme: light) {
+                body {
+                    background: #d4e8d4;
+                    color: #1a1a1a;
+                }
+
+                canvas {
+                    background: #b8d8b8;
+                    border-color: rgba(0, 0, 0, 0.2);
+                }
+
+                #hud {
+                    background: rgba(0, 0, 0, 0.08);
+                    color: #1a1a1a;
+                }
+
+                #instructions {
+                    color: rgba(0, 0, 0, 0.5);
+                }
+
+                #back-link {
+                    color: rgba(0, 0, 0, 0.45);
+                }
+
+                #back-link:hover {
+                    color: rgba(0, 0, 0, 0.8);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <h1>🍎 Orchard Warfare</h1>
+        <div id="hud">
+            <div>🍎 Apples: <span id="apples-display">0</span></div>
+            <div>🪿 Workers: <span id="workers-display">0</span></div>
+        </div>
+        <div id="game-container">
+            <canvas id="gameCanvas" width="600" height="450"></canvas>
+        </div>
+        <p id="instructions">
+            Click a tree to assign a free worker to gather from it. Click again to unassign.<br />
+            Trees shrink and change colour as they are depleted.
+        </p>
+        <a href="index.html" id="back-link">← Back to Applegeese</a>
+
+        <!-- ResourceNode entity -->
+        <script src="src/entities/ResourceNode.js"></script>
+
+        <script>
+            // ─── Constants ────────────────────────────────────────────────────────────
+
+            const CANVAS_W = 600;
+            const CANVAS_H = 450;
+            const WORKER_SPEED = 1.5;
+            const WORKER_RADIUS = 9;
+            const TREE_CLICK_RADIUS = 32; // hit-test area
+
+            // ─── Game state ───────────────────────────────────────────────────────────
+
+            const gameState = { apples: 0 };
+
+            // Trees scattered around the map
+            const trees = [
+                new Tree(120, 100),
+                new Tree(300,  80),
+                new Tree(480, 110),
+                new Tree( 90, 280),
+                new Tree(250, 260),
+                new Tree(430, 270),
+                new Tree(160, 390),
+                new Tree(450, 390),
+            ];
+
+            // Workers (geese) that walk to trees and gather
+            const workers = [
+                { x: 80,  y: 420, targetTree: null, state: 'idle' },
+                { x: 300, y: 420, targetTree: null, state: 'idle' },
+                { x: 520, y: 420, targetTree: null, state: 'idle' },
+            ];
+
+            // ─── Canvas setup ─────────────────────────────────────────────────────────
+
+            const canvas = document.getElementById('gameCanvas');
+            const ctx    = canvas.getContext('2d');
+
+            // ─── Input ────────────────────────────────────────────────────────────────
+
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mx = (e.clientX - rect.left) * (CANVAS_W / rect.width);
+                const my = (e.clientY - rect.top)  * (CANVAS_H / rect.height);
+
+                // Find the clicked tree
+                const clicked = trees.find(t => {
+                    const dx = t.x - mx;
+                    const dy = t.y - my;
+                    return Math.sqrt(dx * dx + dy * dy) <= TREE_CLICK_RADIUS;
+                });
+
+                if (!clicked || clicked.state === 'depleted') return;
+
+                // Check if this tree already has a worker assigned
+                const existingWorker = workers.find(w => w.targetTree === clicked);
+                if (existingWorker) {
+                    // Unassign the worker
+                    clicked.removeUnit(existingWorker);
+                    existingWorker.targetTree = null;
+                    existingWorker.state = 'idle';
+                    return;
+                }
+
+                // Find a free worker
+                const freeWorker = workers.find(w => w.state === 'idle' || w.state === 'walking');
+                if (!freeWorker) return;
+
+                // Unassign the worker from any previous tree
+                if (freeWorker.targetTree) {
+                    freeWorker.targetTree.removeUnit(freeWorker);
+                }
+
+                freeWorker.targetTree = clicked;
+                freeWorker.state = 'walking';
+            });
+
+            // ─── Update ───────────────────────────────────────────────────────────────
+
+            function updateWorker(w) {
+                if (!w.targetTree) {
+                    w.state = 'idle';
+                    return;
+                }
+
+                const tree = w.targetTree;
+
+                if (tree.state === 'depleted') {
+                    w.targetTree = null;
+                    w.state = 'idle';
+                    return;
+                }
+
+                // Walk toward tree
+                const dx = tree.x - w.x;
+                const dy = tree.y - w.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const arrivalDist = tree.radius + WORKER_RADIUS + 4;
+
+                if (dist > arrivalDist) {
+                    w.x += (dx / dist) * WORKER_SPEED;
+                    w.y += (dy / dist) * WORKER_SPEED;
+                    w.state = 'walking';
+                } else {
+                    w.state = 'gathering';
+                    if (!tree.assignedUnits.includes(w)) {
+                        tree.assignUnit(w);
+                    }
+                }
+            }
+
+            function drawWorker(w) {
+                const isGathering = w.state === 'gathering';
+
+                // Shadow
+                ctx.beginPath();
+                ctx.ellipse(w.x, w.y + WORKER_RADIUS + 2, WORKER_RADIUS * 0.7, 3, 0, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0,0,0,0.25)';
+                ctx.fill();
+
+                // Body
+                ctx.beginPath();
+                ctx.arc(w.x, w.y, WORKER_RADIUS, 0, Math.PI * 2);
+                ctx.fillStyle = isGathering ? '#f0c040' : '#e0e0e0';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Goose emoji head
+                ctx.font = `${WORKER_RADIUS + 4}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🪿', w.x, w.y);
+            }
+
+            // ─── Game loop ────────────────────────────────────────────────────────────
+
+            function gameLoop() {
+                // Clear
+                ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+                // Draw a simple ground grid
+                ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+                ctx.lineWidth = 1;
+                for (let gx = 0; gx < CANVAS_W; gx += 40) {
+                    ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, CANVAS_H); ctx.stroke();
+                }
+                for (let gy = 0; gy < CANVAS_H; gy += 40) {
+                    ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(CANVAS_W, gy); ctx.stroke();
+                }
+
+                // Update and draw trees
+                trees.forEach(t => t.update(gameState));
+                trees.forEach(t => t.draw(ctx));
+
+                // Update and draw workers
+                workers.forEach(w => updateWorker(w));
+                workers.forEach(w => drawWorker(w));
+
+                // Update HUD
+                document.getElementById('apples-display').textContent = gameState.apples;
+                document.getElementById('workers-display').textContent =
+                    workers.filter(w => w.state !== 'idle').length + ' / ' + workers.length;
+
+                requestAnimationFrame(gameLoop);
+            }
+
+            gameLoop();
+        </script>
+    </body>
+</html>
