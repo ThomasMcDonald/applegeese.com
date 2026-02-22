@@ -372,9 +372,9 @@
             const ENEMY_WORKER_COST = 20;
             const ENEMY_UNIT_COST = 25;
             const ENEMY_DECISION_INTERVAL = 3.0; // seconds between AI decisions
-            const ENEMY_ATTACK_RANGE_SQ = (TILE_SIZE * 1.8) * (TILE_SIZE * 1.8);
-            const ENEMY_ATTACK_DPS = 15; // damage per second dealt by enemy units
-            const PLAYER_ATTACK_DPS = 10; // damage per second dealt by player geese
+            const COMBAT_RANGE_SQ = (TILE_SIZE * 1.8) * (TILE_SIZE * 1.8);
+            const ENEMY_ATTACK_DAMAGE = 15; // damage per attack hit (once per second)
+            const PLAYER_ATTACK_DAMAGE = 10; // damage per attack hit (once per second)
 
             // ============================================================
             // UTILITY
@@ -951,7 +951,7 @@
                             if (
                                 near &&
                                 dist2(this.x, this.y, near.x, near.y) <=
-                                    ENEMY_ATTACK_RANGE_SQ
+                                    COMBAT_RANGE_SQ
                             ) {
                                 this.state = "FIGHTING";
                                 this.attackTimer = 0;
@@ -971,11 +971,11 @@
                             return;
                         }
                         const d = dist2(this.x, this.y, near.x, near.y);
-                        if (d <= ENEMY_ATTACK_RANGE_SQ) {
+                        if (d <= COMBAT_RANGE_SQ) {
                             this.attackTimer += dt;
                             if (this.attackTimer >= 1.0) {
                                 this.attackTimer = 0;
-                                near.hp -= ENEMY_ATTACK_DPS;
+                                near.hp -= ENEMY_ATTACK_DAMAGE;
                             }
                         } else {
                             // Chase target, repath periodically
@@ -1395,12 +1395,12 @@
                             const d = dist2(unit.x, unit.y, eb.x, eb.y);
                             if (d < nearestD) { nearestD = d; nearestEnemy = eb; }
                         }
-                        if (nearestEnemy && nearestD <= ENEMY_ATTACK_RANGE_SQ) {
+                        if (nearestEnemy && nearestD <= COMBAT_RANGE_SQ) {
                             unit.state = "FIGHTING";
                             unit.attackTimer += dt;
                             if (unit.attackTimer >= 1.0) {
                                 unit.attackTimer = 0;
-                                nearestEnemy.hp -= PLAYER_ATTACK_DPS;
+                                nearestEnemy.hp -= PLAYER_ATTACK_DAMAGE;
                             }
                         } else if (unit.state === "FIGHTING") {
                             unit.state = "IDLE";
@@ -2286,7 +2286,9 @@
                 lastTs = ts;
 
                 input.update(dt);
-                game.update(dt);
+                if (!game.gameOver) {
+                    game.update(dt);
+                }
                 renderer.render(input.sel, input.moveIndicators);
 
                 // Update HUD counters
@@ -2308,9 +2310,7 @@
                         updateInfoPanel();
                 }
 
-                if (!game.gameOver) {
-                    requestAnimationFrame(loop);
-                }
+                requestAnimationFrame(loop);
             }
 
             // ============================================================
