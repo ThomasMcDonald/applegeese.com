@@ -25,6 +25,8 @@ function updateInfoPanel() {
             html += `<div class="info-stat">Income: +${def.incomeRate} 🍎/s</div>`;
         }
         if (def.canTrain) {
+            const trainsUnit = def.trainsUnit || "WORKER";
+            const trainsName = (UNIT_DEFS[trainsUnit] || UNIT_DEFS.WORKER).name;
             const canAfford = game.resources.apples >= TRAIN_COST;
             if (b.training) {
                 const tt = def.trainTime || TRAIN_TIME;
@@ -32,7 +34,7 @@ function updateInfoPanel() {
                 html += `<div class="info-stat">Training… ${rem}s</div>`;
             } else {
                 html += `<button class="info-train-btn" onclick="onTrainClick()" ${canAfford ? "" : "disabled"}>
-                    Train Goose 🪿 (${TRAIN_COST} 🍎)
+                    Train ${trainsName} 🪿 (${TRAIN_COST} 🍎)
                 </button>`;
             }
             html += `<div class="info-hint">Press T to train</div>`;
@@ -54,18 +56,21 @@ function updateInfoPanel() {
         panel.style.display = "block";
     } else if (game.selectedUnits.length > 0) {
         const count = game.selectedUnits.length;
-        let html =
-            count === 1
-                ? `<div class="info-name">🪿 Goose</div>`
-                : `<div class="info-name">${count}× 🪿 Geese</div>`;
+        let html;
         if (count === 1) {
             const u = game.selectedUnits[0];
+            const udef = UNIT_DEFS[u.unitType] || UNIT_DEFS.WORKER;
+            html = `<div class="info-name">🪿 ${udef.name}</div>`;
             html += `<div class="info-stat">HP: ${u.hp} / ${u.maxHp}</div>`;
             html += `<div class="info-stat">State: ${u.state}</div>`;
             if (u.carriedApples > 0)
                 html += `<div class="info-stat">Carrying: ${u.carriedApples} 🍎</div>`;
+        } else {
+            html = `<div class="info-name">${count}× 🪿 Geese</div>`;
         }
-        html += `<div class="info-hint">Right-click to move<br>Right-click 🌳 to gather apples</div>`;
+        const canGather = game.selectedUnits.some(u => UNIT_DEFS[u.unitType]?.canGather);
+        const gatherHint = canGather ? "<br>Right-click 🌳 to gather apples" : "";
+        html += `<div class="info-hint">Right-click to move${gatherHint}</div>`;
         content.innerHTML = html;
         panel.style.display = "block";
     } else {

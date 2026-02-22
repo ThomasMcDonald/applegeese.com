@@ -29,12 +29,21 @@ const MAX_CARRY = 10; // apples per goose
 const TRAIN_TIME = 10; // seconds to train a goose
 const TRAIN_COST = 20; // apples to train
 
+// Player unit type definitions
+const UNIT_DEFS = Object.freeze({
+    WORKER:    { name: "Worker Goose",   color: "#f1c40f", radius: 9,  hp: 80,  speed: UNIT_SPEED,        canGather: true,  fontSize: 0.60 },
+    GUARD:     { name: "Guard Goose",    color: "#3498db", radius: 10, hp: 100, speed: UNIT_SPEED,        canGather: false, fontSize: 0.72 },
+    BRAWLER:   { name: "Brawler Goose",  color: "#e74c3c", radius: 13, hp: 180, speed: UNIT_SPEED * 0.75, canGather: false, fontSize: 0.88 },
+    SCREECHER: { name: "Honk Screecher", color: "#e67e22", radius: 10, hp: 90,  speed: UNIT_SPEED * 1.1,  canGather: false, fontSize: 0.70 },
+    ALPHA:     { name: "Alpha Goose",    color: "#9b59b6", radius: 11, hp: 130, speed: UNIT_SPEED * 0.9,  canGather: false, fontSize: 0.78 },
+});
+
 // Building type definitions
 const BUILDING_DEFS = {
-    NEST:     { name: "Goose Nest",  emoji: "🏠", maxHp: 200, buildCost: 0,  trainTime: TRAIN_TIME, canTrain: true, desc: "The heart of your flock" },
-    GRANARY:  { name: "Granary",     emoji: "🌾", maxHp: 150, buildCost: 40, incomeRate: 2,                         desc: "Generates +2 🍎 per second" },
-    BARRACKS: { name: "Barracks",    emoji: "⛺", maxHp: 180, buildCost: 50, trainTime: 5,  canTrain: true,          desc: "Trains geese in 5s" },
-    TOWER:    { name: "Watchtower",  emoji: "🗼", maxHp: 120, buildCost: 30,                                         desc: "Surveys the orchard" },
+    NEST:     { name: "Goose Nest",  emoji: "🏠", maxHp: 200, buildCost: 0,  trainTime: TRAIN_TIME, canTrain: true, trainsUnit: "WORKER", desc: "The heart of your flock" },
+    GRANARY:  { name: "Granary",     emoji: "🌾", maxHp: 150, buildCost: 40, incomeRate: 2,                                               desc: "Generates +2 🍎 per second" },
+    BARRACKS: { name: "Barracks",    emoji: "⛺", maxHp: 180, buildCost: 50, trainTime: 5,  canTrain: true, trainsUnit: "GUARD",           desc: "Trains geese in 5s" },
+    TOWER:    { name: "Watchtower",  emoji: "🗼", maxHp: 120, buildCost: 30,                                                               desc: "Surveys the orchard" },
 };
 // Building types the player can construct
 const BUILDABLE = ["GRANARY", "BARRACKS", "TOWER"];

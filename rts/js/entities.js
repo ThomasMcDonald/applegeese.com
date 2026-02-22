@@ -26,10 +26,12 @@ class ResourceNode extends Entity {
 }
 
 class Unit extends Entity {
-    constructor(x, y) {
+    constructor(x, y, unitType = "WORKER") {
         super(x, y);
-        this.hp = 100;
-        this.maxHp = 100;
+        const def = UNIT_DEFS[unitType] || UNIT_DEFS.WORKER;
+        this.unitType = unitType;
+        this.hp = def.hp;
+        this.maxHp = def.hp;
         this.selected = false;
         this.state = "IDLE"; // IDLE | MOVING | GATHERING | FIGHTING
         this.path = [];
@@ -37,7 +39,7 @@ class Unit extends Entity {
         this.gatherTimer = 0;
         this.carriedApples = 0;
         this.attackTimer = 0;
-        this.radius = 10;
+        this.radius = def.radius;
     }
 
     update(dt, map, resources) {
@@ -60,13 +62,14 @@ class Unit extends Entity {
                     this.gatherTimer = 0;
                 }
             } else {
-                const spd = UNIT_SPEED * dt;
+                const spd = UNIT_DEFS[this.unitType].speed * dt;
                 this.x += (dx / d) * spd;
                 this.y += (dy / d) * spd;
             }
         } else if (
             this.state === "GATHERING" &&
-            this.targetNode
+            this.targetNode &&
+            UNIT_DEFS[this.unitType].canGather
         ) {
             this.gatherTimer += dt;
             if (this.gatherTimer >= GATHER_TICK) {
@@ -107,6 +110,7 @@ class Unit extends Entity {
     }
 
     gatherFrom(node, map) {
+        if (!UNIT_DEFS[this.unitType].canGather) return;
         this.targetNode = node;
         const path = aStar(
             map,
