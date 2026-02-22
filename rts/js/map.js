@@ -151,7 +151,7 @@ class GameMap {
             if (this.fog[i] === 2) this.fog[i] = 1;
         }
         // Step 2: flood visible radius around each unit/building
-        const mark = (cx, cy, radius) => {
+        const markVisibleTiles = (cx, cy, radius) => {
             const tx0 = Math.floor(cx / TILE_SIZE);
             const ty0 = Math.floor(cy / TILE_SIZE);
             const r2 = radius * radius;
@@ -168,7 +168,7 @@ class GameMap {
                 }
             }
         };
-        for (const u of units)     mark(u.x, u.y, UNIT_VISION_RADIUS);
-        for (const b of buildings) mark(b.x, b.y, BUILDING_VISION_RADIUS);
+        for (const u of units)     markVisibleTiles(u.x, u.y, UNIT_VISION_RADIUS);
+        for (const b of buildings) markVisibleTiles(b.x, b.y, BUILDING_VISION_RADIUS);
     }
 }
