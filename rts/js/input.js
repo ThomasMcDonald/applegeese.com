@@ -15,6 +15,7 @@ class InputHandler {
         this.dragging = false;
         this.panning = false;
         this.panStart = { x: 0, y: 0, cx: 0, cy: 0 };
+        this.minimapDragging = false;
 
         this.sel = {
             active: false,
@@ -34,6 +35,23 @@ class InputHandler {
             x: e.clientX - r.left,
             y: e.clientY - r.top,
         };
+    }
+
+    _minimapBounds() {
+        return {
+            mx: this.canvas.width - MM_W - MM_MARGIN,
+            my: this.canvas.height - MM_H - MM_MARGIN,
+        };
+    }
+
+    _minimapPanTo(p) {
+        const { mx, my } = this._minimapBounds();
+        const relX = (p.x - mx) / MM_W;
+        const relY = (p.y - my) / MM_H;
+        const cam = game.camera;
+        cam.x = relX * MAP_W * TILE_SIZE - (this.canvas.width / cam.zoom) / 2;
+        cam.y = relY * MAP_H * TILE_SIZE - (this.canvas.height / cam.zoom) / 2;
+        cam.clamp();
     }
 
     _bind() {
@@ -68,6 +86,19 @@ class InputHandler {
 
     _down(e) {
         const p = this._pos(e);
+
+        // Minimap left-click navigation
+        if (e.button === 0 && game.map) {
+            const { mx, my } = this._minimapBounds();
+            if (p.x >= mx && p.x <= mx + MM_W &&
+                p.y >= my && p.y <= my + MM_H) {
+                this.minimapDragging = true;
+                this._minimapPanTo(p);
+                this.mouse = p;
+                return;
+            }
+        }
+
         if (e.button === 0) {
             this.dragStart = p;
             this.dragging = false;
@@ -93,6 +124,14 @@ class InputHandler {
     _move(e) {
         const p = this._pos(e);
         game.mouseWorld = game.camera.screenToWorld(p.x, p.y);
+
+        // Minimap drag-to-pan
+        if (this.minimapDragging) {
+            this._minimapPanTo(p);
+            this.mouse = p;
+            return;
+        }
+
         if (this.panning) {
             const dx = p.x - this.panStart.x;
             const dy = p.y - this.panStart.y;
@@ -123,6 +162,12 @@ class InputHandler {
     _up(e) {
         const p = this._pos(e);
         const cam = game.camera;
+
+        if (e.button === 0 && this.minimapDragging) {
+            this.minimapDragging = false;
+            this.mouse = p;
+            return;
+        }
 
         if (e.button === 0) {
             if (game.placingType) {

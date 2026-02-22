@@ -54,6 +54,9 @@ const game = {
         // Initialise enemy AI
         this.enemy = new EnemyAI(AI_DIFFICULTY_CONFIG[difficulty] || AI_DIFFICULTY_CONFIG.normal);
         this.enemy.init(this.map);
+
+        // Reveal starting area
+        this.map.updateFog(this.units, this.buildings);
     },
 
     update(dt) {
@@ -157,6 +160,9 @@ const game = {
         this.enemy.buildings = this.enemy.buildings.filter(
             b => b.hp > 0
         );
+
+        // Update fog of war
+        this.map.updateFog(this.units, this.buildings);
 
         // Check tutorial progress
         if (this.isTutorial) checkTutorialProgress();

@@ -11,6 +11,8 @@ class GameMap {
         this.h = h;
         this.tiles = this._generate();
         this.resourceNodes = [];
+        // 0 = unexplored, 1 = explored (shroud), 2 = currently visible
+        this.fog = new Uint8Array(w * h).fill(0);
         this._placeResources();
     }
 
@@ -132,5 +134,41 @@ class GameMap {
         if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h)
             return TILE.GRASS;
         return this.tiles[ty * this.w + tx];
+    }
+
+    getFog(tx, ty) {
+        if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h)
+            return 0;
+        return this.fog[ty * this.w + tx];
+    }
+
+    // Recompute which tiles are currently visible based on
+    // player units and buildings.  Previously-seen tiles drop
+    // to "explored" (shroud) but never back to unexplored.
+    updateFog(units, buildings) {
+        // Step 1: drop currently-visible cells to explored
+        for (let i = 0; i < this.fog.length; i++) {
+            if (this.fog[i] === 2) this.fog[i] = 1;
+        }
+        // Step 2: flood visible radius around each unit/building
+        const mark = (cx, cy, radius) => {
+            const tx0 = Math.floor(cx / TILE_SIZE);
+            const ty0 = Math.floor(cy / TILE_SIZE);
+            const r2 = radius * radius;
+            for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                    if (dx * dx + dy * dy <= r2) {
+                        const tx = tx0 + dx;
+                        const ty = ty0 + dy;
+                        if (tx >= 0 && ty >= 0 &&
+                            tx < this.w && ty < this.h) {
+                            this.fog[ty * this.w + tx] = 2;
+                        }
+                    }
+                }
+            }
+        };
+        for (const u of units)     mark(u.x, u.y, UNIT_VISION_RADIUS);
+        for (const b of buildings) mark(b.x, b.y, BUILDING_VISION_RADIUS);
     }
 }
