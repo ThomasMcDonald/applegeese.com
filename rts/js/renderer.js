@@ -64,6 +64,13 @@ class Renderer {
 
         for (let ty = startY; ty < endY; ty++) {
             for (let tx = startX; tx < endX; tx++) {
+                const fogState = map.getFog(tx, ty);
+                if (fogState === 0) {
+                    // Completely unexplored — draw black
+                    ctx.fillStyle = "#000";
+                    ctx.fillRect(tx * ts, ty * ts, ts, ts);
+                    continue;
+                }
                 const t = map.getTile(tx, ty);
                 ctx.fillStyle = TILE_COLOR[t];
                 ctx.fillRect(
@@ -75,6 +82,11 @@ class Renderer {
                 ctx.strokeStyle = TILE_BORDER[t];
                 ctx.lineWidth = 0.5;
                 ctx.strokeRect(tx * ts, ty * ts, ts, ts);
+                if (fogState === 1) {
+                    // Explored but not currently visible — shroud
+                    ctx.fillStyle = "rgba(0,0,0,0.5)";
+                    ctx.fillRect(tx * ts, ty * ts, ts, ts);
+                }
             }
         }
     }
@@ -88,6 +100,8 @@ class Renderer {
 
         for (const node of nodes) {
             if (node.apples <= 0) continue;
+            // Only show resource nodes in explored or visible tiles
+            if (game.map.getFog(node.tx, node.ty) === 0) continue;
             const frac = node.apples / node.maxApples;
             ctx.globalAlpha = 0.35 + 0.65 * frac;
             ctx.fillText("🌳", node.x, node.y);
@@ -242,10 +256,8 @@ class Renderer {
 
     _minimap() {
         const { ctx, canvas } = this;
-        const MM_W = 120,
-            MM_H = 82;
-        const mx = canvas.width - MM_W - 8;
-        const my = canvas.height - MM_H - 8;
+        const mx = canvas.width - MM_W - MM_MARGIN;
+        const my = canvas.height - MM_H - MM_MARGIN;
         const sx = MM_W / MAP_W,
             sy = MM_H / MAP_H;
 
@@ -253,11 +265,15 @@ class Renderer {
         ctx.fillStyle = "rgba(0,0,0,0.75)";
         ctx.fillRect(mx - 2, my - 2, MM_W + 4, MM_H + 4);
 
-        // Tiles
+        // Tiles (only draw explored tiles)
         for (let ty = 0; ty < MAP_H; ty++) {
             for (let tx = 0; tx < MAP_W; tx++) {
+                const fogState = game.map.getFog(tx, ty);
+                if (fogState === 0) continue;
                 const t = game.map.getTile(tx, ty);
-                ctx.fillStyle = TILE_COLOR[t];
+                ctx.fillStyle = fogState === 1
+                    ? "rgba(30,30,30,0.9)"
+                    : TILE_COLOR[t];
                 ctx.fillRect(
                     mx + tx * sx,
                     my + ty * sy,
@@ -267,10 +283,10 @@ class Renderer {
             }
         }
 
-        // Resource nodes
+        // Resource nodes (show if explored)
         ctx.fillStyle = "#27ae60";
         for (const n of game.map.resourceNodes) {
-            if (n.apples > 0) {
+            if (n.apples > 0 && game.map.getFog(n.tx, n.ty) >= 1) {
                 ctx.fillRect(
                     mx + n.tx * sx - 1,
                     my + n.ty * sy - 1,
@@ -302,10 +318,13 @@ class Renderer {
             );
         }
 
-        // Enemy buildings
+        // Enemy buildings (show if explored)
         if (game.enemy) {
             ctx.fillStyle = "#c0392b";
             for (const b of game.enemy.buildings) {
+                const tx = Math.floor(b.x / TILE_SIZE);
+                const ty = Math.floor(b.y / TILE_SIZE);
+                if (game.map.getFog(tx, ty) === 0) continue;
                 ctx.fillRect(
                     mx + (b.x / TILE_SIZE) * sx - 2,
                     my + (b.y / TILE_SIZE) * sy - 2,
@@ -313,9 +332,12 @@ class Renderer {
                     4
                 );
             }
-            // Enemy workers & combat units
+            // Enemy workers & combat units (show if currently visible)
             ctx.fillStyle = "#e74c3c";
             for (const w of game.enemy.workers) {
+                const tx = Math.floor(w.x / TILE_SIZE);
+                const ty = Math.floor(w.y / TILE_SIZE);
+                if (game.map.getFog(tx, ty) !== 2) continue;
                 ctx.fillRect(
                     mx + (w.x / TILE_SIZE) * sx - 1,
                     my + (w.y / TILE_SIZE) * sy - 1,
@@ -324,6 +346,9 @@ class Renderer {
                 );
             }
             for (const u of game.enemy.combatUnits) {
+                const tx = Math.floor(u.x / TILE_SIZE);
+                const ty = Math.floor(u.y / TILE_SIZE);
+                if (game.map.getFog(tx, ty) !== 2) continue;
                 ctx.fillRect(
                     mx + (u.x / TILE_SIZE) * sx - 1,
                     my + (u.y / TILE_SIZE) * sy - 1,
@@ -357,6 +382,10 @@ class Renderer {
         ctx.textBaseline = "middle";
         ctx.font = `${TILE_SIZE}px serif`;
         for (const b of buildings) {
+            // Enemy buildings hidden until player has scouted their tile
+            const tx = Math.floor(b.x / TILE_SIZE);
+            const ty = Math.floor(b.y / TILE_SIZE);
+            if (game.map.getFog(tx, ty) === 0) continue;
             ctx.fillText("🪺", b.x, b.y);
             this._hpBar(b.x, b.y + b.radius + 4, b.hp, b.maxHp);
             if (b.training) {
@@ -380,8 +409,11 @@ class Renderer {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.font = `${TILE_SIZE * 0.72}px serif`;
-        // Fox workers
+        // Fox workers — only visible when currently in sight
         for (const w of workers) {
+            const tx = Math.floor(w.x / TILE_SIZE);
+            const ty = Math.floor(w.y / TILE_SIZE);
+            if (game.map.getFog(tx, ty) !== 2) continue;
             ctx.fillText("🦊", w.x, w.y);
             this._hpBar(w.x, w.y - w.radius - 5, w.hp, w.maxHp);
             if (w.carriedApples > 0) {
@@ -395,8 +427,11 @@ class Renderer {
                 ctx.font = `${TILE_SIZE * 0.72}px serif`;
             }
         }
-        // Wolf combat units
+        // Wolf combat units — only visible when currently in sight
         for (const u of combatUnits) {
+            const tx = Math.floor(u.x / TILE_SIZE);
+            const ty = Math.floor(u.y / TILE_SIZE);
+            if (game.map.getFog(tx, ty) !== 2) continue;
             ctx.font = `${TILE_SIZE * 0.72}px serif`;
             ctx.fillText("🐺", u.x, u.y);
             this._hpBar(u.x, u.y - u.radius - 5, u.hp, u.maxHp);

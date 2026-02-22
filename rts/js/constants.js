@@ -65,3 +65,12 @@ const AI_DIFFICULTY_CONFIG = {
     normal: { gatherMultiplier: 1.0, decisionInterval: 3.0, armyMultiplier: 1.0,  attackThresholdModifier: 1.0 },
     hard:   { gatherMultiplier: 1.2, decisionInterval: 2.0, armyMultiplier: 1.4,  attackThresholdModifier: 0.75 },
 };
+
+// Fog of war vision radii (in tiles)
+const UNIT_VISION_RADIUS = 5;
+const BUILDING_VISION_RADIUS = 4;
+
+// Mini-map dimensions (shared by renderer and input handler)
+const MM_W = 120;
+const MM_H = 82;
+const MM_MARGIN = 8;
