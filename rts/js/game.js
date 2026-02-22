@@ -63,7 +63,7 @@ const game = {
     update(dt) {
         if (!this.map) return;
         for (const unit of this.units) {
-            unit.update(dt, this.map, this.resources);
+            unit.update(dt, this.map, this.resources, this.buildings);
         }
         for (const building of this.buildings) {
             const spawned = building.update(dt, this.resources);
@@ -88,6 +88,9 @@ const game = {
             ) {
                 unit.targetNode = null;
                 unit.state = "IDLE";
+            }
+            if (unit.returnNode && unit.returnNode.apples <= 0) {
+                unit.returnNode = null;
             }
         }
 

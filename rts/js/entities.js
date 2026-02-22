@@ -40,9 +40,11 @@ class Unit extends Entity {
         this.carriedApples = 0;
         this.attackTimer = 0;
         this.radius = def.radius;
+        this.returnNode = null;
+        this.isReturning = false;
     }
 
-    update(dt, map, resources) {
+    update(dt, map, resources, buildings = []) {
         if (
             this.state === "MOVING" &&
             this.path.length > 0
@@ -56,10 +58,22 @@ class Unit extends Entity {
                 this.y = wp.y;
                 this.path.shift();
                 if (this.path.length === 0) {
-                    this.state = this.targetNode
-                        ? "GATHERING"
-                        : "IDLE";
-                    this.gatherTimer = 0;
+                    if (this.isReturning) {
+                        this.isReturning = false;
+                        resources.apples += this.carriedApples;
+                        this.carriedApples = 0;
+                        if (this.returnNode && this.returnNode.apples > 0) {
+                            this.gatherFrom(this.returnNode, map);
+                        } else {
+                            this.returnNode = null;
+                            this.state = "IDLE";
+                        }
+                    } else {
+                        this.state = this.targetNode
+                            ? "GATHERING"
+                            : "IDLE";
+                        this.gatherTimer = 0;
+                    }
                 }
             } else {
                 const spd = UNIT_DEFS[this.unitType].speed * dt;
@@ -81,14 +95,49 @@ class Unit extends Entity {
                 );
                 this.carriedApples += amt;
                 this.targetNode.apples -= amt;
-                if (
-                    this.carriedApples >= MAX_CARRY ||
-                    this.targetNode.apples <= 0
-                ) {
-                    resources.apples += this.carriedApples;
-                    this.carriedApples = 0;
+                const nodeExhausted = this.targetNode.apples <= 0;
+                const bagFull = this.carriedApples >= MAX_CARRY;
+                if (bagFull || nodeExhausted) {
+                    this.returnNode = nodeExhausted ? null : this.targetNode;
                     this.targetNode = null;
-                    this.state = "IDLE";
+                    const nests = buildings.filter(
+                        b => b.type === "NEST" && b.hp > 0
+                    );
+                    if (nests.length > 0 && this.carriedApples > 0) {
+                        let nearest = nests[0];
+                        let nearestD = dist2(this.x, this.y, nearest.x, nearest.y);
+                        for (let i = 1; i < nests.length; i++) {
+                            const d = dist2(this.x, this.y, nests[i].x, nests[i].y);
+                            if (d < nearestD) { nearestD = d; nearest = nests[i]; }
+                        }
+                        const path = aStar(
+                            map,
+                            Math.floor(this.x / TILE_SIZE),
+                            Math.floor(this.y / TILE_SIZE),
+                            nearest.tx,
+                            nearest.ty
+                        );
+                        if (path.length > 0) {
+                            this.path = path;
+                            this.state = "MOVING";
+                            this.isReturning = true;
+                        } else {
+                            // Already adjacent to nest — deposit immediately
+                            resources.apples += this.carriedApples;
+                            this.carriedApples = 0;
+                            if (this.returnNode && this.returnNode.apples > 0) {
+                                this.gatherFrom(this.returnNode, map);
+                            } else {
+                                this.returnNode = null;
+                                this.state = "IDLE";
+                            }
+                        }
+                    } else {
+                        resources.apples += this.carriedApples;
+                        this.carriedApples = 0;
+                        this.returnNode = null;
+                        this.state = "IDLE";
+                    }
                 }
             }
         }
@@ -96,6 +145,8 @@ class Unit extends Entity {
 
     sendTo(tx, ty, map) {
         this.targetNode = null;
+        this.returnNode = null;
+        this.isReturning = false;
         const path = aStar(
             map,
             Math.floor(this.x / TILE_SIZE),
@@ -112,6 +163,8 @@ class Unit extends Entity {
     gatherFrom(node, map) {
         if (!UNIT_DEFS[this.unitType].canGather) return;
         this.targetNode = node;
+        this.returnNode = null;
+        this.isReturning = false;
         const path = aStar(
             map,
             Math.floor(this.x / TILE_SIZE),
