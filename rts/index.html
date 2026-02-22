@@ -234,6 +234,163 @@
                 }
             }
 
+            /* ── Screen Overlays ────────────────────── */
+            .screen-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(10, 10, 20, 0.95);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 100;
+                text-align: center;
+            }
+
+            .screen-title {
+                font-size: 46px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                margin-bottom: 8px;
+                color: #e4e4e7;
+            }
+
+            .screen-subtitle {
+                font-size: 16px;
+                color: rgba(255, 255, 255, 0.5);
+                margin-bottom: 36px;
+                max-width: 320px;
+                line-height: 1.6;
+            }
+
+            .menu-btn {
+                display: block;
+                width: 220px;
+                margin: 7px auto;
+                padding: 13px 0;
+                font-size: 18px;
+                font-weight: 600;
+                background: #4caf50;
+                color: #fff;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background 0.2s, transform 0.1s;
+                text-align: center;
+                text-decoration: none;
+            }
+
+            .menu-btn:hover {
+                background: #43a047;
+                transform: scale(1.03);
+            }
+
+            .menu-btn.secondary {
+                background: rgba(255, 255, 255, 0.1);
+                font-size: 15px;
+                padding: 10px 0;
+            }
+
+            .menu-btn.secondary:hover {
+                background: rgba(255, 255, 255, 0.18);
+            }
+
+            /* ── Difficulty options ──────────────────── */
+            .difficulty-group {
+                text-align: left;
+                margin-bottom: 28px;
+            }
+
+            .difficulty-group-label {
+                font-size: 13px;
+                font-weight: 600;
+                color: rgba(255, 255, 255, 0.55);
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                margin-bottom: 14px;
+            }
+
+            .difficulty-option {
+                display: flex;
+                flex-direction: column;
+                margin: 10px 0;
+                cursor: pointer;
+            }
+
+            .difficulty-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .difficulty-row input[type="radio"] {
+                accent-color: #4caf50;
+                width: 16px;
+                height: 16px;
+                cursor: pointer;
+            }
+
+            .difficulty-name {
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }
+
+            .difficulty-desc {
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.45);
+                margin-left: 24px;
+                margin-top: 2px;
+            }
+
+            /* ── Tutorial panel ──────────────────────── */
+            #tutorial-panel {
+                position: fixed;
+                top: 56px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.85);
+                border: 1px solid rgba(255, 255, 255, 0.18);
+                border-radius: 10px;
+                padding: 14px 22px;
+                max-width: 420px;
+                width: 90%;
+                z-index: 30;
+                text-align: center;
+                display: none;
+                backdrop-filter: blur(4px);
+            }
+
+            .tutorial-step-label {
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.4);
+                margin-bottom: 4px;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+            }
+
+            .tutorial-message {
+                font-size: 15px;
+                font-weight: 500;
+                line-height: 1.6;
+                color: #e4e4e7;
+            }
+
+            .tutorial-skip-btn {
+                margin-top: 10px;
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.35);
+                background: none;
+                border: none;
+                cursor: pointer;
+                text-decoration: underline;
+                padding: 0;
+            }
+
+            .tutorial-skip-btn:hover {
+                color: rgba(255, 255, 255, 0.65);
+            }
+
             /* ── Game Over overlay ───────────────────── */
             #game-over {
                 position: fixed;
@@ -275,9 +432,72 @@
         </style>
     </head>
     <body>
+        <!-- Main Menu Overlay -->
+        <div id="main-menu" class="screen-overlay">
+            <div class="screen-title">⚔️ Orchard Warfare</div>
+            <div class="screen-subtitle">Command your geese and defend the orchard!</div>
+            <button class="menu-btn" id="btn-play">▶ Play</button>
+            <button class="menu-btn secondary" id="btn-tutorial-menu">Tutorial</button>
+            <a href="../" class="menu-btn secondary">← Home</a>
+        </div>
+
+        <!-- First-time Welcome Screen -->
+        <div id="welcome-screen" class="screen-overlay" style="display:none">
+            <div class="screen-title" style="font-size:36px">👋 Welcome!</div>
+            <div class="screen-subtitle">Welcome to Orchard Warfare!<br>This is your first time playing.<br>Would you like to start with the tutorial?</div>
+            <button class="menu-btn" id="btn-welcome-tutorial">Start Tutorial</button>
+            <button class="menu-btn secondary" id="btn-welcome-skip">Skip</button>
+        </div>
+
+        <!-- Game Setup Screen -->
+        <div id="game-setup" class="screen-overlay" style="display:none">
+            <div class="screen-title" style="font-size:34px">Game Setup</div>
+            <div class="difficulty-group">
+                <div class="difficulty-group-label">AI Difficulty</div>
+                <label class="difficulty-option">
+                    <div class="difficulty-row">
+                        <input type="radio" name="difficulty" value="easy" id="diff-easy">
+                        <span class="difficulty-name">Easy</span>
+                    </div>
+                    <div class="difficulty-desc">Slower economy · Smaller armies · Longer attack intervals</div>
+                </label>
+                <label class="difficulty-option">
+                    <div class="difficulty-row">
+                        <input type="radio" name="difficulty" value="normal" id="diff-normal" checked>
+                        <span class="difficulty-name">Normal</span>
+                    </div>
+                    <div class="difficulty-desc">Balanced economy and aggression</div>
+                </label>
+                <label class="difficulty-option">
+                    <div class="difficulty-row">
+                        <input type="radio" name="difficulty" value="hard" id="diff-hard">
+                        <span class="difficulty-name">Hard</span>
+                    </div>
+                    <div class="difficulty-desc">Faster gathering · Larger armies · Attacks sooner</div>
+                </label>
+            </div>
+            <button class="menu-btn" id="btn-start-game">Start Game</button>
+            <button class="menu-btn secondary" id="btn-setup-back">← Back</button>
+        </div>
+
+        <!-- Pause Menu Overlay -->
+        <div id="pause-menu" class="screen-overlay" style="display:none">
+            <div class="screen-title" style="font-size:38px">Paused</div>
+            <button class="menu-btn" id="btn-resume">Resume</button>
+            <button class="menu-btn secondary" id="btn-restart">Restart</button>
+            <button class="menu-btn secondary" id="btn-main-menu-pause">Main Menu</button>
+        </div>
+
+        <!-- Tutorial Panel -->
+        <div id="tutorial-panel">
+            <div class="tutorial-step-label" id="tutorial-step-label">Step 1 of 3</div>
+            <div class="tutorial-message" id="tutorial-message">Select your geese by clicking or dragging over them.</div>
+            <button class="tutorial-skip-btn" id="btn-skip-tutorial">Skip tutorial</button>
+        </div>
+
         <canvas id="gameCanvas"></canvas>
 
-        <div id="hud">
+        <div id="hud" style="display:none">
             <div id="hud-left">
                 <div class="hud-item">
                     <span class="hud-icon">🍎</span>
@@ -311,7 +531,8 @@
         <div id="game-over">
             <h1 id="game-over-title">Defeat! 😢</h1>
             <p id="game-over-msg">Your nest has been destroyed!</p>
-            <button onclick="location.reload()">Play Again</button>
+            <button onclick="startGame(game.difficultyKey, game.isTutorial)">Play Again</button>
+            <button onclick="returnToMainMenu()" style="margin-top:8px;background:rgba(255,255,255,0.15)">Main Menu</button>
         </div>
 
         <script>
@@ -375,6 +596,13 @@
             const COMBAT_RANGE_SQ = (TILE_SIZE * 1.8) * (TILE_SIZE * 1.8);
             const ENEMY_ATTACK_DAMAGE = 15; // damage per attack hit (once per second)
             const PLAYER_ATTACK_DAMAGE = 10; // damage per attack hit (once per second)
+
+            // AI difficulty configurations
+            const AI_DIFFICULTY_CONFIG = {
+                easy:   { gatherMultiplier: 0.8, decisionInterval: 5.0, armyMultiplier: 0.7,  attackThresholdModifier: 1.3 },
+                normal: { gatherMultiplier: 1.0, decisionInterval: 3.0, armyMultiplier: 1.0,  attackThresholdModifier: 1.0 },
+                hard:   { gatherMultiplier: 1.2, decisionInterval: 2.0, armyMultiplier: 1.4,  attackThresholdModifier: 0.75 },
+            };
 
             // ============================================================
             // UTILITY
@@ -743,7 +971,7 @@
             }
 
             class EnemyWorker extends Entity {
-                constructor(x, y, homeBase, resources) {
+                constructor(x, y, homeBase, resources, gatherMultiplier = 1.0) {
                     super(x, y);
                     this.hp = 60;
                     this.maxHp = 60;
@@ -757,6 +985,7 @@
                     this.homeBase = homeBase;
                     this.resources = resources;
                     this.idleTimer = 0;
+                    this.gatherMultiplier = gatherMultiplier;
                 }
 
                 update(dt, map, resourceNodes) {
@@ -835,7 +1064,7 @@
                     if (this.gatherTimer >= GATHER_TICK) {
                         this.gatherTimer = 0;
                         const amt = Math.min(
-                            GATHER_AMOUNT,
+                            Math.max(1, Math.round(GATHER_AMOUNT * this.gatherMultiplier)),
                             this.targetNode.apples,
                             MAX_CARRY - this.carriedApples
                         );
@@ -1029,7 +1258,8 @@
             }
 
             class EnemyAI {
-                constructor() {
+                constructor(config = AI_DIFFICULTY_CONFIG.normal) {
+                    this.config = config;
                     this.resources = { apples: 0 };
                     this.workers = [];
                     this.combatUnits = [];
@@ -1044,7 +1274,10 @@
                 }
 
                 get desiredArmy() {
-                    return Math.min(10, 3 + Math.floor(this.gameTime / 45));
+                    return Math.min(
+                        Math.round(10 * this.config.armyMultiplier),
+                        Math.round((3 + Math.floor(this.gameTime / 45)) * this.config.armyMultiplier)
+                    );
                 }
 
                 init(map) {
@@ -1080,7 +1313,8 @@
                         this.den.x + Math.cos(angle) * off,
                         this.den.y + Math.sin(angle) * off,
                         this.den,
-                        this.resources
+                        this.resources,
+                        this.config.gatherMultiplier
                     ));
                 }
 
@@ -1113,7 +1347,7 @@
                     }
                     // Decision loop
                     this.decisionTimer += dt;
-                    if (this.decisionTimer >= ENEMY_DECISION_INTERVAL) {
+                    if (this.decisionTimer >= this.config.decisionInterval) {
                         this.decisionTimer = 0;
                         this._decide(map, playerBuildings);
                     }
@@ -1144,8 +1378,11 @@
                     const idleArmy = this.combatUnits.filter(
                         u => u.state === "IDLE"
                     );
+                    const attackThreshold = Math.max(
+                        1, Math.ceil(this.desiredArmy * this.config.attackThresholdModifier)
+                    );
                     if (
-                        idleArmy.length >= this.desiredArmy &&
+                        idleArmy.length >= attackThreshold &&
                         playerBuildings.length > 0
                     ) {
                         const target = playerBuildings[0];
@@ -1315,8 +1552,19 @@
                 mouseWorld: { x: 0, y: 0 },
                 enemy: null,
                 gameOver: false,
+                paused: false,
+                isTutorial: false,
+                tutorialStep: 0,
+                difficultyKey: "normal",
 
-                init(canvasW, canvasH) {
+                init(canvasW, canvasH, difficulty = "normal") {
+                    this.units = [];
+                    this.buildings = [];
+                    this.resources = { apples: 50 };
+                    this.selectedUnits = [];
+                    this.selectedBuilding = null;
+                    this.placingType = null;
+                    this.gameOver = false;
                     this.map = new GameMap(MAP_W, MAP_H);
                     this.camera = new Camera(canvasW, canvasH);
 
@@ -1337,11 +1585,12 @@
                     this.camera.y = 2 * TILE_SIZE;
 
                     // Initialise enemy AI
-                    this.enemy = new EnemyAI();
+                    this.enemy = new EnemyAI(AI_DIFFICULTY_CONFIG[difficulty] || AI_DIFFICULTY_CONFIG.normal);
                     this.enemy.init(this.map);
                 },
 
                 update(dt) {
+                    if (!this.map) return;
                     for (const unit of this.units) {
                         unit.update(dt, this.map, this.resources);
                     }
@@ -1369,10 +1618,12 @@
                         }
                     }
 
-                    // Update enemy AI
-                    this.enemy.update(
-                        dt, this.map, this.units, this.buildings
-                    );
+                    // Update enemy AI (freeze during tutorial steps 0 and 1)
+                    if (!this.isTutorial || this.tutorialStep >= 2) {
+                        this.enemy.update(
+                            dt, this.map, this.units, this.buildings
+                        );
+                    }
 
                     // Player auto-attack: geese fight back against nearby
                     // enemy entities when idle or already fighting
@@ -1439,6 +1690,9 @@
                     this.enemy.buildings = this.enemy.buildings.filter(
                         b => b.hp > 0
                     );
+
+                    // Check tutorial progress
+                    if (this.isTutorial) checkTutorialProgress();
                 },
 
                 _endGame(won) {
@@ -1502,6 +1756,7 @@
                     const cam = game.camera;
 
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    if (!game.map || !cam) return;
 
                     ctx.save();
                     ctx.scale(cam.zoom, cam.zoom);
@@ -2149,12 +2404,23 @@
                             updateInfoPanel();
                             return;
                         }
-                        game.clearSelection();
-                        updateInfoPanel();
+                        if (!game.map || game.gameOver) return;
+                        const pauseMenu = document.getElementById("pause-menu");
+                        if (pauseMenu.style.display !== "none") {
+                            resumeGame();
+                            return;
+                        }
+                        if (game.selectedUnits.length > 0 || game.selectedBuilding) {
+                            game.clearSelection();
+                            updateInfoPanel();
+                            return;
+                        }
+                        showPauseMenu();
                     }
                 }
 
                 update(dt) {
+                    if (!game.camera) return;
                     // WASD / Arrow camera pan
                     const spd = 280 * dt;
                     if (this.keys["KeyW"] || this.keys["ArrowUp"])
@@ -2286,7 +2552,7 @@
                 lastTs = ts;
 
                 input.update(dt);
-                if (!game.gameOver) {
+                if (!game.gameOver && !game.paused) {
                     game.update(dt);
                 }
                 renderer.render(input.sel, input.moveIndicators);
@@ -2332,12 +2598,151 @@
                 resize();
                 window.addEventListener("resize", resize);
 
-                game.init(canvas.width, canvas.height);
                 renderer = new Renderer(canvas);
                 input = new InputHandler(canvas);
 
+                // Show first-time welcome or main menu
+                if (!localStorage.getItem("seenTutorial")) {
+                    document.getElementById("welcome-screen").style.display = "flex";
+                    document.getElementById("main-menu").style.display = "none";
+                }
+
                 requestAnimationFrame(loop);
+
+                // Welcome screen buttons
+                document.getElementById("btn-welcome-tutorial").addEventListener("click", () => {
+                    localStorage.setItem("seenTutorial", "true");
+                    startGame("normal", true);
+                });
+                document.getElementById("btn-welcome-skip").addEventListener("click", () => {
+                    localStorage.setItem("seenTutorial", "true");
+                    document.getElementById("welcome-screen").style.display = "none";
+                    document.getElementById("main-menu").style.display = "flex";
+                });
+
+                // Main menu buttons
+                document.getElementById("btn-play").addEventListener("click", () => {
+                    document.getElementById("main-menu").style.display = "none";
+                    document.getElementById("game-setup").style.display = "flex";
+                });
+                document.getElementById("btn-tutorial-menu").addEventListener("click", () => {
+                    startGame("normal", true);
+                });
+
+                // Game setup buttons
+                document.getElementById("btn-start-game").addEventListener("click", () => {
+                    const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
+                    startGame(difficulty, false);
+                });
+                document.getElementById("btn-setup-back").addEventListener("click", () => {
+                    document.getElementById("game-setup").style.display = "none";
+                    document.getElementById("main-menu").style.display = "flex";
+                });
+
+                // Pause menu buttons
+                document.getElementById("btn-resume").addEventListener("click", resumeGame);
+                document.getElementById("btn-restart").addEventListener("click", () => {
+                    startGame(game.difficultyKey, game.isTutorial);
+                });
+                document.getElementById("btn-main-menu-pause").addEventListener("click", returnToMainMenu);
+
+                // Tutorial skip button
+                document.getElementById("btn-skip-tutorial").addEventListener("click", () => {
+                    game.isTutorial = false;
+                    document.getElementById("tutorial-panel").style.display = "none";
+                });
             });
+
+            // ============================================================
+            // SCREEN MANAGEMENT
+            // ============================================================
+            function startGame(difficultyKey, isTutorial) {
+                _nextId = 1;
+                game.paused = false;
+                game.isTutorial = isTutorial || false;
+                game.tutorialStep = 0;
+                game.difficultyKey = difficultyKey || "normal";
+
+                const canvas = document.getElementById("gameCanvas");
+                game.init(canvas.width, canvas.height, game.difficultyKey);
+
+                // Hide all overlays, show HUD
+                ["main-menu", "welcome-screen", "game-setup", "pause-menu"].forEach(id => {
+                    document.getElementById(id).style.display = "none";
+                });
+                document.getElementById("game-over").style.display = "none";
+                document.getElementById("hud").style.display = "flex";
+
+                if (game.isTutorial) {
+                    showTutorialStep(0);
+                } else {
+                    document.getElementById("tutorial-panel").style.display = "none";
+                }
+
+                updateInfoPanel();
+            }
+
+            function showPauseMenu() {
+                game.paused = true;
+                document.getElementById("pause-menu").style.display = "flex";
+            }
+
+            function resumeGame() {
+                game.paused = false;
+                document.getElementById("pause-menu").style.display = "none";
+            }
+
+            function returnToMainMenu() {
+                game.paused = false;
+                game.gameOver = true;
+                game.map = null;
+                ["pause-menu", "game-over"].forEach(id => {
+                    document.getElementById(id).style.display = "none";
+                });
+                document.getElementById("tutorial-panel").style.display = "none";
+                document.getElementById("hud").style.display = "none";
+                document.getElementById("main-menu").style.display = "flex";
+            }
+
+            // ============================================================
+            // TUTORIAL
+            // ============================================================
+            const TUTORIAL_STEPS = [
+                { label: "Step 1 of 3", message: "👆 Select your geese by clicking or dragging over them." },
+                { label: "Step 2 of 3", message: "🌳 Right-click an apple tree to send your geese to gather resources." },
+                { label: "Step 3 of 3", message: "⚔️ Build your army and defeat the fox den! Select geese and right-click enemies to attack." },
+            ];
+
+            function showTutorialStep(step) {
+                const panel = document.getElementById("tutorial-panel");
+                if (step >= TUTORIAL_STEPS.length) {
+                    panel.style.display = "none";
+                    return;
+                }
+                const s = TUTORIAL_STEPS[step];
+                document.getElementById("tutorial-step-label").textContent = s.label;
+                document.getElementById("tutorial-message").textContent = s.message;
+                panel.style.display = "block";
+                game.tutorialStep = step;
+            }
+
+            function checkTutorialProgress() {
+                if (!game.isTutorial || game.tutorialStep >= TUTORIAL_STEPS.length) return;
+                switch (game.tutorialStep) {
+                    case 0:
+                        if (game.selectedUnits.length >= 1) {
+                            showTutorialStep(1);
+                        }
+                        break;
+                    case 1:
+                        if (game.units.some(u => u.state === "GATHERING" ||
+                            (u.targetNode !== null && u.state === "MOVING"))) {
+                            showTutorialStep(2);
+                        }
+                        break;
+                    // Step 2 completes via the victory condition in _endGame
+                }
+            }
         </script>
     </body>
 </html>
