@@ -74,3 +74,4 @@ const BUILDING_VISION_RADIUS = 4;
 const MM_W = 120;
 const MM_H = 82;
 const MM_MARGIN = 8;
+const MINIMAP_SHROUD_COLOR = "rgba(30,30,30,0.9)";

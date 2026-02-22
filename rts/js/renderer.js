@@ -272,7 +272,7 @@ class Renderer {
                 if (fogState === 0) continue;
                 const t = game.map.getTile(tx, ty);
                 ctx.fillStyle = fogState === 1
-                    ? "rgba(30,30,30,0.9)"
+                    ? MINIMAP_SHROUD_COLOR
                     : TILE_COLOR[t];
                 ctx.fillRect(
                     mx + tx * sx,
