@@ -2602,20 +2602,24 @@
                 input = new InputHandler(canvas);
 
                 // Show first-time welcome or main menu
-                if (!localStorage.getItem("seenTutorial")) {
-                    document.getElementById("welcome-screen").style.display = "flex";
-                    document.getElementById("main-menu").style.display = "none";
+                try {
+                    if (!localStorage.getItem("seenTutorial")) {
+                        document.getElementById("welcome-screen").style.display = "flex";
+                        document.getElementById("main-menu").style.display = "none";
+                    }
+                } catch (_e) {
+                    // localStorage unavailable (e.g. private browsing) — skip welcome
                 }
 
                 requestAnimationFrame(loop);
 
                 // Welcome screen buttons
                 document.getElementById("btn-welcome-tutorial").addEventListener("click", () => {
-                    localStorage.setItem("seenTutorial", "true");
+                    try { localStorage.setItem("seenTutorial", "true"); } catch (_e) {}
                     startGame("normal", true);
                 });
                 document.getElementById("btn-welcome-skip").addEventListener("click", () => {
-                    localStorage.setItem("seenTutorial", "true");
+                    try { localStorage.setItem("seenTutorial", "true"); } catch (_e) {}
                     document.getElementById("welcome-screen").style.display = "none";
                     document.getElementById("main-menu").style.display = "flex";
                 });
@@ -2631,7 +2635,8 @@
 
                 // Game setup buttons
                 document.getElementById("btn-start-game").addEventListener("click", () => {
-                    const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
+                    const checked = document.querySelector('input[name="difficulty"]:checked');
+                    const difficulty = checked ? checked.value : "normal";
                     startGame(difficulty, false);
                 });
                 document.getElementById("btn-setup-back").addEventListener("click", () => {
@@ -2736,7 +2741,7 @@
                         break;
                     case 1:
                         if (game.units.some(u => u.state === "GATHERING" ||
-                            (u.targetNode !== null && u.state === "MOVING"))) {
+                            (u.state === "MOVING" && u.targetNode))) {
                             showTutorialStep(2);
                         }
                         break;
