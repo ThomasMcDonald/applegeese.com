@@ -151,9 +151,17 @@ class Renderer {
         const { ctx } = this;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.font = `${TILE_SIZE * 0.72}px serif`;
 
         for (const u of units) {
+            const def = UNIT_DEFS[u.unitType] || UNIT_DEFS.WORKER;
+            // Coloured background circle
+            ctx.beginPath();
+            ctx.arc(u.x, u.y, u.radius, 0, Math.PI * 2);
+            ctx.fillStyle = def.color;
+            ctx.globalAlpha = 0.55;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
             if (u.selected) {
                 ctx.strokeStyle = "#4caf50";
                 ctx.lineWidth = 2;
@@ -161,6 +169,7 @@ class Renderer {
                 ctx.arc(u.x, u.y, u.radius + 3, 0, Math.PI * 2);
                 ctx.stroke();
             }
+            ctx.font = `${TILE_SIZE * def.fontSize}px serif`;
             ctx.fillText("🪿", u.x, u.y);
             this._hpBar(u.x, u.y - u.radius - 5, u.hp, u.maxHp);
 
@@ -173,7 +182,6 @@ class Renderer {
                 const lbl = `🍎${u.carriedApples}`;
                 ctx.strokeText(lbl, u.x + 10, u.y - 14);
                 ctx.fillText(lbl, u.x + 10, u.y - 14);
-                ctx.font = `${TILE_SIZE * 0.72}px serif`;
             }
         }
     }

@@ -40,7 +40,8 @@ const game = {
             this.units.push(
                 new Unit(
                     (5 + i * 2 + 0.5) * TILE_SIZE,
-                    (5 + 0.5) * TILE_SIZE
+                    (5 + 0.5) * TILE_SIZE,
+                    "WORKER"
                 )
             );
         }
@@ -66,10 +67,12 @@ const game = {
             if (spawned) {
                 const angle = Math.random() * Math.PI * 2;
                 const off = TILE_SIZE * 1.8;
+                const unitType = BUILDING_DEFS[building.type].trainsUnit || "WORKER";
                 this.units.push(
                     new Unit(
                         building.x + Math.cos(angle) * off,
-                        building.y + Math.sin(angle) * off
+                        building.y + Math.sin(angle) * off,
+                        unitType
                     )
                 );
             }
