@@ -1,0 +1,43 @@
+td/css/style.css
+  s_16c3a6c90f6e56::t_d3eec3978d846c 287,291-317
+  s_16c3a6c90f6e56::t_0d6cfb4ed4afa6 318
+td/js/entities.js
+  s_16c3a6c90f6e56::t_847d9d5adf77d8 4,9-12,23-27,29-48,52-58,67,69,76,79-84,90,94-95,108-110,122
+td/js/constants.js
+  s_16c3a6c90f6e56::t_4036dc6436c55c 63-84,94-120,130-153,165-172
+td/index.html
+  s_16c3a6c90f6e56::t_5d357b1dfc17bd 232-233
+td/js/main.js
+  s_16c3a6c90f6e56::t_761da05cb0db1d 145-150
+td/js/game.js
+  s_16c3a6c90f6e56::t_135189c1b1f6c6 317-321,349-350
+  s_16c3a6c90f6e56::t_5a2555db6c66f6 120
+  s_16c3a6c90f6e56::t_a30d1879806f9e 423
+  s_16c3a6c90f6e56::t_a5d13accaf8aa5 189-190,192,198-216
+  s_16c3a6c90f6e56::t_9757c31dfbf3ad 94
+  s_16c3a6c90f6e56::t_a90abdf1a0247d 217-218
+td/js/input.js
+  s_16c3a6c90f6e56::t_3cf66efd8eecfc 189-192,195-197,199-202,206-227,238,245-249
+td/js/renderer.js
+  s_16c3a6c90f6e56::t_9d191e3a372244 163,165,172-182,188-198
+  s_16c3a6c90f6e56::t_b712c71818c9df 126,131
+td/js/ui.js
+  s_16c3a6c90f6e56::t_1e375259072bf4 117
+  s_16c3a6c90f6e56::t_187116b4656bf4 48-49,51,55-79,92-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "0bc7a908d5eae6d08b2edeb4ab4229a66ecf4a90",
+  "prompts": {},
+  "sessions": {
+    "s_16c3a6c90f6e56": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3ade1796-7900-43ec-ab4e-f4416f0ad0b7",
+        "model": "default"
+      },
+      "human_author": "ThomasMcDonald <thomasmcdonald1996@gmail.com>"
+    }
+  }
+}
