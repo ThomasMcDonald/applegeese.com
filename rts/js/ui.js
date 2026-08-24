@@ -27,14 +27,15 @@ function updateInfoPanel() {
         if (def.canTrain) {
             const trainsUnit = def.trainsUnit || "WORKER";
             const trainsName = (UNIT_DEFS[trainsUnit] || UNIT_DEFS.WORKER).name;
-            const canAfford = game.resources.apples >= TRAIN_COST;
+            const trainCost = def.trainCost || TRAIN_COST;
+            const canAfford = game.resources.apples >= trainCost;
             if (b.training) {
                 const tt = def.trainTime || TRAIN_TIME;
                 const rem = Math.ceil(tt - b.trainTimer);
                 html += `<div class="info-stat">Training… ${rem}s</div>`;
             } else {
                 html += `<button class="info-train-btn" onclick="onTrainClick()" ${canAfford ? "" : "disabled"}>
-                    Train ${trainsName} 🪿 (${TRAIN_COST} 🍎)
+                    Train ${trainsName} 🪿 (${trainCost} 🍎)
                 </button>`;
             }
             html += `<div class="info-hint">Press T to train</div>`;
@@ -70,12 +71,48 @@ function updateInfoPanel() {
         }
         const canGather = game.selectedUnits.some(u => UNIT_DEFS[u.unitType]?.canGather);
         const gatherHint = canGather ? "<br>Right-click 🌳 to gather apples" : "";
-        html += `<div class="info-hint">Right-click to move${gatherHint}</div>`;
+        html += `<div class="info-hint">Right-click to move or attack${gatherHint}</div>`;
         content.innerHTML = html;
         panel.style.display = "block";
     } else {
         panel.style.display = "none";
     }
+    updateMobileBar();
+}
+
+function updateMobileBar() {
+    const bar = document.getElementById("mobile-bar");
+    if (!bar || !input || !input.isTouchDevice) return;
+
+    const inGame =
+        game.map &&
+        !game.gameOver &&
+        document.getElementById("hud").style.display !== "none";
+
+    if (!inGame || game.selectedUnits.length === 0) {
+        bar.style.display = "none";
+        if (input) input.pendingCommand = null;
+        resizeCanvas();
+        return;
+    }
+
+    bar.style.display = "flex";
+    const gatherBtn = document.getElementById("btn-cmd-gather");
+    const canGather = game.selectedUnits.some(
+        (u) => UNIT_DEFS[u.unitType]?.canGather
+    );
+    if (gatherBtn) {
+        gatherBtn.style.display = canGather ? "inline-flex" : "none";
+    }
+
+    const activeCmd = input.pendingCommand || "move";
+    bar.querySelectorAll(".mobile-cmd-btn").forEach((btn) => {
+        btn.classList.toggle(
+            "active",
+            btn.dataset.cmd === activeCmd
+        );
+    });
+    resizeCanvas();
 }
 
 function onTrainClick() {
@@ -138,6 +175,7 @@ function returnToMainMenu() {
     document.getElementById("tutorial-panel").style.display = "none";
     document.getElementById("hud").style.display = "none";
     document.getElementById("main-menu").style.display = "flex";
+    updateMobileBar();
 }
 
 // ── Tutorial ──────────────────────────────────────────────────

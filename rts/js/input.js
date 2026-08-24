@@ -25,6 +25,20 @@ class InputHandler {
             y2: 0,
         };
         this.moveIndicators = [];
+        this.pendingCommand = null;
+        this.isTouchDevice =
+            window.matchMedia("(pointer: coarse)").matches ||
+            "ontouchstart" in window;
+
+        this.touch = {
+            active: false,
+            id: null,
+            startX: 0,
+            startY: 0,
+            moved: false,
+            longPressTimer: null,
+            longPressTriggered: false,
+        };
 
         this._bind();
     }
@@ -82,6 +96,21 @@ class InputHandler {
         window.addEventListener("keyup", (e) => {
             this.keys[e.code] = false;
         });
+
+        if (this.isTouchDevice) {
+            c.addEventListener("touchstart", (e) => this._touchStart(e), {
+                passive: false,
+            });
+            c.addEventListener("touchmove", (e) => this._touchMove(e), {
+                passive: false,
+            });
+            c.addEventListener("touchend", (e) => this._touchEnd(e), {
+                passive: false,
+            });
+            c.addEventListener("touchcancel", (e) => this._touchEnd(e), {
+                passive: false,
+            });
+        }
     }
 
     _down(e) {
@@ -245,17 +274,54 @@ class InputHandler {
         if (game.selectedUnits.length === 0) return;
         const p = this._pos(e);
         const w = game.camera.screenToWorld(p.x, p.y);
-        const tx = Math.floor(w.x / TILE_SIZE);
-        const ty = Math.floor(w.y / TILE_SIZE);
-        const ent = game.entityAt(w.x, w.y);
+        this._issueCommandAt(w.x, w.y, p.x, p.y);
+    }
+
+    _issueCommandAt(worldX, worldY, screenX, screenY) {
+        if (game.selectedUnits.length === 0) return;
+
+        const ent = game.entityAt(worldX, worldY);
+        const enemy = game.enemyEntityAt(worldX, worldY);
+        const tx = Math.floor(worldX / TILE_SIZE);
+        const ty = Math.floor(worldY / TILE_SIZE);
+        const cmd = this.pendingCommand;
 
         if (
+            (cmd === "gather" || cmd === null) &&
             ent instanceof ResourceNode &&
-            ent.apples > 0
+            ent.apples > 0 &&
+            game.selectedUnits.some(u => UNIT_DEFS[u.unitType]?.canGather)
         ) {
-            for (const u of game.selectedUnits)
-                u.gatherFrom(ent, game.map);
-        } else if (game.map.isWalkable(tx, ty)) {
+            for (const u of game.selectedUnits) {
+                if (UNIT_DEFS[u.unitType]?.canGather) {
+                    u.gatherFrom(ent, game.map);
+                }
+            }
+            this.pendingCommand = null;
+            updateMobileBar();
+            return;
+        }
+
+        if (cmd === "attack" || (enemy && cmd !== "move")) {
+            if (enemy) {
+                for (const u of game.selectedUnits) {
+                    u.attack(enemy, game.map);
+                }
+                this.moveIndicators.push({
+                    x: screenX,
+                    y: screenY,
+                    t: 0,
+                    dur: 0.55,
+                    color: "#e74c3c",
+                });
+                this.pendingCommand = null;
+                updateMobileBar();
+                return;
+            }
+            if (cmd === "attack") return;
+        }
+
+        if (game.map.isWalkable(tx, ty)) {
             const n = game.selectedUnits.length;
             const cols = Math.ceil(Math.sqrt(n));
             game.selectedUnits.forEach((u, i) => {
@@ -271,12 +337,250 @@ class InputHandler {
                 u.sendTo(dest.tx, dest.ty, game.map);
             });
             this.moveIndicators.push({
-                x: p.x,
-                y: p.y,
+                x: screenX,
+                y: screenY,
                 t: 0,
                 dur: 0.55,
             });
+            this.pendingCommand = null;
+            updateMobileBar();
         }
+    }
+
+    _touchPos(touch) {
+        const r = this.canvas.getBoundingClientRect();
+        return {
+            x: touch.clientX - r.left,
+            y: touch.clientY - r.top,
+        };
+    }
+
+    _clearLongPress() {
+        if (this.touch.longPressTimer) {
+            clearTimeout(this.touch.longPressTimer);
+            this.touch.longPressTimer = null;
+        }
+    }
+
+    _touchStart(e) {
+        if (e.touches.length > 1) {
+            this._clearLongPress();
+            this.touch.active = false;
+            return;
+        }
+        e.preventDefault();
+        const touch = e.changedTouches[0];
+        const p = this._touchPos(touch);
+        this.touch = {
+            active: true,
+            id: touch.identifier,
+            startX: p.x,
+            startY: p.y,
+            moved: false,
+            longPressTimer: null,
+            longPressTriggered: false,
+        };
+        this.mouse = p;
+
+        const { mx, my } = this._minimapBounds();
+        if (
+            game.map &&
+            p.x >= mx &&
+            p.x <= mx + MM_W &&
+            p.y >= my &&
+            p.y <= my + MM_H
+        ) {
+            this.minimapDragging = true;
+            this._minimapPanTo(p);
+            return;
+        }
+
+        this.dragStart = p;
+        this.dragging = false;
+        this.sel = {
+            active: false,
+            x1: p.x,
+            y1: p.y,
+            x2: p.x,
+            y2: p.y,
+        };
+
+        this.touch.longPressTimer = setTimeout(() => {
+            if (!this.touch.active || this.touch.moved) return;
+            this.touch.longPressTriggered = true;
+            const w = game.camera.screenToWorld(p.x, p.y);
+            if (game.selectedUnits.length > 0) {
+                this._issueCommandAt(w.x, w.y, p.x, p.y);
+            } else {
+                this.panning = true;
+                this.panStart = {
+                    x: p.x,
+                    y: p.y,
+                    cx: game.camera.x,
+                    cy: game.camera.y,
+                };
+            }
+        }, 450);
+    }
+
+    _touchMove(e) {
+        if (!this.touch.active) return;
+        e.preventDefault();
+        const touch = Array.from(e.changedTouches).find(
+            (t) => t.identifier === this.touch.id
+        );
+        if (!touch) return;
+
+        const p = this._touchPos(touch);
+        game.mouseWorld = game.camera.screenToWorld(p.x, p.y);
+
+        if (this.minimapDragging) {
+            this._minimapPanTo(p);
+            this.mouse = p;
+            return;
+        }
+
+        const dx = p.x - this.touch.startX;
+        const dy = p.y - this.touch.startY;
+        if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+            this.touch.moved = true;
+            this._clearLongPress();
+        }
+
+        if (this.panning) {
+            const pdx = p.x - this.panStart.x;
+            const pdy = p.y - this.panStart.y;
+            game.camera.x = this.panStart.cx - pdx / game.camera.zoom;
+            game.camera.y = this.panStart.cy - pdy / game.camera.zoom;
+            game.camera.clamp();
+            this.mouse = p;
+            return;
+        }
+
+        if (this.touch.moved) {
+            if (
+                !this.dragging &&
+                (Math.abs(dx) > 12 || Math.abs(dy) > 12)
+            ) {
+                this.dragging = true;
+                this.sel.active = true;
+            }
+            if (this.dragging) {
+                this.sel.x2 = p.x;
+                this.sel.y2 = p.y;
+            } else if (!game.selectedUnits.length) {
+                game.camera.x -= dx / game.camera.zoom;
+                game.camera.y -= dy / game.camera.zoom;
+                game.camera.clamp();
+                this.touch.startX = p.x;
+                this.touch.startY = p.y;
+            }
+        }
+        this.mouse = p;
+    }
+
+    _touchEnd(e) {
+        if (!this.touch.active) return;
+        e.preventDefault();
+        this._clearLongPress();
+
+        const touch = Array.from(e.changedTouches).find(
+            (t) => t.identifier === this.touch.id
+        );
+        if (!touch) return;
+
+        const p = this._touchPos(touch);
+        const cam = game.camera;
+
+        if (this.minimapDragging) {
+            this.minimapDragging = false;
+            this.touch.active = false;
+            this.mouse = p;
+            return;
+        }
+
+        if (this.panning) {
+            this.panning = false;
+            this.touch.active = false;
+            this.mouse = p;
+            return;
+        }
+
+        if (this.touch.longPressTriggered) {
+            this.touch.active = false;
+            this.dragging = false;
+            this.sel.active = false;
+            this.mouse = p;
+            return;
+        }
+
+        if (!this.touch.moved) {
+            if (game.placingType) {
+                const w = cam.screenToWorld(p.x, p.y);
+                const tx = Math.floor(w.x / TILE_SIZE);
+                const ty = Math.floor(w.y / TILE_SIZE);
+                const def = BUILDING_DEFS[game.placingType];
+                if (game.canPlaceBuilding(tx, ty, game.placingType)) {
+                    game.resources.apples -= def.buildCost;
+                    game.buildings.push(
+                        new Building(tx, ty, game.placingType)
+                    );
+                    game.placingType = null;
+                }
+                updateInfoPanel();
+            } else if (
+                game.selectedUnits.length > 0 &&
+                this.pendingCommand
+            ) {
+                const w = cam.screenToWorld(p.x, p.y);
+                this._issueCommandAt(w.x, w.y, p.x, p.y);
+            } else if (this.dragging) {
+                const w1 = cam.screenToWorld(
+                    Math.min(this.sel.x1, this.sel.x2),
+                    Math.min(this.sel.y1, this.sel.y2)
+                );
+                const w2 = cam.screenToWorld(
+                    Math.max(this.sel.x1, this.sel.x2),
+                    Math.max(this.sel.y1, this.sel.y2)
+                );
+                game.clearSelection();
+                for (const u of game.units) {
+                    if (
+                        u.x >= w1.x &&
+                        u.x <= w2.x &&
+                        u.y >= w1.y &&
+                        u.y <= w2.y
+                    ) {
+                        u.selected = true;
+                        if (!game.selectedUnits.includes(u)) {
+                            game.selectedUnits.push(u);
+                        }
+                    }
+                }
+            } else {
+                const w = cam.screenToWorld(p.x, p.y);
+                const ent = game.entityAt(w.x, w.y);
+                game.clearSelection();
+                if (ent instanceof Unit) {
+                    ent.selected = true;
+                    game.selectedUnits.push(ent);
+                } else if (ent instanceof Building) {
+                    ent.selected = true;
+                    game.selectedBuilding = ent;
+                }
+                updateInfoPanel();
+            }
+        }
+
+        this.touch.active = false;
+        this.dragging = false;
+        this.sel.active = false;
+        this.mouse = p;
+    }
+
+    setPendingCommand(cmd) {
+        this.pendingCommand = cmd;
+        updateMobileBar();
     }
 
     _keydown(e) {

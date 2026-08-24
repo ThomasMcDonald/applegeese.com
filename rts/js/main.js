@@ -8,6 +8,24 @@ let renderer, input;
 let lastTs = 0;
 let infoPanelTick = 0;
 
+function resizeCanvas() {
+    const canvas = document.getElementById("gameCanvas");
+    const bar = document.getElementById("mobile-bar");
+    const barVisible =
+        bar &&
+        input &&
+        input.isTouchDevice &&
+        bar.style.display !== "none";
+    const bottomInset = barVisible ? MOBILE_BAR_H : 0;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight - HUD_H - bottomInset;
+    if (game.camera) {
+        game.camera.w = canvas.width;
+        game.camera.h = canvas.height;
+        game.camera.clamp();
+    }
+}
+
 function loop(ts) {
     const dt = Math.min((ts - lastTs) / 1000, MAX_FRAME_DT);
     lastTs = ts;
@@ -43,21 +61,22 @@ function loop(ts) {
 window.addEventListener("DOMContentLoaded", () => {
     const canvas = document.getElementById("gameCanvas");
 
-    function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight - HUD_H;
-        if (game.camera) {
-            game.camera.w = canvas.width;
-            game.camera.h = canvas.height;
-            game.camera.clamp();
-        }
-    }
-
     resize();
     window.addEventListener("resize", resize);
 
     renderer = new Renderer(canvas);
     input = new InputHandler(canvas);
+
+    // Mobile command bar buttons
+    document.querySelectorAll(".mobile-cmd-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            input.setPendingCommand(btn.dataset.cmd);
+        });
+    });
+
+    function resize() {
+        resizeCanvas();
+    }
 
     // Show first-time welcome or main menu
     try {

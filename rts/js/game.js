@@ -101,37 +101,67 @@ const game = {
             );
         }
 
-        // Player auto-attack: geese fight back against nearby
-        // enemy entities when idle or already fighting
+        // Player combat: chase manual targets and auto-acquire nearby foes
         for (const unit of this.units) {
-            if (
-                unit.state !== "IDLE" &&
-                unit.state !== "FIGHTING"
-            ) continue;
-            let nearestEnemy = null, nearestD = Infinity;
-            for (const en of [
-                ...this.enemy.combatUnits,
-                ...this.enemy.workers,
-            ]) {
-                if (en.hp <= 0) continue;
-                const d = dist2(unit.x, unit.y, en.x, en.y);
-                if (d < nearestD) { nearestD = d; nearestEnemy = en; }
-            }
-            for (const eb of this.enemy.buildings) {
-                if (eb.hp <= 0) continue;
-                const d = dist2(unit.x, unit.y, eb.x, eb.y);
-                if (d < nearestD) { nearestD = d; nearestEnemy = eb; }
-            }
-            if (nearestEnemy && nearestD <= COMBAT_RANGE_SQ) {
-                unit.state = "FIGHTING";
-                unit.attackTimer += dt;
-                if (unit.attackTimer >= 1.0) {
-                    unit.attackTimer = 0;
-                    nearestEnemy.hp -= PLAYER_ATTACK_DAMAGE;
+            if (unit.state === "ATTACKING" && unit.attackTarget) {
+                const tgt = unit.attackTarget;
+                if (tgt.hp <= 0) {
+                    unit.attackTarget = null;
+                    unit.state = "IDLE";
+                    unit.path = [];
+                    continue;
                 }
-            } else if (unit.state === "FIGHTING") {
-                unit.state = "IDLE";
-                unit.attackTimer = 0;
+                const d = dist2(unit.x, unit.y, tgt.x, tgt.y);
+                if (d <= COMBAT_RANGE_SQ) {
+                    unit.path = [];
+                    unit.attackTimer += dt;
+                    if (unit.attackTimer >= 1.0) {
+                        unit.attackTimer = 0;
+                        const udef = UNIT_DEFS[unit.unitType] || UNIT_DEFS.WORKER;
+                        tgt.hp -= udef.attackDamage || PLAYER_ATTACK_DAMAGE;
+                    }
+                } else {
+                    unit.repathTimer += dt;
+                    if (unit.path.length === 0 || unit.repathTimer >= 1.0) {
+                        unit.repathTimer = 0;
+                        const tx = Math.floor(tgt.x / TILE_SIZE);
+                        const ty = Math.floor(tgt.y / TILE_SIZE);
+                        const path = aStar(
+                            this.map,
+                            Math.floor(unit.x / TILE_SIZE),
+                            Math.floor(unit.y / TILE_SIZE),
+                            tx,
+                            ty
+                        );
+                        if (path.length > 0) {
+                            unit.path = path;
+                            unit.state = "MOVING";
+                        }
+                    }
+                }
+            } else if (
+                unit.state === "IDLE" &&
+                !unit.attackTarget
+            ) {
+                let nearestEnemy = null, nearestD = Infinity;
+                for (const en of [
+                    ...this.enemy.combatUnits,
+                    ...this.enemy.workers,
+                ]) {
+                    if (en.hp <= 0) continue;
+                    const d = dist2(unit.x, unit.y, en.x, en.y);
+                    if (d < nearestD) { nearestD = d; nearestEnemy = en; }
+                }
+                for (const eb of this.enemy.buildings) {
+                    if (eb.hp <= 0) continue;
+                    const d = dist2(unit.x, unit.y, eb.x, eb.y);
+                    if (d < nearestD) { nearestD = d; nearestEnemy = eb; }
+                }
+                if (nearestEnemy && nearestD <= COMBAT_RANGE_SQ) {
+                    unit.attackTarget = nearestEnemy;
+                    unit.state = "ATTACKING";
+                    unit.attackTimer = 0;
+                }
             }
         }
 
@@ -200,6 +230,28 @@ const game = {
                 dist2(n.x, n.y, wx, wy) <= hitRadius * hitRadius
             )
                 return n;
+        }
+        return null;
+    },
+
+    enemyEntityAt(wx, wy, hitRadius = 16) {
+        if (!this.enemy) return null;
+        const r2 = hitRadius * hitRadius;
+        for (const u of this.enemy.combatUnits) {
+            if (u.hp > 0 && dist2(u.x, u.y, wx, wy) <= r2) return u;
+        }
+        for (const u of this.enemy.workers) {
+            if (u.hp > 0 && dist2(u.x, u.y, wx, wy) <= r2) return u;
+        }
+        for (const b of this.enemy.buildings) {
+            if (b.hp > 0 && dist2(b.x, b.y, wx, wy) <= r2) return b;
+        }
+        if (
+            this.enemy.den &&
+            this.enemy.den.hp > 0 &&
+            dist2(this.enemy.den.x, this.enemy.den.y, wx, wy) <= r2
+        ) {
+            return this.enemy.den;
         }
         return null;
     },

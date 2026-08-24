@@ -254,7 +254,12 @@ class Renderer {
         for (const m of indicators) {
             const alpha = 1 - m.t / m.dur;
             const r = m.t * 40 + 4;
-            ctx.strokeStyle = `rgba(76,175,80,${alpha})`;
+            const color = m.color || "#4caf50";
+            const rgb =
+                color === "#e74c3c"
+                    ? "231,76,60"
+                    : "76,175,80";
+            ctx.strokeStyle = `rgba(${rgb},${alpha})`;
             ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.arc(m.x, m.y, r, 0, Math.PI * 2);

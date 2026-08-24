@@ -410,3 +410,56 @@ body {
 #game-over button:hover {
     background: #45a049;
 }
+
+/* ── Mobile command bar ──────────────────── */
+#mobile-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 52px;
+    background: rgba(0, 0, 0, 0.85);
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    z-index: 25;
+    padding: 0 12px;
+    backdrop-filter: blur(6px);
+}
+
+.mobile-cmd-btn {
+    flex: 1;
+    max-width: 120px;
+    padding: 10px 8px;
+    font-size: 14px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.1);
+    color: #e4e4e7;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.mobile-cmd-btn.active {
+    background: #4caf50;
+    border-color: #4caf50;
+    color: #fff;
+}
+
+.mobile-cmd-btn:active {
+    transform: scale(0.97);
+}
+
+@media (max-width: 768px) {
+    #controls-hint {
+        display: none;
+    }
+
+    #info-panel {
+        bottom: 68px;
+        max-width: 92%;
+    }
+}

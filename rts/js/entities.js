@@ -33,12 +33,14 @@ class Unit extends Entity {
         this.hp = def.hp;
         this.maxHp = def.hp;
         this.selected = false;
-        this.state = "IDLE"; // IDLE | MOVING | GATHERING | FIGHTING
+        this.state = "IDLE"; // IDLE | MOVING | GATHERING | ATTACKING
         this.path = [];
         this.targetNode = null;
         this.gatherTimer = 0;
         this.carriedApples = 0;
         this.attackTimer = 0;
+        this.attackTarget = null;
+        this.repathTimer = 0;
         this.radius = def.radius;
         this.returnNode = null;
         this.isReturning = false;
@@ -69,9 +71,14 @@ class Unit extends Entity {
                             this.state = "IDLE";
                         }
                     } else {
-                        this.state = this.targetNode
-                            ? "GATHERING"
-                            : "IDLE";
+                        if (this.attackTarget) {
+                            this.state = "ATTACKING";
+                            this.attackTimer = 0;
+                        } else if (this.targetNode) {
+                            this.state = "GATHERING";
+                        } else {
+                            this.state = "IDLE";
+                        }
                         this.gatherTimer = 0;
                     }
                 }
@@ -147,6 +154,7 @@ class Unit extends Entity {
         this.targetNode = null;
         this.returnNode = null;
         this.isReturning = false;
+        this.attackTarget = null;
         const path = aStar(
             map,
             Math.floor(this.x / TILE_SIZE),
@@ -162,6 +170,7 @@ class Unit extends Entity {
 
     gatherFrom(node, map) {
         if (!UNIT_DEFS[this.unitType].canGather) return;
+        this.attackTarget = null;
         this.targetNode = node;
         this.returnNode = null;
         this.isReturning = false;
@@ -180,6 +189,31 @@ class Unit extends Entity {
             this.path = [];
             this.state = "GATHERING";
             this.gatherTimer = 0;
+        }
+    }
+
+    attack(target, map) {
+        this.targetNode = null;
+        this.returnNode = null;
+        this.isReturning = false;
+        this.attackTarget = target;
+        this.repathTimer = 0;
+        const tx = Math.floor(target.x / TILE_SIZE);
+        const ty = Math.floor(target.y / TILE_SIZE);
+        const path = aStar(
+            map,
+            Math.floor(this.x / TILE_SIZE),
+            Math.floor(this.y / TILE_SIZE),
+            tx,
+            ty
+        );
+        if (path.length > 0) {
+            this.path = path;
+            this.state = "MOVING";
+        } else {
+            this.path = [];
+            this.state = "ATTACKING";
+            this.attackTimer = 0;
         }
     }
 }
@@ -203,8 +237,9 @@ class Building extends Entity {
     startTraining(resources) {
         const def = BUILDING_DEFS[this.type];
         if (!def.canTrain) return false;
-        if (!this.training && resources.apples >= TRAIN_COST) {
-            resources.apples -= TRAIN_COST;
+        const cost = def.trainCost || TRAIN_COST;
+        if (!this.training && resources.apples >= cost) {
+            resources.apples -= cost;
             this.training = true;
             this.trainTimer = 0;
             return true;

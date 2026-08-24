@@ -7,6 +7,7 @@ const TILE_SIZE = 32;
 const MAP_W = 64;
 const MAP_H = 44;
 const HUD_H = 44;
+const MOBILE_BAR_H = 52;
 
 const TILE = Object.freeze({ GRASS: 0, DIRT: 1, WATER: 2 });
 
@@ -31,22 +32,25 @@ const TRAIN_COST = 20; // apples to train
 
 // Player unit type definitions
 const UNIT_DEFS = Object.freeze({
-    WORKER:    { name: "Worker Goose",   color: "#f1c40f", radius: 9,  hp: 80,  speed: UNIT_SPEED,        canGather: true,  fontSize: 0.60 },
-    GUARD:     { name: "Guard Goose",    color: "#3498db", radius: 10, hp: 100, speed: UNIT_SPEED,        canGather: false, fontSize: 0.72 },
-    BRAWLER:   { name: "Brawler Goose",  color: "#e74c3c", radius: 13, hp: 180, speed: UNIT_SPEED * 0.75, canGather: false, fontSize: 0.88 },
-    SCREECHER: { name: "Honk Screecher", color: "#e67e22", radius: 10, hp: 90,  speed: UNIT_SPEED * 1.1,  canGather: false, fontSize: 0.70 },
-    ALPHA:     { name: "Alpha Goose",    color: "#9b59b6", radius: 11, hp: 130, speed: UNIT_SPEED * 0.9,  canGather: false, fontSize: 0.78 },
+    WORKER:    { name: "Worker Goose",   color: "#f1c40f", radius: 9,  hp: 80,  speed: UNIT_SPEED,        canGather: true,  fontSize: 0.60, attackDamage: 8 },
+    GUARD:     { name: "Guard Goose",    color: "#3498db", radius: 10, hp: 100, speed: UNIT_SPEED,        canGather: false, fontSize: 0.72, attackDamage: 12 },
+    BRAWLER:   { name: "Brawler Goose",  color: "#e74c3c", radius: 13, hp: 180, speed: UNIT_SPEED * 0.75, canGather: false, fontSize: 0.88, attackDamage: 18 },
+    SCREECHER: { name: "Honk Screecher", color: "#e67e22", radius: 10, hp: 90,  speed: UNIT_SPEED * 1.1,  canGather: false, fontSize: 0.70, attackDamage: 9 },
+    ALPHA:     { name: "Alpha Goose",    color: "#9b59b6", radius: 11, hp: 130, speed: UNIT_SPEED * 0.9,  canGather: false, fontSize: 0.78, attackDamage: 14 },
 });
 
 // Building type definitions
 const BUILDING_DEFS = {
-    NEST:     { name: "Goose Nest",  emoji: "🏠", maxHp: 200, buildCost: 0,  trainTime: TRAIN_TIME, canTrain: true, trainsUnit: "WORKER", desc: "The heart of your flock" },
-    GRANARY:  { name: "Granary",     emoji: "🌾", maxHp: 150, buildCost: 40, incomeRate: 2,                                               desc: "Generates +2 🍎 per second" },
-    BARRACKS: { name: "Barracks",    emoji: "⛺", maxHp: 180, buildCost: 50, trainTime: 5,  canTrain: true, trainsUnit: "GUARD",           desc: "Trains geese in 5s" },
-    TOWER:    { name: "Watchtower",  emoji: "🗼", maxHp: 120, buildCost: 30,                                                               desc: "Surveys the orchard" },
+    NEST:        { name: "Goose Nest",   emoji: "🏠", maxHp: 200, buildCost: 0,  trainTime: TRAIN_TIME, trainCost: TRAIN_COST, canTrain: true, trainsUnit: "WORKER",    desc: "The heart of your flock" },
+    GRANARY:     { name: "Granary",      emoji: "🌾", maxHp: 150, buildCost: 40,                                                                 desc: "Generates +2 🍎 per second", incomeRate: 2 },
+    BARRACKS:    { name: "Barracks",     emoji: "⛺", maxHp: 180, buildCost: 50, trainTime: 5,  trainCost: 25, canTrain: true, trainsUnit: "GUARD",     desc: "Trains guard geese in 5s" },
+    TOWER:       { name: "Watchtower",   emoji: "🗼", maxHp: 120, buildCost: 30,                                                                 desc: "Surveys the orchard" },
+    BRAWLER_PIT: { name: "Brawler Pit",  emoji: "🥊", maxHp: 160, buildCost: 55, trainTime: 8,  trainCost: 35, canTrain: true, trainsUnit: "BRAWLER",   desc: "Trains heavy brawlers" },
+    HONK_TOWER:  { name: "Honk Tower",   emoji: "📯", maxHp: 140, buildCost: 45, trainTime: 6,  trainCost: 30, canTrain: true, trainsUnit: "SCREECHER", desc: "Trains honk screechers" },
+    ALPHA_PERCH: { name: "Alpha Perch",  emoji: "👑", maxHp: 150, buildCost: 70, trainTime: 12, trainCost: 50, canTrain: true, trainsUnit: "ALPHA",     desc: "Trains alpha geese" },
 };
 // Building types the player can construct
-const BUILDABLE = ["GRANARY", "BARRACKS", "TOWER"];
+const BUILDABLE = ["GRANARY", "BARRACKS", "TOWER", "BRAWLER_PIT", "HONK_TOWER", "ALPHA_PERCH"];
 
 // Prevents the game loop from spiral-of-death when the tab is
 // backgrounded or the device stalls — caps one logical step to 100ms.

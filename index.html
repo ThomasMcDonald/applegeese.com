@@ -9,18 +9,74 @@
         <link rel="apple-touch-icon" sizes="180x180" href="favicon.svg" />
         <link rel="shortcut icon" href="favicon.svg" />
 
-        <title>Applegeese</title>
+        <title>AppleGeese — Goose Games &amp; AI Projects</title>
+        <meta
+            name="description"
+            content="Play goose-themed browser games on AppleGeese — Apple Goose Farm, Goose Game, Idle Goose, and Orchard Warfare RTS. AI-crafted fun at applegeese.com."
+        />
+        <link rel="canonical" href="https://applegeese.com/" />
+        <meta name="theme-color" content="#1a1a2e" />
+
         <meta
             property="og:title"
-            content="AppleGeese - A Collection of Goose-Inspired Projects"
+            content="AppleGeese — Goose Games &amp; AI Projects"
         />
         <meta
             property="og:description"
-            content="Explore a whimsical world of goose-themed games and projects, often brought to life by AI."
+            content="Play goose-themed browser games — Farm, Goose, Idle, and Orchard Warfare RTS. AI-crafted fun at applegeese.com."
         />
-
         <meta property="og:url" content="https://applegeese.com/" />
         <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="AppleGeese" />
+        <!-- Interim share image; a 1200x630 PNG/WebP would perform better on social platforms -->
+        <meta property="og:image" content="https://applegeese.com/favicon.svg" />
+
+        <meta name="twitter:card" content="summary" />
+        <meta
+            name="twitter:title"
+            content="AppleGeese — Goose Games &amp; AI Projects"
+        />
+        <meta
+            name="twitter:description"
+            content="Play goose-themed browser games — Farm, Goose, Idle, and Orchard Warfare RTS."
+        />
+        <meta
+            name="twitter:image"
+            content="https://applegeese.com/favicon.svg"
+        />
+
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                "name": "AppleGeese",
+                "url": "https://applegeese.com/",
+                "description": "A collection of goose-themed browser games and AI-crafted projects.",
+                "hasPart": [
+                    {
+                        "@type": "VideoGame",
+                        "name": "Apple Goose Farm",
+                        "url": "https://applegeese.com/farm.html"
+                    },
+                    {
+                        "@type": "VideoGame",
+                        "name": "Goose Game",
+                        "url": "https://applegeese.com/goose.html"
+                    },
+                    {
+                        "@type": "VideoGame",
+                        "name": "Idle Goose Game",
+                        "url": "https://applegeese.com/idle.html"
+                    },
+                    {
+                        "@type": "VideoGame",
+                        "name": "Orchard Warfare",
+                        "url": "https://applegeese.com/rts/"
+                    }
+                ]
+            }
+        </script>
+
         <!-- Google Fonts for Inter -->
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -88,6 +144,18 @@
                 width: 100vw;
             }
 
+            .visually-hidden {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                padding: 0;
+                margin: -1px;
+                overflow: hidden;
+                clip: rect(0, 0, 0, 0);
+                white-space: nowrap;
+                border: 0;
+            }
+
             .emoji-container {
                 font-size: clamp(2.5rem, 8vw, 5rem);
             }
@@ -143,25 +211,43 @@
                 }
             }
 
-            .wiggle-animation {
-                animation: wiggle 0.6s ease-in-out 1 !important;
-                display: inline-block !important;
-                transform-origin: center center !important;
+            .goose-emoji.wiggle-animation {
+                animation: wiggle 0.6s ease-in-out 1;
+                display: inline-block;
+                transform-origin: center center;
             }
 
             .mr-4 {
                 margin-right: 1rem;
             }
 
+            .goose-slot {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 1.15em;
+                height: 1.15em;
+                vertical-align: middle;
+            }
+
             .goose-link {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 100%;
                 text-decoration: none;
                 cursor: pointer;
-                display: inline-block;
-                transition: transform 0.15s ease;
+                transition: filter 0.15s ease, transform 0.15s ease;
             }
 
             .goose-link:hover {
-                transform: scale(1.2);
+                filter: brightness(1.15);
+                transform: translateY(-2px);
+            }
+
+            .goose-link:hover .goose-emoji.wiggle-animation {
+                animation: none;
             }
 
             .game-nav {
@@ -221,6 +307,13 @@
     <body>
         <!-- Main Content Section -->
         <main class="content-container">
+            <div class="visually-hidden">
+                <h1>AppleGeese</h1>
+                <p>
+                    Goose-themed games — Farm, Goose, Idle, and Orchard Warfare
+                    RTS
+                </p>
+            </div>
             <nav class="game-nav" id="gameNav">
                 <a href="farm.html" class="game-nav-link">Farm</a>
                 <a href="goose.html" class="game-nav-link">Goose</a>
@@ -233,17 +326,30 @@
                         >🍎</a
                     ></span
                 >
-                <span class="fade-in delay-2" id="geese"
-                    ><a href="farm.html" class="goose-link">🪿</a
-                    ><a
-                        href="goose.html"
-                        class="goose-link"
-                        id="playableGoose"
-                        >🪿</a
-                    ><a href="idle.html" class="goose-link">🪿</a
-                    ><a href="rts/" class="goose-link">🪿</a
-                    ></span
-                >
+                <span class="fade-in delay-2" id="geese">
+                    <span class="goose-slot"
+                        ><a href="farm.html" class="goose-link"
+                            ><span class="goose-emoji">🪿</span></a
+                        ></span
+                    ><span class="goose-slot"
+                        ><a
+                            href="goose.html"
+                            class="goose-link"
+                            id="playableGoose"
+                            ><span class="goose-emoji" id="wiggleGoose"
+                                >🪿</span
+                            ></a
+                        ></span
+                    ><span class="goose-slot"
+                        ><a href="idle.html" class="goose-link"
+                            ><span class="goose-emoji">🪿</span></a
+                        ></span
+                    ><span class="goose-slot"
+                        ><a href="rts/" class="goose-link"
+                            ><span class="goose-emoji">🪿</span></a
+                        ></span
+                    >
+                </span>
             </div>
         </main>
 
@@ -281,19 +387,22 @@
                     }
                 }, PREVIEW_DELAY_MS);
 
-                // Add wiggle animation to the playable goose every 3 seconds
+                // Wiggle the playable goose emoji (inner span, not the link)
                 setInterval(() => {
+                    const wiggleGoose = document.getElementById("wiggleGoose");
                     const playableGoose =
                         document.getElementById("playableGoose");
 
-                    if (playableGoose) {
-                        playableGoose.style.display = "inline-block";
-                        playableGoose.classList.add("wiggle-animation");
+                    if (
+                        wiggleGoose &&
+                        playableGoose &&
+                        !playableGoose.matches(":hover")
+                    ) {
+                        wiggleGoose.classList.add("wiggle-animation");
 
-                        // Remove the animation class after it completes
                         setTimeout(() => {
-                            playableGoose.classList.remove("wiggle-animation");
-                        }, 1600);
+                            wiggleGoose.classList.remove("wiggle-animation");
+                        }, 600);
                     }
                 }, 2000);
             });
