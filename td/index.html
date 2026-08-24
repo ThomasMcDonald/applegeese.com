@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+        />
+        <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+        <link rel="icon" type="image/png" sizes="32x32" href="../favicon.svg" />
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.svg" />
+        <link rel="apple-touch-icon" sizes="180x180" href="../favicon.svg" />
+        <link rel="shortcut icon" href="../favicon.svg" />
+        <title>Honk Defense — AppleGeese</title>
+        <meta
+            name="description"
+            content="Play Honk Defense on AppleGeese — place goose towers and hold back dense fox swarms flowing through the orchard."
+        />
+        <link rel="canonical" href="https://applegeese.com/td/" />
+        <meta name="theme-color" content="#1a1a2e" />
+        <meta property="og:title" content="Honk Defense — AppleGeese" />
+        <meta
+            property="og:description"
+            content="Place goose towers and hold back dense fox swarms flowing through the orchard."
+        />
+        <meta property="og:url" content="https://applegeese.com/td/" />
+        <meta property="og:type" content="game" />
+        <meta property="og:site_name" content="AppleGeese" />
+        <meta property="og:image" content="https://applegeese.com/favicon.svg" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="Honk Defense — AppleGeese" />
+        <meta
+            name="twitter:description"
+            content="Defend the orchard with goose towers in this tower defense game."
+        />
+        <meta name="twitter:image" content="https://applegeese.com/favicon.svg" />
+        <link rel="stylesheet" href="css/style.css" />
+    </head>
+    <body>
+        <!-- Main Menu -->
+        <div id="main-menu" class="screen-overlay">
+            <div class="screen-title">📯 Honk Defense</div>
+            <div class="screen-subtitle">
+                Place goose towers and hold back dense fox swarms flowing through the orchard!
+            </div>
+            <div id="high-wave"></div>
+            <button class="menu-btn" id="btn-continue" style="display: none">
+                ▶ Continue
+            </button>
+            <button class="menu-btn" id="btn-play">▶ Play</button>
+            <button class="menu-btn secondary" id="btn-meta-shop">
+                🪶 Upgrades
+            </button>
+            <button class="menu-btn secondary" id="btn-tutorial-menu">
+                Tutorial
+            </button>
+            <a href="../" class="menu-btn secondary">← Home</a>
+        </div>
+
+        <!-- Welcome -->
+        <div id="welcome-screen" class="screen-overlay" style="display: none">
+            <div class="screen-title" style="font-size: 36px">👋 Welcome!</div>
+            <div class="screen-subtitle">
+                Welcome to Honk Defense!<br />
+                This is your first time playing.<br />
+                Would you like to start with the tutorial?
+            </div>
+            <button class="menu-btn" id="btn-welcome-tutorial">
+                Start Tutorial
+            </button>
+            <button class="menu-btn secondary" id="btn-welcome-skip">Skip</button>
+        </div>
+
+        <!-- Setup -->
+        <div id="game-setup" class="screen-overlay" style="display: none">
+            <div class="screen-title" style="font-size: 34px">Game Setup</div>
+            <div class="difficulty-group">
+                <div class="difficulty-group-label">Difficulty</div>
+                <label class="difficulty-option">
+                    <div class="difficulty-row">
+                        <input
+                            type="radio"
+                            name="difficulty"
+                            value="easy"
+                            checked
+                        />
+                        <span class="difficulty-name">Easy</span>
+                    </div>
+                    <div class="difficulty-desc">
+                        Stronger towers · Slower foxes · Recommended
+                    </div>
+                </label>
+                <label class="difficulty-option">
+                    <div class="difficulty-row">
+                        <input type="radio" name="difficulty" value="normal" />
+                        <span class="difficulty-name">Normal</span>
+                    </div>
+                    <div class="difficulty-desc">Balanced orchard defense</div>
+                </label>
+                <label class="difficulty-option">
+                    <div class="difficulty-row">
+                        <input type="radio" name="difficulty" value="hard" />
+                        <span class="difficulty-name">Hard</span>
+                    </div>
+                    <div class="difficulty-desc">
+                        Tougher foxes · Lower sell refund
+                    </div>
+                </label>
+            </div>
+            <button class="menu-btn" id="btn-start-game">Start Game</button>
+            <button class="menu-btn secondary" id="btn-setup-back">← Back</button>
+        </div>
+
+        <!-- Pause -->
+        <div id="pause-menu" class="screen-overlay" style="display: none">
+            <div class="screen-title" style="font-size: 38px">Paused</div>
+            <button class="menu-btn" id="btn-resume">Resume</button>
+            <button class="menu-btn secondary" id="btn-restart">Restart</button>
+            <button class="menu-btn secondary" id="btn-main-menu-pause">
+                Main Menu
+            </button>
+        </div>
+
+        <!-- Tutorial -->
+        <div id="tutorial-panel">
+            <div class="tutorial-step-label" id="tutorial-step-label">
+                Step 1 of 3
+            </div>
+            <div class="tutorial-message" id="tutorial-message">
+                Place towers in the orchard — foxes will flow around water and
+                walls toward the nest.
+            </div>
+            <button class="tutorial-skip-btn" id="btn-skip-tutorial">
+                Skip tutorial
+            </button>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="560"></canvas>
+
+        <div id="hud">
+            <div id="hud-left">
+                <div class="hud-item">
+                    <span class="hud-icon">🍎</span>
+                    <span id="apple-count">80</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-icon">🌊</span>
+                    <span id="wave-count">0/10</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-icon">❤️</span>
+                    <span id="nest-hp">20</span>
+                </div>
+            </div>
+            <div class="hud-title">📯 Honk Defense</div>
+            <div id="hud-right">
+                <button class="hud-btn" id="btn-pause">Pause</button>
+                <a href="../" class="hud-back">← Home</a>
+            </div>
+        </div>
+
+        <div id="shop-bar">
+            <div id="tower-info">
+                <span id="tower-info-emoji">🪿</span>
+                <div class="tower-info-text">
+                    <strong id="tower-info-name">Peck Nest</strong>
+                    <span id="tower-info-desc"
+                        >Steady single-target damage</span
+                    >
+                </div>
+            </div>
+            <button
+                class="tower-btn active"
+                data-type="PECK"
+                title="Peck Nest — Steady single-target damage. 12 dmg · 2.5 range · 1.0/s"
+            >
+                <span class="tower-emoji">🪿</span>
+                <span class="tower-name">Peck Nest</span>
+                <span class="tower-cost">25🍎</span>
+                <span class="tower-tip" role="tooltip"
+                    >Single-target DPS. Reliable beaks for picking off foxes one
+                    at a time. 12 dmg · 2.5 range · 1.0/s</span
+                >
+            </button>
+            <button
+                class="tower-btn"
+                data-type="HONK"
+                title="Honk Tower — Slows foxes with loud honks"
+            >
+                <span class="tower-emoji">📯</span>
+                <span class="tower-name">Honk Tower</span>
+                <span class="tower-cost">40🍎</span>
+                <span class="tower-tip" role="tooltip"
+                    >Slows packs so other towers can finish them. Light damage +
+                    40% slow for 2s. 6 dmg · 3.0 range</span
+                >
+            </button>
+            <button
+                class="tower-btn"
+                data-type="CATAPULT"
+                title="Apple Catapult — Splash damage in a small area"
+            >
+                <span class="tower-emoji">🍎</span>
+                <span class="tower-name">Catapult</span>
+                <span class="tower-cost">55🍎</span>
+                <span class="tower-tip" role="tooltip"
+                    >Lobs apples that splash nearby foxes — great vs dense
+                    swarms. 20 dmg · splash · 3.5 range · slow fire</span
+                >
+            </button>
+            <button
+                class="tower-btn"
+                data-type="POND"
+                title="Pond Buff — Boosts nearby tower attack speed"
+            >
+                <span class="tower-emoji">💧</span>
+                <span class="tower-name">Pond Buff</span>
+                <span class="tower-cost">35🍎</span>
+                <span class="tower-tip" role="tooltip"
+                    >Does not attack. Speeds up nearby towers by 25%. Place in
+                    the middle of a kill zone.</span
+                >
+            </button>
+            <div id="wave-preview">Next: 8 scout</div>
+            <button id="btn-start-wave">Start Wave 1</button>
+        </div>
+
+        <div id="sell-panel">
+            <div id="sell-name">Tower</div>
+            <div id="sell-desc">Description</div>
+            <div id="sell-stats"></div>
+            <button id="btn-sell">
+                <span id="sell-refund">Sell</span>
+            </button>
+        </div>
+
+        <div id="mobile-bar">
+            <button
+                type="button"
+                class="mobile-tower-btn active"
+                data-type="PECK"
+            >
+                🪿
+            </button>
+            <button type="button" class="mobile-tower-btn" data-type="HONK">
+                📯
+            </button>
+            <button
+                type="button"
+                class="mobile-tower-btn"
+                data-type="CATAPULT"
+            >
+                🍎
+            </button>
+            <button type="button" class="mobile-tower-btn" data-type="POND">
+                💧
+            </button>
+        </div>
+
+        <!-- Meta upgrade shop -->
+        <div id="meta-shop" class="screen-overlay" style="display: none">
+            <div class="screen-title" style="font-size: 32px">🪶 Flock Upgrades</div>
+            <div class="screen-subtitle">
+                Feathers persist after every run — win or lose.<br />
+                Spend them to grow stronger for the next attempt.
+            </div>
+            <div class="meta-feather-balance">
+                You have <strong id="meta-feathers">0</strong> 🪶
+            </div>
+            <div id="meta-upgrade-list" class="meta-upgrade-list"></div>
+            <button class="menu-btn secondary" id="btn-meta-back">← Back</button>
+        </div>
+
+        <div id="game-over" class="screen-overlay">
+            <h1 id="game-over-title">Defeat! 😢</h1>
+            <p id="game-over-msg">Your nest has been destroyed!</p>
+            <p id="feathers-gained" class="feathers-gained"></p>
+            <button class="menu-btn" id="btn-play-again">Play Again</button>
+            <button class="menu-btn secondary" id="btn-end-upgrades">
+                🪶 Spend Feathers
+            </button>
+            <button class="menu-btn secondary" id="btn-share">
+                Share on Bluesky
+            </button>
+            <button class="menu-btn secondary" id="btn-end-menu">
+                Main Menu
+            </button>
+        </div>
+
+        <script src="js/constants.js"></script>
+        <script src="js/meta.js"></script>
+        <script src="js/map.js"></script>
+        <script src="js/flowfield.js"></script>
+        <script src="js/entities.js"></script>
+        <script src="js/waves.js"></script>
+        <script src="js/game.js"></script>
+        <script src="js/renderer.js"></script>
+        <script src="js/ui.js"></script>
+        <script src="js/input.js"></script>
+        <script src="js/main.js"></script>
+        <script>
+            // Wire mobile tower buttons
+            document.querySelectorAll(".mobile-tower-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    selectTowerType(btn.dataset.type);
+                    document
+                        .querySelectorAll(".mobile-tower-btn")
+                        .forEach((b) =>
+                            b.classList.toggle(
+                                "active",
+                                b.dataset.type === btn.dataset.type,
+                            ),
+                        );
+                });
+            });
+        </script>
+    </body>
+</html>

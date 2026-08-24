@@ -1,0 +1,640 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+body {
+    overflow: hidden;
+    background: #1a1a2e;
+    font-family: "Arial", sans-serif;
+    color: #e4e4e7;
+}
+
+#gameCanvas {
+    display: block;
+    position: fixed;
+    cursor: crosshair;
+    border-radius: 4px;
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.45);
+}
+
+/* ── HUD ─────────────────────────────────── */
+#hud {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 44px;
+    background: rgba(0, 0, 0, 0.78);
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    z-index: 20;
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#hud-left,
+#hud-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.hud-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.hud-icon {
+    font-size: 16px;
+}
+
+.hud-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.hud-back,
+.hud-btn {
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    padding: 4px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    transition:
+        background 0.2s,
+        color 0.2s;
+}
+
+.hud-back:hover,
+.hud-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+/* ── Shop bar ────────────────────────────── */
+#shop-bar {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    gap: 8px;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 10px 14px;
+    z-index: 25;
+    backdrop-filter: blur(6px);
+    max-width: calc(100vw - 24px);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+#tower-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: min(220px, 70vw);
+    max-width: 280px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#tower-info-emoji {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.tower-info-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+}
+
+#tower-info-name {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+#tower-info-desc {
+    font-size: 11px;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.tower-btn {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 72px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background: rgba(255, 255, 255, 0.08);
+    color: #e4e4e7;
+    cursor: pointer;
+    transition:
+        border-color 0.15s,
+        background 0.15s;
+}
+
+.tower-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.tower-btn.active {
+    border-color: #f1c40f;
+    background: rgba(241, 196, 15, 0.15);
+}
+
+.tower-btn.unaffordable {
+    opacity: 0.45;
+}
+
+.tower-tip {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 220px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(10, 12, 28, 0.96);
+    border: 1px solid rgba(241, 196, 15, 0.35);
+    color: #e4e4e7;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: left;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        opacity 0.15s,
+        visibility 0.15s;
+    z-index: 40;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.tower-tip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: rgba(10, 12, 28, 0.96);
+}
+
+.tower-btn:hover .tower-tip,
+.tower-btn:focus-visible .tower-tip {
+    opacity: 1;
+    visibility: visible;
+}
+
+.tower-emoji {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.tower-name {
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.tower-cost {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+#btn-start-wave {
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    min-width: 130px;
+}
+
+#btn-start-wave:hover:not(:disabled) {
+    background: #219150;
+}
+
+#btn-start-wave:disabled {
+    background: #555;
+    cursor: not-allowed;
+}
+
+#wave-preview {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.55);
+    max-width: 140px;
+    line-height: 1.3;
+}
+
+/* ── Sell panel ──────────────────────────── */
+#sell-panel {
+    position: fixed;
+    top: 60px;
+    right: 16px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 14px 16px;
+    z-index: 25;
+    display: none;
+    min-width: 180px;
+}
+
+#sell-name {
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+#sell-desc {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
+#sell-stats {
+    font-size: 11px;
+    color: #f1c40f;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+#btn-sell {
+    width: 100%;
+    background: #e67e22;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#btn-sell:hover {
+    background: #d35400;
+}
+
+.btn-deselect-tower {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    color: #e4e4e7;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    padding: 7px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 8px;
+}
+
+.btn-deselect-tower:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+/* ── Mobile bar ──────────────────────────── */
+#mobile-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    align-items: center;
+    justify-content: space-around;
+    z-index: 30;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0 4px;
+}
+
+.mobile-tower-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #e4e4e7;
+    font-size: 20px;
+    padding: 8px 4px;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.mobile-tower-btn.active {
+    background: rgba(241, 196, 15, 0.2);
+}
+
+/* ── Overlays ────────────────────────────── */
+.screen-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 12, 28, 0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    gap: 12px;
+    text-align: center;
+    padding: 24px;
+}
+
+.screen-title {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+
+.screen-subtitle {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.menu-btn {
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 36px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    min-width: 200px;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.2s;
+}
+
+.menu-btn:hover {
+    background: #219150;
+}
+
+.menu-btn.secondary {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.difficulty-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: min(360px, 90vw);
+    margin: 8px 0 16px;
+    text-align: left;
+}
+
+.difficulty-group-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 4px;
+}
+
+.difficulty-option {
+    display: block;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+}
+
+.difficulty-option:has(input:checked) {
+    border-color: #f1c40f;
+    background: rgba(241, 196, 15, 0.12);
+}
+
+.difficulty-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.difficulty-name {
+    font-weight: 700;
+}
+
+.difficulty-desc {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.55);
+    margin-top: 4px;
+    margin-left: 26px;
+}
+
+#high-wave {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 4px;
+}
+
+.feathers-gained {
+    color: #f1c40f !important;
+    font-weight: 700;
+    font-size: 15px !important;
+}
+
+.meta-feather-balance {
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+.meta-upgrade-list {
+    width: min(440px, 92vw);
+    max-height: min(48vh, 420px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 8px 0 16px;
+    text-align: left;
+}
+
+.meta-upgrade {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.meta-upgrade.maxed {
+    opacity: 0.7;
+}
+
+.meta-upgrade-icon {
+    font-size: 24px;
+    width: 32px;
+    text-align: center;
+}
+
+.meta-upgrade-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.meta-upgrade-name {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.meta-lvl {
+    font-weight: 600;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.45);
+    margin-left: 6px;
+}
+
+.meta-upgrade-desc {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.55);
+    margin-top: 2px;
+}
+
+.meta-buy-btn {
+    background: #f1c40f;
+    color: #1a1a2e;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-weight: 800;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    min-width: 72px;
+}
+
+.meta-buy-btn:hover:not(:disabled) {
+    background: #f39c12;
+}
+
+.meta-buy-btn:disabled {
+    background: #555;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+/* ── Tutorial ────────────────────────────── */
+#tutorial-panel {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.88);
+    border: 1px solid rgba(241, 196, 15, 0.4);
+    border-radius: 10px;
+    padding: 14px 18px;
+    z-index: 40;
+    display: none;
+    max-width: min(420px, 90vw);
+    text-align: center;
+}
+
+.tutorial-step-label {
+    font-size: 11px;
+    color: #f1c40f;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.tutorial-message {
+    font-size: 14px;
+    line-height: 1.4;
+    margin-bottom: 10px;
+}
+
+.tutorial-skip-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.7);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* ── Game over ───────────────────────────── */
+#game-over {
+    display: none;
+}
+
+#game-over h1 {
+    font-size: 36px;
+    margin-bottom: 8px;
+}
+
+#game-over p {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+    .hud-title {
+        display: none;
+    }
+
+    #shop-bar {
+        bottom: 64px;
+        padding: 8px;
+        gap: 4px;
+    }
+
+    #tower-info {
+        flex: 1 1 100%;
+        max-width: none;
+        order: -1;
+    }
+
+    .tower-btn {
+        min-width: 58px;
+        padding: 6px;
+    }
+
+    .tower-tip {
+        display: none;
+    }
+
+    .tower-name {
+        font-size: 9px;
+    }
+
+    #wave-preview {
+        display: none;
+    }
+
+    .screen-title {
+        font-size: 32px;
+    }
+}
