@@ -284,8 +284,36 @@ body {
 #sell-stats {
     font-size: 11px;
     color: #f1c40f;
-    margin-bottom: 10px;
+    margin-bottom: 4px;
     font-weight: 600;
+}
+
+#sell-next {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 10px;
+    line-height: 1.35;
+}
+
+#btn-upgrade {
+    width: 100%;
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 8px;
+}
+
+#btn-upgrade:hover:not(:disabled) {
+    background: #219a52;
+}
+
+#btn-upgrade:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 #btn-sell {

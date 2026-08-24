@@ -123,11 +123,12 @@ class Renderer {
                 const cy = (r + 0.5) * TILE_SIZE;
                 const rangeBonus =
                     typeof meta !== "undefined" ? meta.bonuses().rangeBonus : 0;
+                const t1Range = (def.tiers && def.tiers[0].range) || 2;
                 ctx.beginPath();
                 ctx.arc(
                     cx,
                     cy,
-                    (def.range + rangeBonus) * TILE_SIZE,
+                    (t1Range + rangeBonus) * TILE_SIZE,
                     0,
                     Math.PI * 2,
                 );
@@ -159,19 +160,42 @@ class Renderer {
                 ctx.stroke();
             }
 
+            const baseR = TILE_SIZE * (0.34 + 0.04 * Math.min(tower.tier, 3));
             ctx.beginPath();
-            ctx.arc(tower.x, tower.y, TILE_SIZE * 0.38, 0, Math.PI * 2);
+            ctx.arc(tower.x, tower.y, baseR, 0, Math.PI * 2);
             ctx.fillStyle = tower.def.color;
             ctx.fill();
             ctx.strokeStyle = selected ? "#fff" : "rgba(0,0,0,0.35)";
             ctx.lineWidth = selected ? 2.5 : 1.5;
             ctx.stroke();
 
+            if (tower.tier >= 2) {
+                ctx.beginPath();
+                ctx.arc(tower.x, tower.y, baseR + 3, 0, Math.PI * 2);
+                ctx.strokeStyle =
+                    tower.tier >= 3
+                        ? "rgba(255, 215, 80, 0.95)"
+                        : "rgba(255, 255, 255, 0.55)";
+                ctx.lineWidth = tower.tier >= 3 ? 2.2 : 1.5;
+                ctx.stroke();
+            }
+
             ctx.font = `${TILE_SIZE * 0.55}px Arial`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillStyle = "#fff";
             ctx.fillText(tower.def.emoji, tower.x, tower.y + 1);
+
+            if (tower.tier >= 2) {
+                ctx.font = `bold ${Math.max(9, TILE_SIZE * 0.28)}px Arial`;
+                ctx.fillStyle =
+                    tower.tier >= 3 ? "#ffe082" : "rgba(255,255,255,0.9)";
+                ctx.strokeStyle = "rgba(0,0,0,0.55)";
+                ctx.lineWidth = 2.5;
+                const label = `T${tower.tier}`;
+                ctx.strokeText(label, tower.x + baseR * 0.55, tower.y - baseR * 0.7);
+                ctx.fillText(label, tower.x + baseR * 0.55, tower.y - baseR * 0.7);
+            }
         }
     }
 

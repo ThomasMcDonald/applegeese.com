@@ -142,6 +142,12 @@ window.addEventListener("DOMContentLoaded", () => {
             updateHud();
         }
     });
+    document.getElementById("btn-upgrade").addEventListener("click", () => {
+        if (game.upgradeSelectedTower()) {
+            updateSellPanel();
+            updateHud();
+        }
+    });
 
     document.querySelectorAll(".tower-btn").forEach((btn) => {
         btn.addEventListener("click", () => selectTowerType(btn.dataset.type));

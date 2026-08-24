@@ -1,11 +1,15 @@
 "use strict";
 
 class Tower {
-    constructor(c, r, type) {
+    constructor(c, r, type, tier = 1) {
         this.c = c;
         this.r = r;
         this.type = type;
         this.def = TOWER_DEFS[type];
+        this.tier = Math.max(
+            1,
+            Math.min(tier, (this.def && this.def.maxTier) || 1),
+        );
         this.x = (c + 0.5) * TILE_SIZE;
         this.y = (r + 0.5) * TILE_SIZE;
         this.cooldown = 0;
@@ -16,12 +20,42 @@ class Tower {
         this.metaFireRateMult = b ? b.fireRateMult : 1;
     }
 
+    get stats() {
+        const tiers = this.def.tiers;
+        return tiers[this.tier - 1] || tiers[0];
+    }
+
     get rangePx() {
-        return (this.def.range + this.metaRangeBonus) * TILE_SIZE;
+        return (this.stats.range + this.metaRangeBonus) * TILE_SIZE;
+    }
+
+    get canUpgrade() {
+        return this.tier < (this.def.maxTier || 1);
+    }
+
+    get upgradeCost() {
+        if (!this.canUpgrade) return 0;
+        const next = this.def.tiers[this.tier];
+        return next ? next.upgradeCost || 0 : 0;
+    }
+
+    investedCost() {
+        let total = this.def.cost;
+        for (let t = 2; t <= this.tier; t++) {
+            const step = this.def.tiers[t - 1];
+            if (step && step.upgradeCost) total += step.upgradeCost;
+        }
+        return total;
     }
 
     sellValue(refundRate) {
-        return Math.floor(this.def.cost * refundRate);
+        return Math.floor(this.investedCost() * refundRate);
+    }
+
+    upgrade() {
+        if (!this.canUpgrade) return false;
+        this.tier += 1;
+        return true;
     }
 
     update(dt, enemies, difficulty, pondBuffMult) {
@@ -30,33 +64,35 @@ class Tower {
         this.cooldown -= dt;
         if (this.cooldown > 0) return null;
 
+        const stats = this.stats;
         const rangeSq = this.rangePx * this.rangePx;
-        let target = null;
-        let bestProgress = -1;
+        const inRange = [];
 
         for (const enemy of enemies) {
             if (enemy.dead || enemy.reachedNest) continue;
             const dx = enemy.x - this.x;
             const dy = enemy.y - this.y;
             if (dx * dx + dy * dy > rangeSq) continue;
-            if (enemy.pathProgress > bestProgress) {
-                bestProgress = enemy.pathProgress;
-                target = enemy;
-            }
+            inRange.push(enemy);
         }
 
-        if (!target) return null;
+        if (inRange.length === 0) return null;
+
+        inRange.sort((a, b) => b.pathProgress - a.pathProgress);
+
+        const shotCount = Math.max(1, stats.multiShot || 1);
+        const targets = inRange.slice(0, shotCount);
 
         const dmgMult =
             (difficulty.towerDamageMult || 1) * this.metaDamageMult;
         const fireRateMult =
             (pondBuffMult || 1) * this.metaFireRateMult;
-        this.cooldown = 1 / (this.def.fireRate * fireRateMult);
+        this.cooldown = 1 / (stats.fireRate * fireRateMult);
 
         return {
             tower: this,
-            target,
-            damage: this.def.damage * dmgMult,
+            targets,
+            damage: stats.damage * dmgMult,
         };
     }
 }
@@ -69,6 +105,9 @@ class Projectile {
         this.damage = damage;
         this.towerType = tower.type;
         this.def = tower.def;
+        const stats = tower.stats;
+        this.slow = stats.slow || 0;
+        this.slowDuration = stats.slowDuration || 0;
         this.alive = true;
         this.hit = false;
         this.arcOffset = 0;
@@ -80,7 +119,7 @@ class Projectile {
             this.emoji = "🍎";
             this.arc = true;
             this.ring = false;
-            this.splash = (tower.def.splash || 1) * TILE_SIZE;
+            this.splash = (stats.splash || 1) * TILE_SIZE;
         } else if (tower.type === "HONK") {
             this.speed = 420;
             this.radius = 5;

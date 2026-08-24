@@ -91,7 +91,7 @@ const game = {
         this.messageTimer = 2.5;
 
         this.towers = (data.towers || []).map(
-            (t) => new Tower(t.c, t.r, t.type),
+            (t) => new Tower(t.c, t.r, t.type, t.tier || 1),
         );
         this.enemies = (data.enemies || []).map((e) =>
             Enemy.fromSave(e, this.difficulty),
@@ -117,6 +117,7 @@ const game = {
                 c: t.c,
                 r: t.r,
                 type: t.type,
+                tier: t.tier || 1,
             })),
             enemies: this.enemies
                 .filter((e) => !e.dead && !e.reachedNest)
@@ -185,12 +186,34 @@ const game = {
             if (other.type !== "POND" || other === tower) continue;
             const dx = other.x - tower.x;
             const dy = other.y - tower.y;
-            const r = (other.def.buffRadius || 2) * TILE_SIZE;
+            const stats = other.stats;
+            const r = (stats.buffRadius || 2) * TILE_SIZE;
             if (dx * dx + dy * dy <= r * r) {
-                mult = Math.max(mult, other.def.buffMult || 1.25);
+                mult = Math.max(mult, stats.buffMult || 1.25);
             }
         }
         return mult;
+    },
+
+    upgradeSelectedTower() {
+        const tower = this.selectedTower;
+        if (!tower || !this.playing || this.gameOver || this.victory) {
+            return false;
+        }
+        if (!tower.canUpgrade) {
+            this.showMessage("Already max tier!", 1.2);
+            return false;
+        }
+        const cost = tower.upgradeCost;
+        if (this.apples < cost) {
+            this.showMessage("Not enough apples!", 1.2);
+            return false;
+        }
+        this.apples -= cost;
+        tower.upgrade();
+        this.showMessage(`${tower.def.name} → T${tower.tier}`, 1.2);
+        this.persistRun();
+        return true;
     },
 
     placeTower(c, r) {
@@ -291,9 +314,11 @@ const game = {
             const buff = this.pondBuffFor(tower);
             const shot = tower.update(dt, this.enemies, this.difficulty, buff);
             if (!shot) continue;
-            this.projectiles.push(
-                new Projectile(shot.tower, shot.target, shot.damage),
-            );
+            for (const target of shot.targets) {
+                this.projectiles.push(
+                    new Projectile(shot.tower, target, shot.damage),
+                );
+            }
         }
 
         // Update projectiles and resolve hits
@@ -321,8 +346,8 @@ const game = {
                 });
             } else if (p.target && !p.target.dead && !p.target.reachedNest) {
                 p.target.takeDamage(p.damage, "normal", this.time);
-                if (p.def.slow) {
-                    p.target.applySlow(p.def.slow, p.def.slowDuration);
+                if (p.slow) {
+                    p.target.applySlow(p.slow, p.slowDuration);
                 }
                 this.particles.push({
                     x: p.x,
@@ -395,6 +420,7 @@ const game = {
         }
 
         updateHud();
+        if (this.selectedTower) updateSellPanel();
     },
 
     onVictory() {

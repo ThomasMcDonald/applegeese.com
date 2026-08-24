@@ -45,12 +45,38 @@ function updateSellPanel() {
     const t = game.selectedTower;
     const refund = t.sellValue(game.difficulty.sellRefund);
     panel.style.display = "block";
+    const tierLabel =
+        t.def.maxTier > 1 ? ` · T${t.tier}/${t.def.maxTier}` : "";
     document.getElementById("sell-name").textContent =
-        `${t.def.emoji} ${t.def.name}`;
+        `${t.def.emoji} ${t.def.name}${tierLabel}`;
     document.getElementById("sell-desc").textContent =
         t.def.tooltip || t.def.desc;
     const statsEl = document.getElementById("sell-stats");
-    if (statsEl) statsEl.textContent = towerStatsText(t.def);
+    if (statsEl) {
+        statsEl.textContent = towerStatsText(t.stats, t.def);
+    }
+    const nextEl = document.getElementById("sell-next");
+    if (nextEl) {
+        nextEl.textContent = towerNextTierPreview(t);
+        nextEl.style.display = t.def.maxTier > 1 ? "block" : "none";
+    }
+
+    const upgradeBtn = document.getElementById("btn-upgrade");
+    if (upgradeBtn) {
+        if (t.canUpgrade) {
+            const cost = t.upgradeCost;
+            upgradeBtn.style.display = "block";
+            upgradeBtn.disabled = game.apples < cost;
+            upgradeBtn.textContent = `Upgrade T${t.tier + 1} (−${cost}🍎)`;
+        } else if (t.def.maxTier > 1) {
+            upgradeBtn.style.display = "block";
+            upgradeBtn.disabled = true;
+            upgradeBtn.textContent = "Max tier";
+        } else {
+            upgradeBtn.style.display = "none";
+        }
+    }
+
     document.getElementById("sell-refund").textContent = `Sell (+${refund}🍎)`;
 
     let deselectBtn = document.getElementById("btn-deselect-tower");
@@ -63,7 +89,8 @@ function updateSellPanel() {
             game.selectedTower = null;
             updateSellPanel();
         });
-        panel.insertBefore(deselectBtn, document.getElementById("btn-sell"));
+        const sellBtn = document.getElementById("btn-sell");
+        panel.insertBefore(deselectBtn, sellBtn);
     }
 }
 
@@ -87,7 +114,7 @@ function updateTutorialPanel() {
         },
         {
             label: "Step 3 of 3",
-            msg: "Use Honk Towers to slow packs and Catapults for splash. Right-click (or long-press) a tower to sell.",
+            msg: "Select a tower to upgrade (T2/T3) or sell. Honks slow packs; Catapults splash swarms.",
         },
     ];
     const step = steps[game.tutorialStep];

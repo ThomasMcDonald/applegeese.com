@@ -186,19 +186,43 @@ function selectTowerType(type) {
     });
 }
 
-function towerStatsText(def) {
-    if (!def) return "";
-    if (def.noAttack) {
-        return `Buff: +${Math.round((def.buffMult - 1) * 100)}% attack speed · radius ${def.buffRadius}`;
+function towerStatsText(stats, extras) {
+    if (!stats) return "";
+    if (extras && extras.noAttack) {
+        return `Buff: +${Math.round((stats.buffMult - 1) * 100)}% attack speed · radius ${stats.buffRadius}`;
     }
     const parts = [
-        `${def.damage} dmg`,
-        `${def.range} range`,
-        `${def.fireRate}/s`,
+        `${stats.damage} dmg`,
+        `${stats.range} range`,
+        `${stats.fireRate}/s`,
     ];
-    if (def.slow) parts.push(`${Math.round(def.slow * 100)}% slow`);
-    if (def.splash) parts.push(`splash ${def.splash}`);
+    if (stats.slow) parts.push(`${Math.round(stats.slow * 100)}% slow`);
+    if (stats.slowDuration) parts.push(`${stats.slowDuration}s`);
+    if (stats.splash) parts.push(`splash ${stats.splash}`);
+    if (stats.multiShot) parts.push(`×${stats.multiShot} targets`);
     return parts.join(" · ");
+}
+
+function towerNextTierPreview(tower) {
+    if (!tower.canUpgrade) return "Max tier";
+    const next = tower.def.tiers[tower.tier];
+    if (!next) return "";
+    const bits = [];
+    if (next.damage != null && next.damage !== tower.stats.damage) {
+        bits.push(`${next.damage} dmg`);
+    }
+    if (next.range != null && next.range !== tower.stats.range) {
+        bits.push(`${next.range} rng`);
+    }
+    if (next.fireRate != null && next.fireRate !== tower.stats.fireRate) {
+        bits.push(`${next.fireRate}/s`);
+    }
+    if (next.slow != null) {
+        bits.push(`${Math.round(next.slow * 100)}% slow`);
+    }
+    if (next.splash != null) bits.push(`splash ${next.splash}`);
+    if (next.multiShot) bits.push(`×${next.multiShot}`);
+    return bits.length ? `Next: ${bits.join(" · ")}` : "Upgrade available";
 }
 
 function updateTowerInfo(type) {
@@ -211,12 +235,16 @@ function updateTowerInfo(type) {
         emoji.textContent = "👆";
         name.textContent = "No tower selected";
         desc.textContent =
-            "Pick a tower to place, or click a placed tower to inspect. Esc to deselect.";
+            "Pick a tower to place, or click a placed tower to inspect / upgrade. Esc to deselect.";
         return;
     }
 
     const def = TOWER_DEFS[type];
     emoji.textContent = def.emoji;
     name.textContent = def.name;
-    desc.textContent = def.tooltip || def.desc;
+    const t1 = def.tiers[0];
+    const stats = towerStatsText(t1, def);
+    const tierNote =
+        def.maxTier > 1 ? ` · upgrades to T${def.maxTier}` : "";
+    desc.textContent = `${def.tooltip || def.desc} (${stats}${tierNote})`;
 }
