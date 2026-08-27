@@ -1,0 +1,2299 @@
+// Game constants - Calculate dynamic canvas size
+const calculateCanvasSize = () => {
+    const isMobile = window.innerWidth <= 768;
+    const maxWidth = window.innerWidth * 0.95;
+    const headerFooterHeight = isMobile ? 280 : 200;
+    const maxHeight =
+        (window.innerHeight - headerFooterHeight) * 0.95;
+    const GRID_SIZE = 30; // Larger grid squares
+
+    const gridWidth = Math.floor(maxWidth / GRID_SIZE);
+    const gridHeight = Math.floor(maxHeight / GRID_SIZE);
+
+    return {
+        GRID_SIZE: GRID_SIZE,
+        GRID_WIDTH: gridWidth,
+        GRID_HEIGHT: gridHeight,
+        CANVAS_WIDTH: gridWidth * GRID_SIZE,
+        CANVAS_HEIGHT: gridHeight * GRID_SIZE,
+    };
+};
+
+let gameSize = calculateCanvasSize();
+let GRID_SIZE = gameSize.GRID_SIZE;
+let GRID_WIDTH = gameSize.GRID_WIDTH;
+let GRID_HEIGHT = gameSize.GRID_HEIGHT;
+let CANVAS_WIDTH = gameSize.CANVAS_WIDTH;
+let CANVAS_HEIGHT = gameSize.CANVAS_HEIGHT;
+
+// Game elements
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const scoreElement = document.getElementById("score");
+const highScoreElement = document.getElementById("highScore");
+const todayScoreElement = document.getElementById("todayScore");
+const neckLengthElement = document.getElementById("neckLength");
+const speedElement = document.getElementById("speed");
+const modeLabelElement = document.getElementById("modeLabel");
+const timerDisplayElement = document.getElementById("timerDisplay");
+const timeLeftElement = document.getElementById("timeLeft");
+
+// Particle system
+let particles = [];
+let sparkleTimer = 0;
+let screenShake = { x: 0, y: 0, intensity: 0 };
+let trailParticles = [];
+const prefersReducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+).matches;
+
+// Game state
+let gameState = "start"; // 'start', 'playing', 'paused', 'gameOver'
+let gameLoop = null;
+let lastUpdateTime = 0;
+let updateInterval = 100; // milliseconds between updates
+const TIME_LIMIT_MS = 60000;
+const GAME_MODES = {
+    classic: {
+        label: "Classic",
+        highScoreKey: "gooseGameHighScore",
+        todayScoreKey: "gooseGameTodayScore",
+    },
+    wrapped: {
+        label: "Wrapped Walls",
+        highScoreKey: "gooseGameHighScoreWrapped",
+        todayScoreKey: "gooseGameTodayScoreWrapped",
+    },
+    timed: {
+        label: "Timed",
+        highScoreKey: "gooseGameHighScoreTimed",
+        todayScoreKey: "gooseGameTodayScoreTimed",
+    },
+};
+let selectedMode = "classic";
+let timedEndAt = 0;
+let timedRemainingMs = TIME_LIMIT_MS;
+
+// Game objects
+let goose = [];
+let apples = [];
+let powerups = [];
+let direction = { x: 1, y: 0 };
+let nextDirection = { x: 1, y: 0 };
+let score = 0;
+let highScore = 0;
+let todayScore = 0;
+let speed = 1.0;
+let powerupTimer = 0;
+let appleSpawnTimer = 0;
+let dailyRandom = Math.random;
+let currentRunPath = [];
+let currentRunLengths = [];
+let ghostPath = [];
+let ghostLengths = [];
+let ghostStep = 0;
+let ghostFinished = false;
+let ghostEnabled = localStorage.getItem("gooseGameGhost") === "true";
+const MAX_GHOST_STEPS = 8000;
+
+function utcDayString(date = new Date()) {
+    return date.toISOString().slice(0, 10);
+}
+
+function utcDayOffset(offset) {
+    const now = new Date();
+    const day = new Date(
+        Date.UTC(
+            now.getUTCFullYear(),
+            now.getUTCMonth(),
+            now.getUTCDate() + offset,
+        ),
+    );
+    return utcDayString(day);
+}
+
+function lastSevenUtcDays() {
+    const days = [];
+    for (let offset = -6; offset <= 0; offset++) {
+        days.push(utcDayOffset(offset));
+    }
+    return days;
+}
+
+function weekdayLetter(day) {
+    const date = new Date(`${day}T00:00:00Z`);
+    return date.toLocaleDateString("en-US", {
+        weekday: "narrow",
+        timeZone: "UTC",
+    });
+}
+
+function hashString(value) {
+    let hash = 2166136261;
+    for (let i = 0; i < value.length; i++) {
+        hash ^= value.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+}
+
+function mulberry32(seed) {
+    return function dailyRng() {
+        seed |= 0;
+        seed = (seed + 0x6d2b79f5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+function resetDailyRng() {
+    const seed = hashString(
+        `${utcDayString()}|${selectedMode}|${GRID_WIDTH}x${GRID_HEIGHT}`,
+    );
+    dailyRandom = mulberry32(seed);
+}
+
+function getStoredRecord(mode = selectedMode) {
+    try {
+        const raw = localStorage.getItem(GAME_MODES[mode].todayScoreKey);
+        if (!raw) {
+            return {};
+        }
+        const data = JSON.parse(raw);
+        return data && typeof data === "object" ? data : {};
+    } catch (e) {
+        return {};
+    }
+}
+
+function getTodayRecord(mode = selectedMode) {
+    const data = getStoredRecord(mode);
+    if (!data.day || data.day !== utcDayString()) {
+        return null;
+    }
+    return data;
+}
+
+function historyMapFromRecord(record) {
+    const map = {};
+    if (record && Array.isArray(record.history)) {
+        record.history.forEach((entry) => {
+            if (entry && entry.day) {
+                map[entry.day] = parseInt(entry.score, 10) || 0;
+            }
+        });
+    }
+    if (record && record.day) {
+        map[record.day] = Math.max(
+            map[record.day] || 0,
+            parseInt(record.score, 10) || 0,
+        );
+    }
+    return map;
+}
+
+function weekHistoryFromMap(histMap) {
+    return lastSevenUtcDays().map((day) => ({
+        day,
+        score: histMap[day] || 0,
+    }));
+}
+
+function currentStreak(record) {
+    if (!record) {
+        return 0;
+    }
+    const today = utcDayString();
+    const yesterday = utcDayOffset(-1);
+    if (
+        record.lastStreakDay !== today &&
+        record.lastStreakDay !== yesterday
+    ) {
+        return 0;
+    }
+    return parseInt(record.streak, 10) || 0;
+}
+
+function nextStreakState(record, today) {
+    const yesterday = utcDayOffset(-1);
+    const streak = parseInt(record.streak, 10) || 0;
+    if (record.lastStreakDay === today) {
+        return { streak, lastStreakDay: today };
+    }
+    if (record.lastStreakDay === yesterday) {
+        return { streak: streak + 1, lastStreakDay: today };
+    }
+    return { streak: 1, lastStreakDay: today };
+}
+
+function updateStreakUI(mode = selectedMode) {
+    const record = getStoredRecord(mode);
+    const streak = currentStreak(record);
+    const histMap = historyMapFromRecord(record);
+    const today = utcDayString();
+    const week = weekHistoryFromMap(histMap);
+
+    const streakCount = document.getElementById("streakCount");
+    const menuStreak = document.getElementById("menuStreakCount");
+    const finalStreak = document.getElementById("finalStreak");
+    if (streakCount) {
+        streakCount.textContent = streak;
+    }
+    if (menuStreak) {
+        menuStreak.textContent = streak;
+    }
+    if (finalStreak) {
+        finalStreak.textContent = streak;
+    }
+
+    const strip = document.getElementById("weekStrip");
+    if (!strip) {
+        return;
+    }
+    strip.replaceChildren();
+    week.forEach((entry) => {
+        const cell = document.createElement("div");
+        cell.className = "week-day";
+        if (entry.score > 0) {
+            cell.classList.add("played");
+        }
+        if (entry.day === today) {
+            cell.classList.add("today");
+        }
+        const label = document.createElement("span");
+        label.textContent = weekdayLetter(entry.day);
+        const value = document.createElement("strong");
+        value.textContent = entry.score > 0 ? String(entry.score) : "–";
+        cell.append(label, value);
+        strip.appendChild(cell);
+    });
+}
+
+function getModeHighScore(mode) {
+    return parseInt(
+        localStorage.getItem(GAME_MODES[mode].highScoreKey) || "0",
+        10,
+    );
+}
+
+function getTodayScore(mode) {
+    const record = getTodayRecord(mode);
+    return record ? parseInt(record.score, 10) || 0 : 0;
+}
+
+function saveTodayScore(mode, scoreValue, ghostData = null) {
+    const existing = getStoredRecord(mode);
+    const today = utcDayString();
+    const histMap = historyMapFromRecord(existing);
+    histMap[today] = Math.max(histMap[today] || 0, scoreValue);
+    const streakState = nextStreakState(existing, today);
+    const payload = {
+        day: today,
+        score: scoreValue,
+        history: weekHistoryFromMap(histMap),
+        streak: streakState.streak,
+        lastStreakDay: streakState.lastStreakDay,
+    };
+    if (ghostData && ghostData.path && ghostData.path.length) {
+        payload.path = ghostData.path;
+        payload.lengths = ghostData.lengths;
+        payload.gridW = ghostData.gridW;
+        payload.gridH = ghostData.gridH;
+    } else if (
+        existing.day === today &&
+        Array.isArray(existing.path)
+    ) {
+        payload.path = existing.path;
+        payload.lengths = existing.lengths;
+        payload.gridW = existing.gridW;
+        payload.gridH = existing.gridH;
+    }
+    try {
+        localStorage.setItem(
+            GAME_MODES[mode].todayScoreKey,
+            JSON.stringify(payload),
+        );
+    } catch (e) {
+        try {
+            localStorage.setItem(
+                GAME_MODES[mode].todayScoreKey,
+                JSON.stringify({
+                    day: payload.day,
+                    score: payload.score,
+                    history: payload.history,
+                    streak: payload.streak,
+                    lastStreakDay: payload.lastStreakDay,
+                }),
+            );
+        } catch (ignored) {
+            // Storage full or blocked
+        }
+    }
+}
+
+function loadGhostForToday() {
+    ghostPath = [];
+    ghostLengths = [];
+    ghostStep = 0;
+    ghostFinished = false;
+    if (!ghostEnabled) {
+        return;
+    }
+    const record = getTodayRecord();
+    if (
+        !record ||
+        !Array.isArray(record.path) ||
+        !Array.isArray(record.lengths) ||
+        record.gridW !== GRID_WIDTH ||
+        record.gridH !== GRID_HEIGHT
+    ) {
+        return;
+    }
+    ghostPath = record.path;
+    ghostLengths = record.lengths;
+}
+
+function recordRunStep(head) {
+    if (currentRunPath.length >= MAX_GHOST_STEPS) {
+        return;
+    }
+    currentRunPath.push({ x: head.x, y: head.y });
+    currentRunLengths.push(goose.length);
+    ghostStep = currentRunPath.length - 1;
+}
+
+function explodeGhost() {
+    if (ghostFinished || !ghostPath.length) {
+        return;
+    }
+    const last = ghostPath[ghostPath.length - 1];
+    createGooseExplosion(
+        last.x * GRID_SIZE + GRID_SIZE / 2,
+        last.y * GRID_SIZE + GRID_SIZE / 2,
+    );
+    ghostFinished = true;
+    ghostPath = [];
+    ghostLengths = [];
+}
+
+function syncGhostAfterMove() {
+    if (!ghostEnabled || ghostFinished || !ghostPath.length) {
+        return;
+    }
+    if (ghostStep >= ghostPath.length) {
+        explodeGhost();
+    }
+}
+
+function updateGhostToggleButton() {
+    const button = document.getElementById("ghostToggle");
+    if (!button) {
+        return;
+    }
+    button.setAttribute("aria-pressed", ghostEnabled.toString());
+    button.querySelector("strong").textContent = ghostEnabled
+        ? "Ghost: On"
+        : "Ghost: Off";
+}
+
+function toggleGhost() {
+    ghostEnabled = !ghostEnabled;
+    localStorage.setItem("gooseGameGhost", ghostEnabled.toString());
+    updateGhostToggleButton();
+    if (gameState === "start") {
+        loadGhostForToday();
+        render();
+    }
+}
+
+function getGhostSegments() {
+    if (!ghostPath.length) {
+        return [];
+    }
+    const index = Math.min(ghostStep, ghostPath.length - 1);
+    const length = Math.max(1, ghostLengths[index] || 1);
+    const segments = [];
+    for (let i = 0; i < length; i++) {
+        const pathIndex = index - i;
+        if (pathIndex < 0) {
+            break;
+        }
+        segments.push(ghostPath[pathIndex]);
+    }
+    return segments;
+}
+
+function drawGhostGoose(ctx) {
+    if (!ghostEnabled || ghostFinished) {
+        return;
+    }
+    const segments = getGhostSegments();
+    const drawSegments = prefersReducedMotion
+        ? segments.slice(0, Math.min(segments.length, 12))
+        : segments;
+    if (!drawSegments.length) {
+        return;
+    }
+
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    drawSegments.forEach((segment, index) => {
+        const x = segment.x * GRID_SIZE;
+        const y = segment.y * GRID_SIZE;
+        const inset = index === 0 ? 2 : 4;
+        ctx.fillStyle = index === 0 ? "#d9ecff" : "#b7c9d9";
+        ctx.fillRect(
+            x + inset,
+            y + inset,
+            GRID_SIZE - inset * 2,
+            GRID_SIZE - inset * 2,
+        );
+    });
+    ctx.restore();
+}
+
+function refreshStoredScores(mode = selectedMode) {
+    highScore = getModeHighScore(mode);
+    todayScore = getTodayScore(mode);
+    highScoreElement.textContent = highScore;
+    todayScoreElement.textContent = todayScore;
+    updateStreakUI(mode);
+}
+
+refreshStoredScores(selectedMode);
+
+function selectGameMode(mode) {
+    if (!GAME_MODES[mode] || gameState !== "start") return;
+
+    selectedMode = mode;
+    refreshStoredScores(mode);
+    modeLabelElement.textContent = GAME_MODES[mode].label;
+    timerDisplayElement.hidden = mode !== "timed";
+
+    document.querySelectorAll(".mode-button").forEach((button) => {
+        const isSelected = button.dataset.mode === mode;
+        button.classList.toggle("selected", isSelected);
+        button.setAttribute("aria-pressed", isSelected.toString());
+    });
+}
+
+// Particle class for effects
+class Particle {
+    constructor(x, y, type = "apple") {
+        this.x = x;
+        this.y = y;
+        this.originalX = x;
+        this.originalY = y;
+        this.type = type;
+        this.life = 1.0;
+        this.maxLife =
+            type === "sparkle" ? 2.0 : type === "trail" ? 0.5 : 1.0;
+
+        if (type === "apple") {
+            this.vx = (Math.random() - 0.5) * 8;
+            this.vy = (Math.random() - 0.5) * 8 - 3;
+            this.gravity = 0.2;
+            this.size = Math.random() * 4 + 2;
+            this.color = `hsl(${Math.random() * 60 + 30}, 100%, 60%)`; // Yellow to red
+        } else if (type === "gameOver") {
+            this.vx = (Math.random() - 0.5) * 6;
+            this.vy = Math.random() * -8 - 2;
+            this.gravity = 0.15;
+            this.size = Math.random() * 6 + 3;
+            this.color = `hsl(0, 100%, ${Math.random() * 50 + 50}%)`; // Red shades
+        } else if (type === "sparkle") {
+            this.angle = Math.random() * Math.PI * 2;
+            this.radius = Math.random() * 20 + 10;
+            this.angularVel = (Math.random() - 0.5) * 0.1;
+            this.size = Math.random() * 2 + 1;
+            this.color = `hsl(${Math.random() * 360}, 100%, 80%)`;
+            this.twinkle = Math.random() * Math.PI * 2;
+        } else if (type === "trail") {
+            this.vx = (Math.random() - 0.5) * 2;
+            this.vy = (Math.random() - 0.5) * 2;
+            this.size = Math.random() * 3 + 1;
+            this.color = `hsla(45, 80%, 85%, 0.6)`;
+        } else if (type === "explosion") {
+            this.vx = (Math.random() - 0.5) * 16;
+            this.vy = (Math.random() - 0.5) * 16 - 5;
+            this.gravity = 0.3;
+            this.size = Math.random() * 8 + 4;
+            this.color = `hsl(${Math.random() * 60 + 10}, 100%, ${Math.random() * 30 + 50}%)`; // Orange to red
+            this.spin = Math.random() * 0.2 - 0.1;
+            this.angle = 0;
+        }
+    }
+
+    update() {
+        this.life -= 1 / (this.maxLife * 60); // Assuming 60 FPS
+
+        if (
+            this.type === "apple" ||
+            this.type === "gameOver" ||
+            this.type === "trail" ||
+            this.type === "explosion"
+        ) {
+            this.x += this.vx;
+            this.y += this.vy;
+            if (this.gravity) this.vy += this.gravity;
+            if (this.spin) this.angle += this.spin;
+        } else if (this.type === "sparkle") {
+            this.angle += this.angularVel;
+            this.twinkle += 0.15;
+            this.x =
+                this.originalX +
+                Math.cos(this.angle) * this.radius * this.life;
+            this.y =
+                this.originalY +
+                Math.sin(this.angle) * this.radius * this.life;
+        }
+
+        return this.life > 0;
+    }
+
+    draw(ctx) {
+        const alpha = Math.max(0, this.life);
+
+        if (this.type === "sparkle") {
+            const twinkleAlpha = (Math.sin(this.twinkle) + 1) * 0.5;
+            ctx.globalAlpha = alpha * twinkleAlpha;
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (this.type === "explosion") {
+            ctx.globalAlpha = alpha;
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+            ctx.fillStyle = this.color;
+            ctx.fillRect(
+                -this.size / 2,
+                -this.size / 2,
+                this.size,
+                this.size,
+            );
+            ctx.restore();
+        } else {
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(
+                this.x,
+                this.y,
+                this.size * alpha,
+                0,
+                Math.PI * 2,
+            );
+            ctx.fill();
+        }
+
+        ctx.globalAlpha = 1;
+    }
+}
+
+// Powerup system
+class Powerup {
+    constructor(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.active = true;
+        this.life = 1.0;
+        this.pulse = 0;
+        this.sparkleTimer = 0;
+
+        switch (type) {
+            case "speed":
+                this.color = "#FFD700";
+                this.icon = "⚡";
+                this.duration = 300; // 5 seconds at 60fps
+                break;
+            case "shield":
+                this.color = "#00BFFF";
+                this.icon = "🛡️";
+                this.duration = 600; // 10 seconds
+                break;
+            case "rainbow":
+                this.color = "#FF1493";
+                this.icon = "🌈";
+                this.duration = 240; // 4 seconds
+                break;
+        }
+    }
+
+    update() {
+        this.pulse += 0.1;
+        this.sparkleTimer++;
+
+        // Create sparkle effect around powerup
+        if (
+            !prefersReducedMotion &&
+            this.sparkleTimer > 10 &&
+            Math.random() < 0.3
+        ) {
+            const sparkleX =
+                this.x * GRID_SIZE +
+                GRID_SIZE / 2 +
+                (Math.random() - 0.5) * GRID_SIZE;
+            const sparkleY =
+                this.y * GRID_SIZE +
+                GRID_SIZE / 2 +
+                (Math.random() - 0.5) * GRID_SIZE;
+            particles.push(
+                new Particle(sparkleX, sparkleY, "sparkle"),
+            );
+            this.sparkleTimer = 0;
+        }
+
+        return this.active;
+    }
+
+    draw(ctx) {
+        const x = this.x * GRID_SIZE;
+        const y = this.y * GRID_SIZE;
+        const centerX = x + GRID_SIZE / 2;
+        const centerY = y + GRID_SIZE / 2;
+
+        // Draw pulsing background
+        const pulseSize = 1 + Math.sin(this.pulse) * 0.2;
+        ctx.fillStyle = this.color + "40"; // Semi-transparent
+        ctx.beginPath();
+        ctx.arc(
+            centerX,
+            centerY,
+            (GRID_SIZE / 2 - 2) * pulseSize,
+            0,
+            Math.PI * 2,
+        );
+        ctx.fill();
+
+        // Draw powerup icon
+        ctx.font = `${GRID_SIZE * 0.7}px Arial`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = this.color;
+        ctx.fillText(this.icon, centerX, centerY);
+    }
+}
+
+function createAppleEatEffect(x, y) {
+    const count = prefersReducedMotion ? 4 : 12;
+    for (let i = 0; i < count; i++) {
+        particles.push(
+            new Particle(
+                x + GRID_SIZE / 2,
+                y + GRID_SIZE / 2,
+                "apple",
+            ),
+        );
+    }
+}
+
+function createGooseExplosion(gooseX, gooseY) {
+    const burstCount = prefersReducedMotion ? 12 : 60;
+    const flashCount = prefersReducedMotion ? 4 : 15;
+    for (let i = 0; i < burstCount; i++) {
+        particles.push(new Particle(gooseX, gooseY, "explosion"));
+    }
+
+    for (let i = 0; i < flashCount; i++) {
+        const flashParticle = new Particle(
+            gooseX,
+            gooseY,
+            "explosion",
+        );
+        flashParticle.color = "rgba(255, 255, 255, 0.9)";
+        flashParticle.size *= 1.5;
+        particles.push(flashParticle);
+    }
+
+    // Create screen shake for dramatic effect
+    if (!prefersReducedMotion) {
+        createScreenShake(12);
+    }
+}
+
+function createSparkleEffect() {
+    if (prefersReducedMotion) return;
+    if (goose.length > 0 && gameState === "playing") {
+        const head = goose[0];
+        const x = head.x * GRID_SIZE + GRID_SIZE / 2;
+        const y = head.y * GRID_SIZE + GRID_SIZE / 2;
+
+        particles.push(new Particle(x, y, "sparkle"));
+    }
+}
+
+function createTrailEffect() {
+    if (prefersReducedMotion) return;
+    if (goose.length > 1 && gameState === "playing") {
+        // Add trail particles to the last few segments
+        for (
+            let i = Math.max(0, goose.length - 3);
+            i < goose.length;
+            i++
+        ) {
+            const segment = goose[i];
+            const x = segment.x * GRID_SIZE + GRID_SIZE / 2;
+            const y = segment.y * GRID_SIZE + GRID_SIZE / 2;
+
+            if (Math.random() < 0.3) {
+                particles.push(
+                    new Particle(
+                        x + (Math.random() - 0.5) * GRID_SIZE,
+                        y + (Math.random() - 0.5) * GRID_SIZE,
+                        "trail",
+                    ),
+                );
+            }
+        }
+    }
+}
+
+function createScreenShake(intensity) {
+    if (prefersReducedMotion) return;
+    screenShake.intensity = intensity;
+}
+
+function updateScreenShake() {
+    if (screenShake.intensity > 0) {
+        screenShake.x =
+            (Math.random() - 0.5) * screenShake.intensity;
+        screenShake.y =
+            (Math.random() - 0.5) * screenShake.intensity;
+        screenShake.intensity *= 0.8; // Decay shake
+
+        if (screenShake.intensity < 0.1) {
+            screenShake.intensity = 0;
+            screenShake.x = 0;
+            screenShake.y = 0;
+        }
+    }
+}
+
+function updateParticles() {
+    particles = particles.filter((particle) => particle.update());
+    updateScreenShake();
+
+    // Add ambient sparkles occasionally
+    sparkleTimer++;
+    if (
+        sparkleTimer > 120 &&
+        gameState === "playing" &&
+        Math.random() < 0.3
+    ) {
+        // Every 2 seconds roughly
+        createSparkleEffect();
+        sparkleTimer = 0;
+    }
+
+    if (
+        !prefersReducedMotion &&
+        gameState === "playing" &&
+        Math.random() < 0.4
+    ) {
+        createTrailEffect();
+    }
+}
+
+function updatePowerups() {
+    powerups = powerups.filter((powerup) => powerup.update());
+}
+
+function spawnWorldItemsOnTick() {
+    if (apples.length === 0) {
+        spawnApple();
+        appleSpawnTimer = 0;
+    } else {
+        appleSpawnTimer++;
+        if (appleSpawnTimer >= 15 && apples.length < 3) {
+            spawnApple();
+            appleSpawnTimer = 0;
+        }
+    }
+
+    powerupTimer++;
+    if (powerupTimer >= 300 && dailyRandom() < 0.03) {
+        spawnPowerup();
+        powerupTimer = 0;
+    }
+}
+
+function drawParticles(ctx) {
+    particles.forEach((particle) => particle.draw(ctx));
+}
+
+function drawFieldBackground(ctx, isDarkMode) {
+    // Simple field background with gradient
+    const gradient = ctx.createLinearGradient(
+        0,
+        0,
+        0,
+        CANVAS_HEIGHT,
+    );
+    gradient.addColorStop(0, isDarkMode ? "#2d4a2d" : "#81C784");
+    gradient.addColorStop(1, isDarkMode ? "#1a3d1a" : "#4CAF50");
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // Simple grid overlay
+    ctx.strokeStyle = isDarkMode
+        ? "rgba(255, 255, 255, 0.08)"
+        : "rgba(0, 0, 0, 0.08)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= GRID_WIDTH; x++) {
+        ctx.beginPath();
+        ctx.moveTo(x * GRID_SIZE, 0);
+        ctx.lineTo(x * GRID_SIZE, CANVAS_HEIGHT);
+        ctx.stroke();
+    }
+    for (let y = 0; y <= GRID_HEIGHT; y++) {
+        ctx.beginPath();
+        ctx.moveTo(0, y * GRID_SIZE);
+        ctx.lineTo(CANVAS_WIDTH, y * GRID_SIZE);
+        ctx.stroke();
+    }
+}
+
+// Set initial canvas size
+function setCanvasSize() {
+    gameSize = calculateCanvasSize();
+    GRID_SIZE = gameSize.GRID_SIZE;
+    GRID_WIDTH = gameSize.GRID_WIDTH;
+    GRID_HEIGHT = gameSize.GRID_HEIGHT;
+    CANVAS_WIDTH = gameSize.CANVAS_WIDTH;
+    CANVAS_HEIGHT = gameSize.CANVAS_HEIGHT;
+
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+}
+
+function clampEntitiesToGrid() {
+    goose.forEach((segment) => {
+        segment.x = Math.max(
+            0,
+            Math.min(GRID_WIDTH - 1, segment.x),
+        );
+        segment.y = Math.max(
+            0,
+            Math.min(GRID_HEIGHT - 1, segment.y),
+        );
+    });
+    apples = apples.filter(
+        (apple) =>
+            apple.x >= 0 &&
+            apple.x < GRID_WIDTH &&
+            apple.y >= 0 &&
+            apple.y < GRID_HEIGHT,
+    );
+    powerups = powerups.filter(
+        (powerup) =>
+            powerup.x >= 0 &&
+            powerup.x < GRID_WIDTH &&
+            powerup.y >= 0 &&
+            powerup.y < GRID_HEIGHT,
+    );
+}
+
+// Handle window resize
+window.addEventListener("resize", () => {
+    setCanvasSize();
+    clampEntitiesToGrid();
+    updateMobileControlsVisibility();
+    render();
+});
+
+// Set initial size
+setCanvasSize();
+
+// Initialize mobile controls visibility
+updateMobileControlsVisibility();
+
+// Handle orientation change
+window.addEventListener("orientationchange", () => {
+    setTimeout(() => {
+        setCanvasSize();
+        clampEntitiesToGrid();
+        updateMobileControlsVisibility();
+        render();
+    }, 100);
+});
+
+// Game initialization
+function initializeGame() {
+    setCanvasSize(); // Ensure canvas is properly sized
+    goose = [
+        {
+            x: Math.floor(GRID_WIDTH / 4),
+            y: Math.floor(GRID_HEIGHT / 2),
+        },
+    ]; // Start goose head at position
+    direction = { x: 1, y: 0 };
+    nextDirection = { x: 1, y: 0 };
+    score = 0;
+    speed = 1.0;
+    updateInterval = 100;
+    timedRemainingMs = TIME_LIMIT_MS;
+    timedEndAt = 0;
+
+    // Clear arrays and reset timers
+    apples = [];
+    powerups = [];
+    activePowerups = {};
+    powerupTimer = 0;
+    appleSpawnTimer = 0;
+    currentRunPath = [];
+    currentRunLengths = [];
+    resetDailyRng();
+    loadGhostForToday();
+    currentRunPath.push({
+        x: goose[0].x,
+        y: goose[0].y,
+    });
+    currentRunLengths.push(1);
+
+    spawnApple();
+    updateUI();
+}
+
+// Spawn apple at random location
+function spawnApple() {
+    if (apples.length >= 3) return; // Max 3 apples
+
+    let validPosition = false;
+    let attempts = 0;
+    let newApple;
+
+    while (!validPosition && attempts < 50) {
+        newApple = {
+            x: Math.floor(dailyRandom() * GRID_WIDTH),
+            y: Math.floor(dailyRandom() * GRID_HEIGHT),
+            isGolden: dailyRandom() < 0.15,
+        };
+
+        validPosition =
+            !goose.some(
+                (segment) =>
+                    segment.x === newApple.x &&
+                    segment.y === newApple.y,
+            ) &&
+            !powerups.some(
+                (powerup) =>
+                    powerup.x === newApple.x &&
+                    powerup.y === newApple.y,
+            ) &&
+            !apples.some(
+                (apple) =>
+                    apple.x === newApple.x &&
+                    apple.y === newApple.y,
+            );
+
+        attempts++;
+    }
+
+    if (validPosition) {
+        apples.push(newApple);
+    }
+}
+
+function spawnPowerup() {
+    if (powerups.length >= 2) return; // Max 2 powerups at once
+
+    const types = ["speed", "shield", "rainbow"];
+    const type = types[Math.floor(dailyRandom() * types.length)];
+
+    let validPosition = false;
+    let attempts = 0;
+    while (!validPosition && attempts < 50) {
+        const x = Math.floor(dailyRandom() * GRID_WIDTH);
+        const y = Math.floor(dailyRandom() * GRID_HEIGHT);
+
+        validPosition =
+            !goose.some(
+                (segment) => segment.x === x && segment.y === y,
+            ) &&
+            !powerups.some(
+                (powerup) => powerup.x === x && powerup.y === y,
+            ) &&
+            !apples.some((apple) => apple.x === x && apple.y === y);
+
+        if (validPosition) {
+            powerups.push(new Powerup(x, y, type));
+        }
+        attempts++;
+    }
+}
+
+// Update game UI
+function updateUI() {
+    scoreElement.textContent = score;
+    neckLengthElement.textContent = goose.length;
+    speedElement.textContent = speed.toFixed(1);
+    modeLabelElement.textContent = GAME_MODES[selectedMode].label;
+    timerDisplayElement.hidden = selectedMode !== "timed";
+    timeLeftElement.textContent = Math.ceil(timedRemainingMs / 1000);
+    todayScoreElement.textContent = todayScore;
+}
+
+function updateTimedMode(currentTime) {
+    if (selectedMode !== "timed" || gameState !== "playing") {
+        return false;
+    }
+
+    timedRemainingMs = Math.max(0, timedEndAt - currentTime);
+    timeLeftElement.textContent = Math.ceil(timedRemainingMs / 1000);
+
+    if (timedRemainingMs === 0) {
+        gameOver(score, goose.length, "timed");
+        return true;
+    }
+
+    return false;
+}
+
+function recomputeSpeed() {
+    let baseSpeed = 1.0 + Math.floor(score / 100) * 0.5;
+    if (activePowerups.speed && activePowerups.speed.active) {
+        baseSpeed *= 1.5;
+    }
+    speed = Math.min(5.0, baseSpeed);
+    updateInterval = Math.max(50, 100 / Math.pow(speed, 0.5));
+}
+
+// Input handling
+document.addEventListener("keydown", (event) => {
+    if (gameState === "playing") {
+        switch (event.key) {
+            case "ArrowUp":
+            case "w":
+            case "W":
+                if (direction.y !== 1) {
+                    nextDirection = { x: 0, y: -1 };
+                }
+                event.preventDefault();
+                break;
+            case "ArrowDown":
+            case "s":
+            case "S":
+                if (direction.y !== -1) {
+                    nextDirection = { x: 0, y: 1 };
+                }
+                event.preventDefault();
+                break;
+            case "ArrowLeft":
+            case "a":
+            case "A":
+                if (direction.x !== 1) {
+                    nextDirection = { x: -1, y: 0 };
+                }
+                event.preventDefault();
+                break;
+            case "ArrowRight":
+            case "d":
+            case "D":
+                if (direction.x !== -1) {
+                    nextDirection = { x: 1, y: 0 };
+                }
+                event.preventDefault();
+                break;
+            case " ":
+                pauseGame();
+                event.preventDefault();
+                break;
+        }
+    } else if (gameState === "paused") {
+        if (event.key === " ") {
+            resumeGame();
+            event.preventDefault();
+        }
+    } else if (gameState === "gameOver" || gameState === "start") {
+        if (event.key === "Enter") {
+            if (gameState === "gameOver") {
+                restartGame();
+            } else {
+                startGame();
+            }
+            event.preventDefault();
+        }
+    }
+});
+
+// Mobile touch controls and swipe gestures
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+
+// Function to handle direction changes
+function changeDirection(newDirection) {
+    if (gameState === "playing") {
+        switch (newDirection) {
+            case "up":
+                if (direction.y !== 1) {
+                    nextDirection = { x: 0, y: -1 };
+                }
+                break;
+            case "down":
+                if (direction.y !== -1) {
+                    nextDirection = { x: 0, y: 1 };
+                }
+                break;
+            case "left":
+                if (direction.x !== 1) {
+                    nextDirection = { x: -1, y: 0 };
+                }
+                break;
+            case "right":
+                if (direction.x !== -1) {
+                    nextDirection = { x: 1, y: 0 };
+                }
+                break;
+        }
+    }
+}
+
+function bindControlButton(id, handler) {
+    const btn = document.getElementById(id);
+    btn.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        handler();
+    });
+    btn.addEventListener("click", handler);
+}
+
+bindControlButton("upBtn", () => changeDirection("up"));
+bindControlButton("downBtn", () => changeDirection("down"));
+bindControlButton("leftBtn", () => changeDirection("left"));
+bindControlButton("rightBtn", () => changeDirection("right"));
+
+bindControlButton("pauseBtn", () => {
+    if (gameState === "playing") {
+        pauseGame();
+    } else if (gameState === "paused") {
+        resumeGame();
+    }
+});
+
+// Swipe detection on canvas
+canvas.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+});
+
+canvas.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+    handleSwipe();
+});
+
+function handleSwipe() {
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    const minSwipeDistance = 30;
+
+    if (
+        Math.abs(deltaX) < minSwipeDistance &&
+        Math.abs(deltaY) < minSwipeDistance
+    ) {
+        return; // Too small to be a swipe
+    }
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        // Horizontal swipe
+        if (deltaX > 0) {
+            changeDirection("right");
+        } else {
+            changeDirection("left");
+        }
+    } else {
+        // Vertical swipe
+        if (deltaY > 0) {
+            changeDirection("down");
+        } else {
+            changeDirection("up");
+        }
+    }
+}
+
+// Update pause button text based on game state
+function updatePauseButton() {
+    const pauseBtn = document.getElementById("pauseBtn");
+    if (gameState === "paused") {
+        pauseBtn.textContent = "▶";
+    } else {
+        pauseBtn.textContent = "⏸";
+    }
+}
+
+// Mobile controls visibility management
+function updateMobileControlsVisibility() {
+    const isMobile = window.innerWidth <= 768;
+    const mobileControls =
+        document.getElementById("mobileControls");
+    if (isMobile && (gameState === "playing" || gameState === "paused")) {
+        mobileControls.style.display = "block";
+    } else {
+        mobileControls.style.display = "none";
+    }
+}
+
+// Game loop
+function gameUpdate(currentTime) {
+    if (gameState !== "playing" && gameState !== "gameOver") return;
+
+    // Update particles regardless of game update interval
+    updateParticles();
+
+    if (updateTimedMode(currentTime)) {
+        render();
+        return;
+    }
+
+    // Update powerups
+    if (gameState === "playing") {
+        updatePowerups();
+        updateActivePowerups();
+    }
+
+    if (
+        gameState === "playing" &&
+        goose.length > 0 &&
+        currentTime - lastUpdateTime >= updateInterval
+    ) {
+        direction = { ...nextDirection };
+
+        // Move goose
+        const head = { ...goose[0] };
+        head.x += direction.x;
+        head.y += direction.y;
+
+        // Check wall collisions
+        if (
+            head.x < 0 ||
+            head.x >= GRID_WIDTH ||
+            head.y < 0 ||
+            head.y >= GRID_HEIGHT
+        ) {
+            if (selectedMode === "wrapped") {
+                head.x = (head.x + GRID_WIDTH) % GRID_WIDTH;
+                head.y = (head.y + GRID_HEIGHT) % GRID_HEIGHT;
+            } else if (
+                activePowerups.shield &&
+                activePowerups.shield.active
+            ) {
+                // Consume shield and wrap around
+                delete activePowerups.shield;
+                head.x = (head.x + GRID_WIDTH) % GRID_WIDTH;
+                head.y = (head.y + GRID_HEIGHT) % GRID_HEIGHT;
+                createScreenShake(3);
+            } else {
+                // Store the last valid goose head position BEFORE clearing
+                const lastValidX =
+                    goose[0].x * GRID_SIZE + GRID_SIZE / 2;
+                const lastValidY =
+                    goose[0].y * GRID_SIZE + GRID_SIZE / 2;
+
+                // Capture game state before clearing
+                const finalScore = score;
+                const finalNeckLength = goose.length;
+
+                // Clear goose immediately so it doesn't show during explosion
+                goose = [];
+
+                // Create explosion at last valid position
+                createGooseExplosion(lastValidX, lastValidY);
+                gameOver(finalScore, finalNeckLength);
+                render();
+                return;
+            }
+        }
+
+        // Check self collision
+        if (
+            goose.some(
+                (segment) =>
+                    segment.x === head.x && segment.y === head.y,
+            )
+        ) {
+            // Shield powerup prevents death
+            if (
+                activePowerups.shield &&
+                activePowerups.shield.active
+            ) {
+                delete activePowerups.shield;
+                nextDirection = {
+                    x: -direction.x,
+                    y: -direction.y,
+                };
+                direction = { ...nextDirection };
+                createScreenShake(3);
+                updateUI();
+                lastUpdateTime = currentTime;
+                render();
+                return;
+            } else {
+                // Store collision position BEFORE clearing goose
+                const collisionX =
+                    head.x * GRID_SIZE + GRID_SIZE / 2;
+                const collisionY =
+                    head.y * GRID_SIZE + GRID_SIZE / 2;
+
+                // Capture game state before clearing
+                const finalScore = score;
+                const finalNeckLength = goose.length;
+
+                // Clear goose immediately so it doesn't show during explosion
+                goose = [];
+
+                // Create explosion at collision position
+                createGooseExplosion(collisionX, collisionY);
+                gameOver(finalScore, finalNeckLength);
+                render();
+                return;
+            }
+        }
+
+        goose.unshift(head);
+
+        // Check apple collisions
+        let appleEaten = false;
+        for (let i = apples.length - 1; i >= 0; i--) {
+            const apple = apples[i];
+            if (head.x === apple.x && head.y === apple.y) {
+                // Create apple eating particle effect
+                createAppleEatEffect(
+                    apple.x * GRID_SIZE,
+                    apple.y * GRID_SIZE,
+                );
+
+                // Create screen shake effect
+                createScreenShake(3);
+
+                // Apple eaten - don't remove tail, goose grows
+                let applePoints = apple.isGolden ? 25 : 10;
+
+                // Rainbow powerup doubles points
+                if (
+                    activePowerups.rainbow &&
+                    activePowerups.rainbow.active
+                ) {
+                    applePoints *= 2;
+                }
+
+                score += applePoints;
+
+                // Length bonus
+                score += goose.length * 5;
+
+                recomputeSpeed();
+
+                // Remove eaten apple and spawn new one
+                apples.splice(i, 1);
+                appleEaten = true;
+                playEatSound(apple.isGolden);
+                break;
+            }
+        }
+
+        if (!appleEaten) {
+            // Remove tail if no apple eaten
+            goose.pop();
+        }
+
+        // Check powerup collisions
+        for (let i = powerups.length - 1; i >= 0; i--) {
+            const powerup = powerups[i];
+            if (head.x === powerup.x && head.y === powerup.y) {
+                // Consume powerup
+                activatePowerup(powerup.type);
+                powerups.splice(i, 1);
+
+                // Create collection effect
+                createPowerupEffect(
+                    powerup.x * GRID_SIZE + GRID_SIZE / 2,
+                    powerup.y * GRID_SIZE + GRID_SIZE / 2,
+                    powerup.type,
+                );
+                score += 50; // Bonus points for powerup
+                break;
+            }
+        }
+
+        recordRunStep(head);
+        syncGhostAfterMove();
+        spawnWorldItemsOnTick();
+        updateUI();
+        lastUpdateTime = currentTime;
+    }
+
+    render();
+}
+
+function getGooseSegmentColor(index, isHead) {
+    const rainbowActive =
+        activePowerups.rainbow && activePowerups.rainbow.active;
+    if (rainbowActive) {
+        const hue = (performance.now() / 8 + index * 25) % 360;
+        return `hsl(${hue}, 85%, ${isHead ? 70 : 60}%)`;
+    }
+    return isHead ? "#FFFAF0" : "#F5F5DC";
+}
+
+// Rendering
+function render() {
+    // Save context and apply screen shake
+    ctx.save();
+    ctx.translate(screenShake.x, screenShake.y);
+
+    // Clear canvas and draw field background
+    const isDarkMode =
+        document.body.classList.contains("dark-mode");
+
+    // Draw field background
+    drawFieldBackground(ctx, isDarkMode);
+
+    drawGhostGoose(ctx);
+
+    // Draw goose
+    goose.forEach((segment, index) => {
+        const x = segment.x * GRID_SIZE;
+        const y = segment.y * GRID_SIZE;
+
+        if (index === 0) {
+            // Draw goose head
+            ctx.fillStyle = getGooseSegmentColor(index, true);
+            ctx.fillRect(
+                x + 2,
+                y + 2,
+                GRID_SIZE - 4,
+                GRID_SIZE - 4,
+            );
+            ctx.strokeStyle = "#DDD";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(
+                x + 2,
+                y + 2,
+                GRID_SIZE - 4,
+                GRID_SIZE - 4,
+            );
+
+            // Draw beak
+            ctx.fillStyle = "#FF8C00";
+            const beakX = x + GRID_SIZE / 2;
+            const beakY = y + GRID_SIZE / 2;
+            ctx.beginPath();
+            if (direction.x === 1) {
+                // Right
+                ctx.moveTo(beakX + 3, beakY);
+                ctx.lineTo(beakX + 8, beakY - 3);
+                ctx.lineTo(beakX + 8, beakY + 3);
+            } else if (direction.x === -1) {
+                // Left
+                ctx.moveTo(beakX - 3, beakY);
+                ctx.lineTo(beakX - 8, beakY - 3);
+                ctx.lineTo(beakX - 8, beakY + 3);
+            } else if (direction.y === -1) {
+                // Up
+                ctx.moveTo(beakX, beakY - 3);
+                ctx.lineTo(beakX - 3, beakY - 8);
+                ctx.lineTo(beakX + 3, beakY - 8);
+            } else {
+                // Down
+                ctx.moveTo(beakX, beakY + 3);
+                ctx.lineTo(beakX - 3, beakY + 8);
+                ctx.lineTo(beakX + 3, beakY + 8);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Draw eyes
+            ctx.fillStyle = "#000";
+            ctx.fillRect(x + 6, y + 5, 2, 2);
+            ctx.fillRect(x + 12, y + 5, 2, 2);
+        } else if (index === goose.length - 1) {
+            // Draw tail segment with feet
+            ctx.fillStyle = getGooseSegmentColor(index, false);
+            ctx.fillRect(
+                x + 3,
+                y + 3,
+                GRID_SIZE - 6,
+                GRID_SIZE - 6,
+            );
+            ctx.strokeStyle = "#DDD";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(
+                x + 3,
+                y + 3,
+                GRID_SIZE - 6,
+                GRID_SIZE - 6,
+            );
+
+            // Draw little feet
+            ctx.fillStyle = "#FF8C00";
+            const footX = x + GRID_SIZE / 2;
+            const footY = y + GRID_SIZE - 2;
+
+            // Left foot
+            ctx.beginPath();
+            ctx.ellipse(
+                footX - 4,
+                footY + 2,
+                3,
+                2,
+                0,
+                0,
+                2 * Math.PI,
+            );
+            ctx.fill();
+
+            // Right foot
+            ctx.beginPath();
+            ctx.ellipse(
+                footX + 4,
+                footY + 2,
+                3,
+                2,
+                0,
+                0,
+                2 * Math.PI,
+            );
+            ctx.fill();
+
+            // Tiny toes (left foot)
+            ctx.fillStyle = "#E6740A";
+            ctx.fillRect(footX - 7, footY + 3, 1, 1);
+            ctx.fillRect(footX - 5, footY + 4, 1, 1);
+            ctx.fillRect(footX - 3, footY + 3, 1, 1);
+
+            // Tiny toes (right foot)
+            ctx.fillRect(footX + 1, footY + 3, 1, 1);
+            ctx.fillRect(footX + 3, footY + 4, 1, 1);
+            ctx.fillRect(footX + 5, footY + 3, 1, 1);
+        } else {
+            // Draw neck segment
+            ctx.fillStyle = getGooseSegmentColor(index, false);
+            ctx.fillRect(
+                x + 3,
+                y + 3,
+                GRID_SIZE - 6,
+                GRID_SIZE - 6,
+            );
+            ctx.strokeStyle = "#DDD";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(
+                x + 3,
+                y + 3,
+                GRID_SIZE - 6,
+                GRID_SIZE - 6,
+            );
+        }
+    });
+
+    // Draw particles
+    drawParticles(ctx);
+
+    // Draw powerups
+    powerups.forEach((powerup) => powerup.draw(ctx));
+
+    // Draw all apples (inside shake transform)
+    apples.forEach((apple) => {
+        const appleX = apple.x * GRID_SIZE;
+        const appleY = apple.y * GRID_SIZE;
+
+        ctx.fillStyle = apple.isGolden ? "#FFD700" : "#DC143C";
+        ctx.beginPath();
+        ctx.arc(
+            appleX + GRID_SIZE / 2,
+            appleY + GRID_SIZE / 2,
+            GRID_SIZE / 2 - 2,
+            0,
+            Math.PI * 2,
+        );
+        ctx.fill();
+
+        ctx.fillStyle = apple.isGolden ? "#FFF8DC" : "#FF6B6B";
+        ctx.beginPath();
+        ctx.arc(
+            appleX + GRID_SIZE / 2 - 3,
+            appleY + GRID_SIZE / 2 - 3,
+            3,
+            0,
+            Math.PI * 2,
+        );
+        ctx.fill();
+
+        ctx.strokeStyle = "#228B22";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(appleX + GRID_SIZE / 2, appleY + 3);
+        ctx.lineTo(appleX + GRID_SIZE / 2, appleY + 1);
+        ctx.stroke();
+    });
+
+    ctx.restore();
+
+    drawPowerupIndicators(ctx);
+}
+
+// Game state functions
+function startGame() {
+    if (gameLoop) {
+        cancelAnimationFrame(gameLoop);
+        gameLoop = null;
+    }
+
+    gameState = "playing";
+    document.getElementById("startScreen").style.display = "none";
+    refreshStoredScores();
+    initializeGame();
+    if (selectedMode === "timed") {
+        timedEndAt = performance.now() + TIME_LIMIT_MS;
+    }
+    updatePauseButton();
+    updateMobileControlsVisibility();
+    resumeSfxContext();
+
+    // Start background music if enabled
+    if (musicEnabled) {
+        backgroundMusic.currentTime = 0;
+        backgroundMusic
+            .play()
+            .catch((e) => console.log("Audio play failed:", e));
+    }
+
+    lastUpdateTime = performance.now();
+    gameLoop = requestAnimationFrame(function loop(time) {
+        gameUpdate(time);
+        if (
+            gameState === "playing" ||
+            gameState === "paused" ||
+            gameState === "gameOver"
+        ) {
+            gameLoop = requestAnimationFrame(loop);
+        }
+    });
+}
+
+function pauseGame() {
+    if (gameState === "playing") {
+        if (selectedMode === "timed") {
+            timedRemainingMs = Math.max(0, timedEndAt - performance.now());
+        }
+        gameState = "paused";
+        document.getElementById("pauseOverlay").style.display =
+            "block";
+        updatePauseButton();
+
+        // Pause background music
+        backgroundMusic.pause();
+    }
+}
+
+function resumeGame() {
+    if (gameState === "paused") {
+        gameState = "playing";
+        document.getElementById("pauseOverlay").style.display =
+            "none";
+        lastUpdateTime = performance.now();
+        if (selectedMode === "timed") {
+            timedEndAt = lastUpdateTime + timedRemainingMs;
+        }
+        updatePauseButton();
+
+        // Resume background music if enabled
+        if (musicEnabled) {
+            backgroundMusic
+                .play()
+                .catch((e) => console.log("Audio play failed:", e));
+        }
+    }
+}
+
+function gameOver(finalScore, finalNeckLength, reason = "collision") {
+    if (gameState === "gameOver") return;
+
+    gameState = "gameOver";
+    updateMobileControlsVisibility();
+    refreshStoredScores();
+    const isNewHighScore = finalScore > highScore;
+    const isNewTodayScore = finalScore > todayScore;
+
+    if (isNewHighScore) {
+        highScore = finalScore;
+        localStorage.setItem(
+            GAME_MODES[selectedMode].highScoreKey,
+            highScore.toString(),
+        );
+        highScoreElement.textContent = highScore;
+        document.getElementById("newHighScore").style.display =
+            "block";
+    } else {
+        document.getElementById("newHighScore").style.display =
+            "none";
+    }
+
+    if (isNewTodayScore) {
+        todayScore = finalScore;
+        saveTodayScore(selectedMode, todayScore, {
+            path: currentRunPath,
+            lengths: currentRunLengths,
+            gridW: GRID_WIDTH,
+            gridH: GRID_HEIGHT,
+        });
+        todayScoreElement.textContent = todayScore;
+        document.getElementById("newTodayScore").style.display =
+            isNewHighScore ? "none" : "block";
+    } else {
+        document.getElementById("newTodayScore").style.display =
+            "none";
+    }
+
+    updateStreakUI();
+    document.getElementById("finalScore").textContent = finalScore;
+    document.getElementById("finalNeckLength").textContent =
+        finalNeckLength;
+    document.getElementById("finalTodayScore").textContent = todayScore;
+    document.getElementById("gameOverTitle").textContent =
+        reason === "timed" ? "Time’s Up! 🪿" : "Game Over! 🪿";
+
+    playGameOverSound();
+
+    // Stop background music on game over
+    backgroundMusic.pause();
+
+    // Simple delay to let explosion play out completely
+    setTimeout(() => {
+        document.getElementById("gameOverScreen").style.display =
+            "block";
+
+        const shareButton =
+            document.getElementById("shareBlueskyButton");
+        if (shareButton) {
+            const scoreToShare = finalScore;
+            const modeName = GAME_MODES[selectedMode].label;
+            let shareText = `I just scored ${scoreToShare} in Goose Game (${modeName})! Can you beat it? #GooseGame #applegeese\n\nhttps://applegeese.com/goose.html`;
+
+            if (isNewHighScore) {
+                shareText = `I set a NEW HIGH SCORE of ${scoreToShare} in Goose Game (${modeName})! Try to beat it! #GooseGame #applegeese\n\nhttps://applegeese.com/goose.html`;
+            } else if (isNewTodayScore) {
+                shareText = `I set today’s best of ${scoreToShare} in Goose Game (${modeName})! Can you beat it? #GooseGame #applegeese\n\nhttps://applegeese.com/goose.html`;
+            }
+
+            const blueskyShareUrl = `https://bsky.app/intent/compose?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(window.location.href)}`;
+
+            shareButton.style.display = "block"; // Make the button visible
+            shareButton.onclick = () => {
+                window.open(blueskyShareUrl, "_blank");
+            };
+        }
+    }, reason === "timed" ? 250 : 1500);
+}
+
+function hideGameOverBanners() {
+    document.getElementById("newHighScore").style.display = "none";
+    document.getElementById("newTodayScore").style.display = "none";
+}
+
+function restartGame() {
+    document.getElementById("gameOverScreen").style.display =
+        "none";
+    hideGameOverBanners();
+    const shareButton =
+        document.getElementById("shareBlueskyButton");
+    if (shareButton) {
+        shareButton.style.display = "none";
+    }
+    particles = [];
+    powerups = [];
+    activePowerups = {};
+    apples = [];
+    startGame();
+}
+
+function showStartScreen() {
+    gameState = "start";
+    updateMobileControlsVisibility();
+    document.getElementById("gameOverScreen").style.display =
+        "none";
+    hideGameOverBanners();
+    const shareButton =
+        document.getElementById("shareBlueskyButton");
+    if (shareButton) {
+        shareButton.style.display = "none";
+    }
+    document.getElementById("startScreen").style.display = "block";
+
+    initializeGame();
+    selectGameMode(selectedMode);
+    render();
+}
+
+let sfxContext = null;
+
+function getSfxContext() {
+    const AudioCtx =
+        window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) {
+        return null;
+    }
+    if (!sfxContext) {
+        sfxContext = new AudioCtx();
+    }
+    return sfxContext;
+}
+
+function resumeSfxContext() {
+    const audioContext = getSfxContext();
+    if (audioContext && audioContext.state === "suspended") {
+        audioContext.resume().catch(() => {});
+    }
+}
+
+function playEatSound(isGolden) {
+    try {
+        const audioContext = getSfxContext();
+        if (!audioContext) {
+            return;
+        }
+        resumeSfxContext();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = isGolden ? 800 : 600;
+        oscillator.type = "sine";
+
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+            0.01,
+            audioContext.currentTime + 0.1,
+        );
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.1);
+    } catch (e) {
+        // Audio not supported or blocked
+    }
+}
+
+function playGameOverSound() {
+    try {
+        const audioContext = getSfxContext();
+        if (!audioContext) {
+            return;
+        }
+        resumeSfxContext();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = 200;
+        oscillator.type = "sawtooth";
+
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+            0.01,
+            audioContext.currentTime + 0.5,
+        );
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (e) {
+        // Audio not supported or blocked
+    }
+}
+
+// Theme toggle functionality
+function toggleTheme() {
+    const body = document.body;
+    const themeButton = document.getElementById("themeToggle");
+    const savedTheme = localStorage.getItem("gooseGameTheme");
+
+    // Check system preference
+    const supportsColorScheme =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme)").media !==
+            "not all";
+    const prefersDark =
+        supportsColorScheme &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    // Cycle through: system -> light -> dark -> system...
+    if (!savedTheme) {
+        // Currently using system, switch to opposite of system (or light if no system support)
+        if (supportsColorScheme && prefersDark) {
+            body.classList.remove("dark-mode");
+            localStorage.setItem("gooseGameTheme", "light");
+        } else {
+            body.classList.add("dark-mode");
+            localStorage.setItem("gooseGameTheme", "dark");
+        }
+    } else if (savedTheme === "light") {
+        // Switch to dark
+        body.classList.add("dark-mode");
+        localStorage.setItem("gooseGameTheme", "dark");
+    } else if (savedTheme === "dark") {
+        // Switch to system
+        localStorage.removeItem("gooseGameTheme");
+        if (supportsColorScheme && prefersDark) {
+            body.classList.add("dark-mode");
+        } else {
+            body.classList.remove("dark-mode");
+        }
+    }
+
+    // Update button text after theme change
+    updateThemeButtonText();
+
+    // Re-render the game with new theme
+    if (gameState !== "playing") {
+        render();
+    }
+}
+
+function updateThemeButtonText() {
+    const themeButton = document.getElementById("themeToggle");
+    if (!themeButton) return; // Safety check
+    const savedTheme = localStorage.getItem("gooseGameTheme");
+    const supportsColorScheme =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme)").media !==
+            "not all";
+    const prefersDark =
+        supportsColorScheme &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    if (!savedTheme) {
+        if (supportsColorScheme) {
+            themeButton.textContent = prefersDark
+                ? "☀️ Light"
+                : "🌙 Dark";
+        } else {
+            themeButton.textContent = "🌙 Dark";
+        }
+    } else if (savedTheme === "dark") {
+        themeButton.textContent = supportsColorScheme
+            ? "🌿 System"
+            : "☀️ Light";
+    } else {
+        themeButton.textContent = "🌙 Dark";
+    }
+}
+
+// Load saved theme on page load
+function loadTheme() {
+    const savedTheme = localStorage.getItem("gooseGameTheme");
+
+    // Check if system supports prefers-color-scheme
+    const supportsColorScheme =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme)").media !==
+            "not all";
+
+    // Check system preference if supported and no saved theme
+    let prefersDark = false;
+    if (supportsColorScheme) {
+        prefersDark = window.matchMedia(
+            "(prefers-color-scheme: dark)",
+        ).matches;
+    }
+
+    let shouldUseDark = false;
+
+    if (savedTheme) {
+        shouldUseDark = savedTheme === "dark";
+    } else if (supportsColorScheme) {
+        shouldUseDark = prefersDark;
+    } else {
+        // Fallback to light mode if system doesn't support color scheme detection
+        shouldUseDark = false;
+    }
+
+    if (shouldUseDark) {
+        document.body.classList.add("dark-mode");
+    } else {
+        document.body.classList.remove("dark-mode");
+    }
+
+    updateThemeButtonText();
+}
+
+// Listen for system theme changes
+if (
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme)").media !== "not all"
+) {
+    window
+        .matchMedia("(prefers-color-scheme: dark)")
+        .addEventListener("change", (e) => {
+            // Only update if user hasn't manually set a preference
+            const savedTheme =
+                localStorage.getItem("gooseGameTheme");
+            if (!savedTheme) {
+                const body = document.body;
+
+                if (e.matches) {
+                    body.classList.add("dark-mode");
+                } else {
+                    body.classList.remove("dark-mode");
+                }
+                updateThemeButtonText();
+
+                // Re-render the game with new theme
+                if (gameState !== "playing") {
+                    render();
+                }
+            }
+        });
+}
+
+// Background music functions
+const backgroundMusic = document.getElementById("backgroundMusic");
+let musicEnabled =
+    localStorage.getItem("gooseGameMusic") !== "false";
+
+function toggleSettings() {
+    const settingsMenu = document.getElementById("settingsMenu");
+    if (
+        settingsMenu.style.display === "none" ||
+        settingsMenu.style.display === ""
+    ) {
+        settingsMenu.style.display = "block";
+    } else {
+        settingsMenu.style.display = "none";
+    }
+}
+
+// Close settings menu when clicking outside
+document.addEventListener("click", function (e) {
+    const settingsMenu = document.getElementById("settingsMenu");
+    const settingsToggle =
+        document.getElementById("settingsToggle");
+
+    if (settingsMenu.style.display !== "block") {
+        return;
+    }
+
+    if (
+        !settingsMenu.contains(e.target) &&
+        !settingsToggle.contains(e.target)
+    ) {
+        settingsMenu.style.display = "none";
+    }
+});
+
+function toggleMusic() {
+    const musicToggle = document.getElementById("musicToggle");
+
+    if (musicEnabled) {
+        backgroundMusic.pause();
+        musicToggle.textContent = "🔇 Off";
+        musicEnabled = false;
+        localStorage.setItem("gooseGameMusic", "false");
+    } else {
+        if (gameState === "playing") {
+            backgroundMusic.currentTime = 0;
+            backgroundMusic
+                .play()
+                .catch((e) => console.log("Audio play failed:", e));
+        }
+        musicToggle.textContent = "🎵 On";
+        musicEnabled = true;
+        localStorage.setItem("gooseGameMusic", "true");
+    }
+}
+
+function initMusic() {
+    const musicToggle = document.getElementById("musicToggle");
+    backgroundMusic.volume = 0.2; // Set volume to 20%
+    backgroundMusic.loop = true; // Ensure audio loops
+
+    // Handle audio loading errors
+    backgroundMusic.addEventListener("error", () => {
+        console.log("Background music failed to load");
+        musicToggle.textContent = "❌ No Music";
+        musicToggle.disabled = true;
+        musicEnabled = false;
+    });
+
+    backgroundMusic.addEventListener("canplaythrough", () => {
+        console.log("Background music ready");
+    });
+
+    if (musicEnabled) {
+        musicToggle.textContent = "🎵 On";
+    } else {
+        musicToggle.textContent = "🔇 Off";
+    }
+}
+
+// Powerup system variables
+let activePowerups = {};
+
+function activatePowerup(type) {
+    activePowerups[type] = {
+        timeLeft: getPowerupDuration(type),
+        active: true,
+    };
+
+    // Apply immediate effects
+    switch (type) {
+        case "speed":
+            recomputeSpeed();
+            updateUI();
+            break;
+        case "shield":
+            break;
+        case "rainbow":
+            break;
+    }
+}
+
+function getPowerupDuration(type) {
+    switch (type) {
+        case "speed":
+            return 300; // 5 seconds
+        case "shield":
+            return 600; // 10 seconds
+        case "rainbow":
+            return 240; // 4 seconds
+        default:
+            return 300;
+    }
+}
+
+function createPowerupEffect(x, y, type) {
+    const colors = {
+        speed: "#FFD700",
+        shield: "#00BFFF",
+        rainbow: "#FF1493",
+    };
+
+    const count = prefersReducedMotion ? 6 : 20;
+    for (let i = 0; i < count; i++) {
+        const particle = new Particle(x, y, "apple");
+        particle.color = colors[type];
+        particle.size = Math.random() * 6 + 3;
+        particles.push(particle);
+    }
+
+    createScreenShake(5);
+}
+
+function updateActivePowerups() {
+    for (const type in activePowerups) {
+        if (activePowerups[type].active) {
+            activePowerups[type].timeLeft--;
+            if (activePowerups[type].timeLeft <= 0) {
+                delete activePowerups[type];
+                if (type === "speed") {
+                    recomputeSpeed();
+                    updateUI();
+                }
+            }
+        }
+    }
+}
+
+function drawPowerupIndicators(ctx) {
+    let yOffset = 10;
+    const iconSize = 24;
+
+    for (const type in activePowerups) {
+        if (activePowerups[type].active) {
+            const timeLeft = activePowerups[type].timeLeft;
+            const progress = timeLeft / getPowerupDuration(type);
+
+            // Draw background
+            ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+            ctx.fillRect(10, yOffset, 120, iconSize + 4);
+
+            // Draw icon
+            ctx.font = `${iconSize}px Arial`;
+            ctx.textAlign = "left";
+            ctx.textBaseline = "top";
+
+            const icons = {
+                speed: "⚡",
+                shield: "🛡️",
+                rainbow: "🌈",
+            };
+
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillText(icons[type], 12, yOffset + 2);
+
+            // Draw progress bar
+            const barWidth = 80;
+            const barHeight = 4;
+            const barX = 40;
+            const barY = yOffset + iconSize - 2;
+
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+
+            const colors = {
+                speed: "#FFD700",
+                shield: "#00BFFF",
+                rainbow: "#FF1493",
+            };
+
+            ctx.fillStyle = colors[type];
+            ctx.fillRect(
+                barX,
+                barY,
+                barWidth * progress,
+                barHeight,
+            );
+
+            yOffset += iconSize + 8;
+        }
+    }
+}
+
+// Initialize the game and load theme when DOM is ready
+function initializeModePicker() {
+    document.querySelectorAll(".mode-button").forEach((button) => {
+        button.addEventListener("click", () => {
+            selectGameMode(button.dataset.mode);
+        });
+    });
+    const ghostToggle = document.getElementById("ghostToggle");
+    if (ghostToggle) {
+        ghostToggle.addEventListener("click", toggleGhost);
+        updateGhostToggleButton();
+    }
+    selectGameMode(selectedMode);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    loadTheme();
+    initMusic();
+    initializeModePicker();
+    render();
+});
+
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+        refreshStoredScores();
+    }
+});
+
+// Also initialize immediately in case DOM is already loaded
+if (document.readyState === "loading") {
+    // DOM is still loading, wait for DOMContentLoaded
+} else {
+    // DOM is already loaded
+    loadTheme();
+    initMusic();
+    initializeModePicker();
+    render();
+}
