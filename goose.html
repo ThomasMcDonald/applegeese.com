@@ -114,42 +114,6 @@
                 color: #e6e6e6;
             }
 
-            .theme-toggle {
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                background: transparent;
-                border: 2px solid #2f4f2f;
-                color: #2f4f2f;
-                padding: 12px 16px;
-                font-size: 16px;
-                border-radius: 20px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                z-index: 1000;
-                min-height: 44px;
-                min-width: 80px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-
-            .theme-toggle:hover {
-                background: #2f4f2f;
-                color: white;
-                transform: scale(1.05);
-            }
-
-            body.dark-mode .theme-toggle {
-                border-color: #e6e6e6;
-                color: #e6e6e6;
-            }
-
-            body.dark-mode .theme-toggle:hover {
-                background: #e6e6e6;
-                color: #1a1a2e;
-            }
-
             #gameCanvas {
                 border: 4px solid #8b4513;
                 border-radius: 8px;
@@ -304,6 +268,19 @@
                 margin-bottom: 10px;
             }
 
+            .dpad {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .dpad-middle {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
             .control-btn {
                 background: rgba(47, 79, 47, 0.8);
                 border: 2px solid #2f4f2f;
@@ -360,15 +337,6 @@
                     display: block;
                 }
 
-                .theme-toggle {
-                    bottom: 300px;
-                    right: 10px;
-                    padding: 16px 20px;
-                    font-size: 18px;
-                    min-height: 48px;
-                    min-width: 100px;
-                }
-
                 .game-header {
                     font-size: 18px;
                     padding: 0 10px;
@@ -379,7 +347,7 @@
                 .game-footer {
                     font-size: 16px;
                     padding: 0 10px;
-                    margin-bottom: 60px;
+                    margin-bottom: 140px;
                 }
 
                 #gameCanvas {
@@ -422,62 +390,15 @@
                     font-size: 14px;
                 }
 
-                .control-pad {
-                    /* Keep flex layout for single button */
-                }
-
                 .control-btn {
                     min-height: 50px;
                     min-width: 50px;
                     font-size: 18px;
                 }
 
-                .theme-toggle {
-                    bottom: 260px;
-                    padding: 12px 16px;
-                    font-size: 16px;
-                    min-width: 90px;
-                }
-
                 #gameCanvas {
                     max-height: calc(100vh - 240px);
                 }
-            }
-
-            .music-toggle {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: transparent;
-                border: 2px solid #2f4f2f;
-                color: #2f4f2f;
-                padding: 12px 16px;
-                font-size: 16px;
-                border-radius: 20px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                z-index: 1000;
-                min-height: 44px;
-                min-width: 80px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-
-            .music-toggle:hover {
-                background: #2f4f2f;
-                color: white;
-                transform: scale(1.05);
-            }
-
-            body.dark-mode .music-toggle {
-                border-color: #e6e6e6;
-                color: #e6e6e6;
-            }
-
-            body.dark-mode .music-toggle:hover {
-                background: #e6e6e6;
-                color: #1a1a2e;
             }
 
             .settings-toggle {
@@ -624,10 +545,10 @@
                 <p>Help the goose eat apples and grow its neck!</p>
                 <div class="controls">
                     <p><strong>Controls:</strong></p>
-                    <p>Arrow Keys/WASD or Swipe to move</p>
-                    <p>Spacebar or Pause button to pause</p>
-                    <p>Enter to restart</p>
-                    <p>Theme button: System → Light → Dark</p>
+                    <p>Arrow Keys / WASD, swipe, or D-pad to move</p>
+                    <p>Spacebar or Pause to pause</p>
+                    <p>Enter to start or play again</p>
+                    <p>Settings (gear) for music and theme</p>
                 </div>
                 <button onclick="startGame()">Start Game</button>
             </div>
@@ -650,7 +571,6 @@
                         display: none;
                         background-color: #0096ff;
                         margin: 10px auto;
-                        display: block;
                     "
                 >
                     <i class="fa-brands fa-bluesky"></i> Share
@@ -666,8 +586,26 @@
         </div>
 
         <div class="mobile-controls" id="mobileControls">
-            <div class="control-pad">
-                <button class="control-btn pause" id="pauseBtn">⏸</button>
+            <div class="dpad">
+                <button class="control-btn" id="upBtn" aria-label="Up">▲</button>
+                <div class="dpad-middle">
+                    <button class="control-btn" id="leftBtn" aria-label="Left">
+                        ◀
+                    </button>
+                    <button
+                        class="control-btn pause"
+                        id="pauseBtn"
+                        aria-label="Pause"
+                    >
+                        ⏸
+                    </button>
+                    <button class="control-btn" id="rightBtn" aria-label="Right">
+                        ▶
+                    </button>
+                </div>
+                <button class="control-btn" id="downBtn" aria-label="Down">
+                    ▼
+                </button>
             </div>
         </div>
 
@@ -753,6 +691,9 @@
             let sparkleTimer = 0;
             let screenShake = { x: 0, y: 0, intensity: 0 };
             let trailParticles = [];
+            const prefersReducedMotion = window.matchMedia(
+                "(prefers-reduced-motion: reduce)",
+            ).matches;
 
             // Game state
             let gameState = "start"; // 'start', 'playing', 'paused', 'gameOver'
@@ -927,7 +868,11 @@
                     this.sparkleTimer++;
 
                     // Create sparkle effect around powerup
-                    if (this.sparkleTimer > 10 && Math.random() < 0.3) {
+                    if (
+                        !prefersReducedMotion &&
+                        this.sparkleTimer > 10 &&
+                        Math.random() < 0.3
+                    ) {
                         const sparkleX =
                             this.x * GRID_SIZE +
                             GRID_SIZE / 2 +
@@ -974,7 +919,8 @@
             }
 
             function createAppleEatEffect(x, y) {
-                for (let i = 0; i < 12; i++) {
+                const count = prefersReducedMotion ? 4 : 12;
+                for (let i = 0; i < count; i++) {
                     particles.push(
                         new Particle(
                             x + GRID_SIZE / 2,
@@ -986,13 +932,13 @@
             }
 
             function createGooseExplosion(gooseX, gooseY) {
-                // Create explosion particles at goose head location
-                for (let i = 0; i < 60; i++) {
+                const burstCount = prefersReducedMotion ? 12 : 60;
+                const flashCount = prefersReducedMotion ? 4 : 15;
+                for (let i = 0; i < burstCount; i++) {
                     particles.push(new Particle(gooseX, gooseY, "explosion"));
                 }
 
-                // Add some white flash particles for extra drama
-                for (let i = 0; i < 15; i++) {
+                for (let i = 0; i < flashCount; i++) {
                     const flashParticle = new Particle(
                         gooseX,
                         gooseY,
@@ -1004,10 +950,13 @@
                 }
 
                 // Create screen shake for dramatic effect
-                createScreenShake(12);
+                if (!prefersReducedMotion) {
+                    createScreenShake(12);
+                }
             }
 
             function createSparkleEffect() {
+                if (prefersReducedMotion) return;
                 if (goose.length > 0 && gameState === "playing") {
                     const head = goose[0];
                     const x = head.x * GRID_SIZE + GRID_SIZE / 2;
@@ -1018,6 +967,7 @@
             }
 
             function createTrailEffect() {
+                if (prefersReducedMotion) return;
                 if (goose.length > 1 && gameState === "playing") {
                     // Add trail particles to the last few segments
                     for (
@@ -1043,6 +993,7 @@
             }
 
             function createScreenShake(intensity) {
+                if (prefersReducedMotion) return;
                 screenShake.intensity = intensity;
             }
 
@@ -1078,8 +1029,11 @@
                     sparkleTimer = 0;
                 }
 
-                // Add trail particles occasionally
-                if (gameState === "playing" && Math.random() < 0.4) {
+                if (
+                    !prefersReducedMotion &&
+                    gameState === "playing" &&
+                    Math.random() < 0.4
+                ) {
                     createTrailEffect();
                 }
             }
@@ -1146,13 +1100,39 @@
                 canvas.height = CANVAS_HEIGHT;
             }
 
+            function clampEntitiesToGrid() {
+                goose.forEach((segment) => {
+                    segment.x = Math.max(
+                        0,
+                        Math.min(GRID_WIDTH - 1, segment.x),
+                    );
+                    segment.y = Math.max(
+                        0,
+                        Math.min(GRID_HEIGHT - 1, segment.y),
+                    );
+                });
+                apples = apples.filter(
+                    (apple) =>
+                        apple.x >= 0 &&
+                        apple.x < GRID_WIDTH &&
+                        apple.y >= 0 &&
+                        apple.y < GRID_HEIGHT,
+                );
+                powerups = powerups.filter(
+                    (powerup) =>
+                        powerup.x >= 0 &&
+                        powerup.x < GRID_WIDTH &&
+                        powerup.y >= 0 &&
+                        powerup.y < GRID_HEIGHT,
+                );
+            }
+
             // Handle window resize
             window.addEventListener("resize", () => {
-                if (gameState === "start") {
-                    setCanvasSize();
-                    render();
-                }
+                setCanvasSize();
+                clampEntitiesToGrid();
                 updateMobileControlsVisibility();
+                render();
             });
 
             // Set initial size
@@ -1165,10 +1145,9 @@
             window.addEventListener("orientationchange", () => {
                 setTimeout(() => {
                     setCanvasSize();
+                    clampEntitiesToGrid();
                     updateMobileControlsVisibility();
-                    if (gameState === "start") {
-                        render();
-                    }
+                    render();
                 }, 100);
             });
 
@@ -1273,6 +1252,15 @@
                 speedElement.textContent = speed.toFixed(1);
             }
 
+            function recomputeSpeed() {
+                let baseSpeed = 1.0 + Math.floor(score / 100) * 0.5;
+                if (activePowerups.speed && activePowerups.speed.active) {
+                    baseSpeed *= 1.5;
+                }
+                speed = Math.min(5.0, baseSpeed);
+                updateInterval = Math.max(50, 100 / Math.pow(speed, 0.5));
+            }
+
             // Input handling
             document.addEventListener("keydown", (event) => {
                 if (gameState === "playing") {
@@ -1365,28 +1353,27 @@
                 }
             }
 
-            // Mobile pause button
-            document
-                .getElementById("pauseBtn")
-                .addEventListener("touchstart", (e) => {
+            function bindControlButton(id, handler) {
+                const btn = document.getElementById(id);
+                btn.addEventListener("touchstart", (e) => {
                     e.preventDefault();
-                    if (gameState === "playing") {
-                        pauseGame();
-                    } else if (gameState === "paused") {
-                        resumeGame();
-                    }
+                    handler();
                 });
+                btn.addEventListener("click", handler);
+            }
 
-            // Also add click event for desktop testing
-            document
-                .getElementById("pauseBtn")
-                .addEventListener("click", () => {
-                    if (gameState === "playing") {
-                        pauseGame();
-                    } else if (gameState === "paused") {
-                        resumeGame();
-                    }
-                });
+            bindControlButton("upBtn", () => changeDirection("up"));
+            bindControlButton("downBtn", () => changeDirection("down"));
+            bindControlButton("leftBtn", () => changeDirection("left"));
+            bindControlButton("rightBtn", () => changeDirection("right"));
+
+            bindControlButton("pauseBtn", () => {
+                if (gameState === "playing") {
+                    pauseGame();
+                } else if (gameState === "paused") {
+                    resumeGame();
+                }
+            });
 
             // Swipe detection on canvas
             canvas.addEventListener("touchstart", (e) => {
@@ -1478,7 +1465,11 @@
                     }
                 }
 
-                if (currentTime - lastUpdateTime >= updateInterval) {
+                if (
+                    gameState === "playing" &&
+                    goose.length > 0 &&
+                    currentTime - lastUpdateTime >= updateInterval
+                ) {
                     direction = { ...nextDirection };
 
                     // Move goose
@@ -1520,6 +1511,7 @@
                             // Create explosion at last valid position
                             createGooseExplosion(lastValidX, lastValidY);
                             gameOver(finalScore, finalNeckLength);
+                            render();
                             return;
                         }
                     }
@@ -1536,14 +1528,17 @@
                             activePowerups.shield &&
                             activePowerups.shield.active
                         ) {
-                            // Consume shield and bounce off
                             delete activePowerups.shield;
-                            // Reverse direction
                             nextDirection = {
                                 x: -direction.x,
                                 y: -direction.y,
                             };
+                            direction = { ...nextDirection };
                             createScreenShake(3);
+                            updateUI();
+                            lastUpdateTime = currentTime;
+                            render();
+                            return;
                         } else {
                             // Store collision position BEFORE clearing goose
                             const collisionX =
@@ -1561,6 +1556,7 @@
                             // Create explosion at collision position
                             createGooseExplosion(collisionX, collisionY);
                             gameOver(finalScore, finalNeckLength);
+                            render();
                             return;
                         }
                     }
@@ -1597,29 +1593,12 @@
                             // Length bonus
                             score += goose.length * 5;
 
-                            // Increase speed every 100 points
-                            let baseSpeed = 1.0 + Math.floor(score / 100) * 0.5;
-
-                            // Speed powerup effect
-                            if (
-                                activePowerups.speed &&
-                                activePowerups.speed.active
-                            ) {
-                                baseSpeed *= 1.5;
-                            }
-
-                            if (baseSpeed <= 5.0) {
-                                speed = baseSpeed;
-                                updateInterval = Math.max(
-                                    50,
-                                    100 / Math.pow(speed, 0.5),
-                                );
-                            }
+                            recomputeSpeed();
 
                             // Remove eaten apple and spawn new one
                             apples.splice(i, 1);
                             appleEaten = true;
-                            playEatSound();
+                            playEatSound(apple.isGolden);
                             break;
                         }
                     }
@@ -1655,6 +1634,16 @@
                 render();
             }
 
+            function getGooseSegmentColor(index, isHead) {
+                const rainbowActive =
+                    activePowerups.rainbow && activePowerups.rainbow.active;
+                if (rainbowActive) {
+                    const hue = (performance.now() / 8 + index * 25) % 360;
+                    return `hsl(${hue}, 85%, ${isHead ? 70 : 60}%)`;
+                }
+                return isHead ? "#FFFAF0" : "#F5F5DC";
+            }
+
             // Rendering
             function render() {
                 // Save context and apply screen shake
@@ -1675,7 +1664,7 @@
 
                     if (index === 0) {
                         // Draw goose head
-                        ctx.fillStyle = "#FFFAF0";
+                        ctx.fillStyle = getGooseSegmentColor(index, true);
                         ctx.fillRect(
                             x + 2,
                             y + 2,
@@ -1726,7 +1715,7 @@
                         ctx.fillRect(x + 12, y + 5, 2, 2);
                     } else if (index === goose.length - 1) {
                         // Draw tail segment with feet
-                        ctx.fillStyle = "#F5F5DC";
+                        ctx.fillStyle = getGooseSegmentColor(index, false);
                         ctx.fillRect(
                             x + 3,
                             y + 3,
@@ -1785,7 +1774,7 @@
                         ctx.fillRect(footX + 5, footY + 3, 1, 1);
                     } else {
                         // Draw neck segment
-                        ctx.fillStyle = "#F5F5DC";
+                        ctx.fillStyle = getGooseSegmentColor(index, false);
                         ctx.fillRect(
                             x + 3,
                             y + 3,
@@ -1809,13 +1798,7 @@
                 // Draw powerups
                 powerups.forEach((powerup) => powerup.draw(ctx));
 
-                // Restore context after screen shake
-                ctx.restore();
-
-                // Draw powerup status indicators
-                drawPowerupIndicators(ctx);
-
-                // Draw all apples
+                // Draw all apples (inside shake transform)
                 apples.forEach((apple) => {
                     const appleX = apple.x * GRID_SIZE;
                     const appleY = apple.y * GRID_SIZE;
@@ -1831,7 +1814,6 @@
                     );
                     ctx.fill();
 
-                    // Draw apple highlight
                     ctx.fillStyle = apple.isGolden ? "#FFF8DC" : "#FF6B6B";
                     ctx.beginPath();
                     ctx.arc(
@@ -1843,7 +1825,6 @@
                     );
                     ctx.fill();
 
-                    // Draw apple stem
                     ctx.strokeStyle = "#228B22";
                     ctx.lineWidth = 2;
                     ctx.beginPath();
@@ -1851,14 +1832,24 @@
                     ctx.lineTo(appleX + GRID_SIZE / 2, appleY + 1);
                     ctx.stroke();
                 });
+
+                ctx.restore();
+
+                drawPowerupIndicators(ctx);
             }
 
             // Game state functions
             function startGame() {
+                if (gameLoop) {
+                    cancelAnimationFrame(gameLoop);
+                    gameLoop = null;
+                }
+
                 gameState = "playing";
                 document.getElementById("startScreen").style.display = "none";
                 initializeGame();
                 updatePauseButton();
+                resumeSfxContext();
 
                 // Start background music if enabled
                 if (musicEnabled) {
@@ -1871,7 +1862,6 @@
                 lastUpdateTime = performance.now();
                 gameLoop = requestAnimationFrame(function loop(time) {
                     gameUpdate(time);
-                    render();
                     if (
                         gameState === "playing" ||
                         gameState === "paused" ||
@@ -1966,7 +1956,11 @@
             function restartGame() {
                 document.getElementById("gameOverScreen").style.display =
                     "none";
-                // Clear particles, powerups, and apples when restarting
+                const shareButton =
+                    document.getElementById("shareBlueskyButton");
+                if (shareButton) {
+                    shareButton.style.display = "none";
+                }
                 particles = [];
                 powerups = [];
                 activePowerups = {};
@@ -1978,26 +1972,52 @@
                 gameState = "start";
                 document.getElementById("gameOverScreen").style.display =
                     "none";
+                const shareButton =
+                    document.getElementById("shareBlueskyButton");
+                if (shareButton) {
+                    shareButton.style.display = "none";
+                }
                 document.getElementById("startScreen").style.display = "block";
 
-                // Reset the board
                 initializeGame();
                 render();
             }
 
-            // Audio functions (simplified)
-            function playEatSound() {
-                // Simple audio feedback using Web Audio API
+            let sfxContext = null;
+
+            function getSfxContext() {
+                const AudioCtx =
+                    window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) {
+                    return null;
+                }
+                if (!sfxContext) {
+                    sfxContext = new AudioCtx();
+                }
+                return sfxContext;
+            }
+
+            function resumeSfxContext() {
+                const audioContext = getSfxContext();
+                if (audioContext && audioContext.state === "suspended") {
+                    audioContext.resume().catch(() => {});
+                }
+            }
+
+            function playEatSound(isGolden) {
                 try {
-                    const audioContext = new (window.AudioContext ||
-                        window.webkitAudioContext)();
+                    const audioContext = getSfxContext();
+                    if (!audioContext) {
+                        return;
+                    }
+                    resumeSfxContext();
                     const oscillator = audioContext.createOscillator();
                     const gainNode = audioContext.createGain();
 
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
 
-                    oscillator.frequency.value = apple.isGolden ? 800 : 600;
+                    oscillator.frequency.value = isGolden ? 800 : 600;
                     oscillator.type = "sine";
 
                     gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
@@ -2015,8 +2035,11 @@
 
             function playGameOverSound() {
                 try {
-                    const audioContext = new (window.AudioContext ||
-                        window.webkitAudioContext)();
+                    const audioContext = getSfxContext();
+                    if (!audioContext) {
+                        return;
+                    }
+                    resumeSfxContext();
                     const oscillator = audioContext.createOscillator();
                     const gainNode = audioContext.createGain();
 
@@ -2166,8 +2189,6 @@
                         const savedTheme =
                             localStorage.getItem("gooseGameTheme");
                         if (!savedTheme) {
-                            const themeButton =
-                                document.querySelector(".theme-toggle");
                             const body = document.body;
 
                             if (e.matches) {
@@ -2207,6 +2228,10 @@
                 const settingsMenu = document.getElementById("settingsMenu");
                 const settingsToggle =
                     document.getElementById("settingsToggle");
+
+                if (settingsMenu.style.display !== "block") {
+                    return;
+                }
 
                 if (
                     !settingsMenu.contains(e.target) &&
@@ -2273,13 +2298,12 @@
                 // Apply immediate effects
                 switch (type) {
                     case "speed":
-                        // Speed boost is handled in game update
+                        recomputeSpeed();
+                        updateUI();
                         break;
                     case "shield":
-                        // Shield prevents death for duration
                         break;
                     case "rainbow":
-                        // Rainbow mode gives double points
                         break;
                 }
             }
@@ -2304,7 +2328,8 @@
                     rainbow: "#FF1493",
                 };
 
-                for (let i = 0; i < 20; i++) {
+                const count = prefersReducedMotion ? 6 : 20;
+                for (let i = 0; i < count; i++) {
                     const particle = new Particle(x, y, "apple");
                     particle.color = colors[type];
                     particle.size = Math.random() * 6 + 3;
@@ -2319,8 +2344,11 @@
                     if (activePowerups[type].active) {
                         activePowerups[type].timeLeft--;
                         if (activePowerups[type].timeLeft <= 0) {
-                            activePowerups[type].active = false;
                             delete activePowerups[type];
+                            if (type === "speed") {
+                                recomputeSpeed();
+                                updateUI();
+                            }
                         }
                     }
                 }
