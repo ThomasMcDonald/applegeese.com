@@ -3,12 +3,6 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-        <link rel="icon" type="image/png" sizes="32x32" href="favicon.svg" />
-        <link rel="icon" type="image/png" sizes="16x16" href="favicon.svg" />
-        <link rel="apple-touch-icon" sizes="180x180" href="favicon.svg" />
-        <link rel="shortcut icon" href="favicon.svg" />
-
         <title>AppleGeese — Goose Games &amp; AI Projects</title>
         <meta
             name="description"
@@ -16,6 +10,12 @@
         />
         <link rel="canonical" href="https://applegeese.com/" />
         <meta name="theme-color" content="#1a1a2e" />
+
+        <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+        <link rel="icon" type="image/png" sizes="32x32" href="favicon.svg" />
+        <link rel="icon" type="image/png" sizes="16x16" href="favicon.svg" />
+        <link rel="apple-touch-icon" sizes="180x180" href="favicon.svg" />
+        <link rel="shortcut icon" href="favicon.svg" />
 
         <meta
             property="og:title"
@@ -43,6 +43,21 @@
         <meta
             name="twitter:image"
             content="https://applegeese.com/favicon.svg"
+        />
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="assets/home/home.css" />
+        <!-- Warms the goose game soundtrack before the player gets there -->
+        <link
+            rel="preload"
+            href="assets/goose/arcade.mp3"
+            as="audio"
+            type="audio/mpeg"
         />
 
         <script type="application/ld+json">
@@ -81,236 +96,9 @@
                 ]
             }
         </script>
-
-        <!-- Google Fonts for Inter -->
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-            rel="stylesheet"
-        />
-        <!-- Preload arcade soundtrack for the game -->
-        <link
-            rel="preload"
-            href="assets/goose/arcade.mp3"
-            as="audio"
-            type="audio/mpeg"
-        />
-        <style>
-            :root {
-                --background-light: #f3f4f6;
-                --text-light: #1a1a1a;
-                --background-dark: linear-gradient(
-                    135deg,
-                    #1a1a2e 0%,
-                    #16213e 100%
-                );
-                --text-dark: #e4e4e7;
-            }
-
-            html,
-            body {
-                height: 100%;
-                width: 100%;
-                margin: 0;
-                padding: 0;
-                overflow: hidden;
-                user-select: none;
-            }
-
-            body {
-                font-family: "Inter", sans-serif;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                text-align: center;
-                transition:
-                    background-color 0.3s,
-                    color 0.3s;
-            }
-
-            body.light-mode {
-                background-color: var(--background-light);
-                color: var(--text-light);
-            }
-
-            body.dark-mode {
-                background: var(--background-dark);
-                color: var(--text-dark);
-            }
-
-            .content-container {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                gap: 1.5rem;
-                height: 100vh;
-                width: 100vw;
-            }
-
-            .visually-hidden {
-                position: absolute;
-                width: 1px;
-                height: 1px;
-                padding: 0;
-                margin: -1px;
-                overflow: hidden;
-                clip: rect(0, 0, 0, 0);
-                white-space: nowrap;
-                border: 0;
-            }
-
-            .emoji-container {
-                font-size: clamp(2.5rem, 8vw, 5rem);
-            }
-
-            .fade-in {
-                opacity: 0;
-                animation: fadeInBounce 1s forwards;
-            }
-
-            .fade-in.delay-1 {
-                animation-delay: 0.5s;
-            }
-
-            .fade-in.delay-2 {
-                animation-delay: 1s;
-            }
-
-            @keyframes fadeInBounce {
-                0% {
-                    opacity: 0;
-                    transform: translateY(30px) scale(0.95);
-                }
-                60% {
-                    opacity: 1;
-                    transform: translateY(-10px) scale(1.05);
-                }
-                80% {
-                    transform: translateY(5px) scale(0.98);
-                }
-                100% {
-                    opacity: 1;
-                    transform: translateY(0) scale(1);
-                }
-            }
-
-            @keyframes wiggle {
-                0%,
-                100% {
-                    transform: rotate(0deg) scale(1) translateY(0px);
-                }
-                10%,
-                30%,
-                50%,
-                70%,
-                90% {
-                    transform: rotate(-8deg) scale(1.05) translateY(-3px);
-                }
-                20%,
-                40%,
-                60%,
-                80% {
-                    transform: rotate(8deg) scale(1.05) translateY(-2px);
-                }
-            }
-
-            .goose-emoji.wiggle-animation {
-                animation: wiggle 0.6s ease-in-out 1;
-                display: inline-block;
-                transform-origin: center center;
-            }
-
-            .mr-4 {
-                margin-right: 1rem;
-            }
-
-            .goose-slot {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 1.15em;
-                height: 1.15em;
-                vertical-align: middle;
-            }
-
-            .goose-link {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 100%;
-                height: 100%;
-                text-decoration: none;
-                cursor: pointer;
-                transition: filter 0.15s ease, transform 0.15s ease;
-            }
-
-            .goose-link:hover {
-                filter: brightness(1.15);
-                transform: translateY(-2px);
-            }
-
-            .goose-link:hover .goose-emoji.wiggle-animation {
-                animation: none;
-            }
-
-            .game-nav {
-                display: flex;
-                gap: 0.5rem;
-                opacity: 0;
-                transform: translateY(-10px);
-                pointer-events: none;
-                transition:
-                    opacity 0.6s ease,
-                    transform 0.6s ease;
-            }
-
-            .game-nav.visible {
-                opacity: 1;
-                transform: translateY(0);
-                pointer-events: auto;
-            }
-
-            .game-nav-link {
-                text-decoration: none;
-                font-size: 0.8rem;
-                font-weight: 600;
-                padding: 0.35rem 0.9rem;
-                border-radius: 999px;
-                letter-spacing: 0.03em;
-                transition:
-                    background-color 0.2s,
-                    color 0.2s,
-                    transform 0.15s ease;
-            }
-
-            body.light-mode .game-nav-link {
-                background-color: rgba(0, 0, 0, 0.07);
-                color: var(--text-light);
-            }
-
-            body.dark-mode .game-nav-link {
-                background-color: rgba(255, 255, 255, 0.1);
-                color: var(--text-dark);
-            }
-
-            .game-nav-link:hover {
-                transform: scale(1.05);
-            }
-
-            body.light-mode .game-nav-link:hover {
-                background-color: rgba(0, 0, 0, 0.13);
-            }
-
-            body.dark-mode .game-nav-link:hover {
-                background-color: rgba(255, 255, 255, 0.18);
-            }
-        </style>
     </head>
 
     <body>
-        <!-- Main Content Section -->
         <main class="content-container">
             <div class="visually-hidden">
                 <h1>AppleGeese</h1>
@@ -319,103 +107,58 @@
                     and Honk Defense
                 </p>
             </div>
-            <nav class="game-nav" id="gameNav">
-                <a href="farm.html" class="game-nav-link">Farm</a>
-                <a href="goose.html" class="game-nav-link">Goose</a>
-                <a href="idle.html" class="game-nav-link">Idle</a>
-                <a href="rts/" class="game-nav-link">RTS</a>
-                <a href="td/" class="game-nav-link">TD</a>
+
+            <nav class="game-nav" id="gameNav" aria-label="Games">
+                <a class="game-nav-link" href="farm.html">Farm</a>
+                <a class="game-nav-link" href="goose.html">Goose</a>
+                <a class="game-nav-link" href="idle.html">Idle</a>
+                <a class="game-nav-link" href="rts/">RTS</a>
+                <a class="game-nav-link" href="td/">TD</a>
             </nav>
-            <div class="emoji-container" id="emojiContainer">
-                <span class="mr-4 fade-in delay-1" id="apple"
-                    ><a href="about.html" style="text-decoration: none"
-                        >🍎</a
-                    ></span
-                >
-                <span class="fade-in delay-2" id="geese">
-                    <span class="goose-slot"
-                        ><a href="farm.html" class="goose-link"
-                            ><span class="goose-emoji">🪿</span></a
-                        ></span
-                    ><span class="goose-slot"
-                        ><a
-                            href="goose.html"
-                            class="goose-link"
-                            id="playableGoose"
-                            ><span class="goose-emoji" id="wiggleGoose"
-                                >🪿</span
-                            ></a
-                        ></span
-                    ><span class="goose-slot"
-                        ><a href="idle.html" class="goose-link"
-                            ><span class="goose-emoji">🪿</span></a
-                        ></span
-                    >                    <span class="goose-slot"
-                        ><a href="rts/" class="goose-link"
-                            ><span class="goose-emoji">🪿</span></a
-                        ></span
-                    ><span class="goose-slot"
-                        ><a href="td/" class="goose-link"
-                            ><span class="goose-emoji">🪿</span></a
-                        ></span
+
+            <div class="emoji-row">
+                <span class="fade-in delay-1">
+                    <a class="apple-link" href="about.html" aria-label="About">
+                        🍎
+                    </a>
+                </span>
+                <span class="geese fade-in delay-2">
+                    <a
+                        class="goose-link"
+                        href="farm.html"
+                        aria-label="Apple Goose Farm"
                     >
+                        <span class="goose-emoji">🪿</span>
+                    </a>
+                    <a
+                        class="goose-link"
+                        href="goose.html"
+                        id="playableGoose"
+                        aria-label="Goose Game"
+                    >
+                        <span class="goose-emoji" id="wiggleGoose">🪿</span>
+                    </a>
+                    <a
+                        class="goose-link"
+                        href="idle.html"
+                        aria-label="Idle Goose Game"
+                    >
+                        <span class="goose-emoji">🪿</span>
+                    </a>
+                    <a
+                        class="goose-link"
+                        href="rts/"
+                        aria-label="Orchard Warfare"
+                    >
+                        <span class="goose-emoji">🪿</span>
+                    </a>
+                    <a class="goose-link" href="td/" aria-label="Honk Defense">
+                        <span class="goose-emoji">🪿</span>
+                    </a>
                 </span>
             </div>
         </main>
 
-        <script>
-            document.addEventListener("DOMContentLoaded", () => {
-                const PREVIEW_DELAY_MS = 15000;
-                const body = document.body;
-
-                function updateTheme() {
-                    if (
-                        window.matchMedia("(prefers-color-scheme: dark)")
-                            .matches
-                    ) {
-                        body.classList.remove("light-mode");
-                        body.classList.add("dark-mode");
-                    } else {
-                        body.classList.remove("dark-mode");
-                        body.classList.add("light-mode");
-                    }
-                }
-
-                // Set initial theme based on system preference
-                updateTheme();
-
-                // Listen for changes in the system color scheme
-                window
-                    .matchMedia("(prefers-color-scheme: dark)")
-                    .addEventListener("change", updateTheme);
-
-                // Show game nav above geese after 15 seconds
-                setTimeout(() => {
-                    const gameNav = document.getElementById("gameNav");
-                    if (gameNav) {
-                        gameNav.classList.add("visible");
-                    }
-                }, PREVIEW_DELAY_MS);
-
-                // Wiggle the playable goose emoji (inner span, not the link)
-                setInterval(() => {
-                    const wiggleGoose = document.getElementById("wiggleGoose");
-                    const playableGoose =
-                        document.getElementById("playableGoose");
-
-                    if (
-                        wiggleGoose &&
-                        playableGoose &&
-                        !playableGoose.matches(":hover")
-                    ) {
-                        wiggleGoose.classList.add("wiggle-animation");
-
-                        setTimeout(() => {
-                            wiggleGoose.classList.remove("wiggle-animation");
-                        }, 600);
-                    }
-                }, 2000);
-            });
-        </script>
+        <script src="assets/home/home.js"></script>
     </body>
 </html>
