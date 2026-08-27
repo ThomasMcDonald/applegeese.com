@@ -1,0 +1,52 @@
+goose.html
+  s_5618bd5fced318::t_06b459d03387cf 970
+  s_5618bd5fced318::t_d912850a13ec04 1801,1835-1838
+  s_5618bd5fced318::t_f1fcda82da5cb8 1959-1963,1975-1979,1986-2007,2009-2013,2020,2038-2042
+  s_5618bd5fced318::t_578dd561e0245d 2301-2302
+  s_5618bd5fced318::t_96a2b891026461 1777
+  s_5618bd5fced318::t_01d5be3358e77d 1148,1150
+  s_5618bd5fced318::t_99b9ade9230422 1637-1646
+  s_5618bd5fced318::t_849d51e4e76569 1255-1263
+  s_5618bd5fced318::t_36fb6616141660 2232-2235
+  s_5618bd5fced318::t_c2734c4c0d95cd 1514
+  s_5618bd5fced318::t_eedf6a87055c4c 1536,1538-1541
+  s_5618bd5fced318::t_e4832fdfcbe96c 922-923
+  s_5618bd5fced318::t_d223bbe4d7da41 1559
+  s_5618bd5fced318::t_65763d6849f518 1032-1036
+  s_5618bd5fced318::t_6de230125c8804 548-551
+  s_5618bd5fced318::t_87ce3fc6fea283 1103-1129,1132-1133,1135
+  s_5618bd5fced318::t_ebf9ec5d237910 1356-1358,1360,1362-1363,1365-1376
+  s_5618bd5fced318::t_f8280cfd585950 1596,1601
+  s_5618bd5fced318::t_238ad73610c011 953-955
+  s_5618bd5fced318::t_9649f231b1482e 996
+  s_5618bd5fced318::t_8f48804f4b03de 350
+  s_5618bd5fced318::t_05d44cf260562f 2331-2332,2348-2351
+  s_5618bd5fced318::t_cc4fb2fa730261 589-608
+  s_5618bd5fced318::t_1e083dece62a5e 935-937,941
+  s_5618bd5fced318::t_5a9eb58d7f01bb 1468-1472
+  s_5618bd5fced318::t_96d1a445720a9c 1667
+  s_5618bd5fced318::t_a2ac8ef1c61ced 1718
+  s_5618bd5fced318::t_4e4ac0478d49dd 694-696
+  s_5618bd5fced318::t_b8634d66b8f852 959
+  s_5618bd5fced318::t_c4b2df14a59393 1843-1847,1852
+  s_5618bd5fced318::t_119393e7376d5a 871-875
+  s_5618bd5fced318::t_3a1f0cc4d5527c 271-283
+.gitignore
+  s_5618bd5fced318::t_df30e7875e1494 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "61ab0d1e6a7b9d2e884dc49a684f313b487480ae",
+  "prompts": {},
+  "sessions": {
+    "s_5618bd5fced318": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "899a1a03-349f-4fd3-a0a7-f02b779a742e",
+        "model": "auto-smart"
+      },
+      "human_author": "ThomasMcDonald <thomasmcdonald1996@gmail.com>"
+    }
+  }
+}
