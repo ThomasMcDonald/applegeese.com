@@ -1,14 +1,37 @@
 // Game constants - Calculate dynamic canvas size
+const CANVAS_BORDER = 4; // Widest border across breakpoints; keeps the board inside the stage
+const MOBILE_TARGET_COLUMNS = 15;
+
+// Measures the flexible play area so the board always fits the chrome around it
+const measureStage = () => {
+    const stage = document.getElementById("gameStage");
+    const fallbackWidth = window.innerWidth * 0.95;
+    const fallbackHeight = window.innerHeight - 200;
+
+    if (!stage) {
+        return { width: fallbackWidth, height: fallbackHeight };
+    }
+
+    return {
+        width: stage.clientWidth || fallbackWidth,
+        height: stage.clientHeight || fallbackHeight,
+    };
+};
+
 const calculateCanvasSize = () => {
     const isMobile = window.innerWidth <= 768;
-    const maxWidth = window.innerWidth * 0.95;
-    const headerFooterHeight = isMobile ? 280 : 200;
-    const maxHeight =
-        (window.innerHeight - headerFooterHeight) * 0.95;
-    const GRID_SIZE = 30; // Larger grid squares
+    const stage = measureStage();
+    const availWidth = Math.max(180, stage.width - CANVAS_BORDER * 2);
+    const availHeight = Math.max(180, stage.height - CANVAS_BORDER * 2);
 
-    const gridWidth = Math.floor(maxWidth / GRID_SIZE);
-    const gridHeight = Math.floor(maxHeight / GRID_SIZE);
+    // Phones get fewer, chunkier cells so the goose stays readable at arm's length
+    const targetCell = isMobile
+        ? availWidth / MOBILE_TARGET_COLUMNS
+        : 30;
+    const GRID_SIZE = Math.max(18, Math.min(30, Math.floor(targetCell)));
+
+    const gridWidth = Math.max(10, Math.floor(availWidth / GRID_SIZE));
+    const gridHeight = Math.max(10, Math.floor(availHeight / GRID_SIZE));
 
     return {
         GRID_SIZE: GRID_SIZE,
@@ -80,6 +103,7 @@ let apples = [];
 let powerups = [];
 let direction = { x: 1, y: 0 };
 let nextDirection = { x: 1, y: 0 };
+let directionQueue = [];
 let score = 0;
 let highScore = 0;
 let todayScore = 0;
@@ -858,8 +882,31 @@ function drawFieldBackground(ctx, isDarkMode) {
     }
 }
 
-// Set initial canvas size
-function setCanvasSize() {
+// Scales the fixed-resolution board to whatever space the stage currently has
+function fitCanvasToStage() {
+    const stage = measureStage();
+    const availWidth = Math.max(120, stage.width - CANVAS_BORDER * 2);
+    const availHeight = Math.max(120, stage.height - CANVAS_BORDER * 2);
+    const scale = Math.min(
+        availWidth / CANVAS_WIDTH,
+        availHeight / CANVAS_HEIGHT,
+        1,
+    );
+
+    canvas.style.width = `${Math.floor(CANVAS_WIDTH * scale)}px`;
+    canvas.style.height = `${Math.floor(CANVAS_HEIGHT * scale)}px`;
+}
+
+// Set initial canvas size. Mid-run the grid is frozen so a mobile browser
+// showing or hiding its address bar cannot reshape the board under the player.
+function setCanvasSize(rebuildGrid = false) {
+    const inPlay = gameState === "playing" || gameState === "paused";
+
+    if (inPlay && !rebuildGrid) {
+        fitCanvasToStage();
+        return;
+    }
+
     gameSize = calculateCanvasSize();
     GRID_SIZE = gameSize.GRID_SIZE;
     GRID_WIDTH = gameSize.GRID_WIDTH;
@@ -869,6 +916,7 @@ function setCanvasSize() {
 
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
+    fitCanvasToStage();
 }
 
 function clampEntitiesToGrid() {
@@ -898,33 +946,26 @@ function clampEntitiesToGrid() {
     );
 }
 
-// Handle window resize
-window.addEventListener("resize", () => {
+function handleViewportChange() {
     setCanvasSize();
     clampEntitiesToGrid();
-    updateMobileControlsVisibility();
     render();
-});
+}
+
+// Handle window resize
+window.addEventListener("resize", handleViewportChange);
 
 // Set initial size
 setCanvasSize();
 
-// Initialize mobile controls visibility
-updateMobileControlsVisibility();
-
 // Handle orientation change
 window.addEventListener("orientationchange", () => {
-    setTimeout(() => {
-        setCanvasSize();
-        clampEntitiesToGrid();
-        updateMobileControlsVisibility();
-        render();
-    }, 100);
+    setTimeout(handleViewportChange, 150);
 });
 
 // Game initialization
 function initializeGame() {
-    setCanvasSize(); // Ensure canvas is properly sized
+    setCanvasSize(true); // Rebuild the grid for the current viewport
     goose = [
         {
             x: Math.floor(GRID_WIDTH / 4),
@@ -933,6 +974,7 @@ function initializeGame() {
     ]; // Start goose head at position
     direction = { x: 1, y: 0 };
     nextDirection = { x: 1, y: 0 };
+    directionQueue = [];
     score = 0;
     speed = 1.0;
     updateInterval = 100;
@@ -1070,33 +1112,25 @@ document.addEventListener("keydown", (event) => {
             case "ArrowUp":
             case "w":
             case "W":
-                if (direction.y !== 1) {
-                    nextDirection = { x: 0, y: -1 };
-                }
+                changeDirection("up");
                 event.preventDefault();
                 break;
             case "ArrowDown":
             case "s":
             case "S":
-                if (direction.y !== -1) {
-                    nextDirection = { x: 0, y: 1 };
-                }
+                changeDirection("down");
                 event.preventDefault();
                 break;
             case "ArrowLeft":
             case "a":
             case "A":
-                if (direction.x !== 1) {
-                    nextDirection = { x: -1, y: 0 };
-                }
+                changeDirection("left");
                 event.preventDefault();
                 break;
             case "ArrowRight":
             case "d":
             case "D":
-                if (direction.x !== -1) {
-                    nextDirection = { x: 1, y: 0 };
-                }
+                changeDirection("right");
                 event.preventDefault();
                 break;
             case " ":
@@ -1121,126 +1155,130 @@ document.addEventListener("keydown", (event) => {
     }
 });
 
-// Mobile touch controls and swipe gestures
-let touchStartX = 0;
-let touchStartY = 0;
-let touchEndX = 0;
-let touchEndY = 0;
+const DIRECTION_VECTORS = {
+    up: { x: 0, y: -1 },
+    down: { x: 0, y: 1 },
+    left: { x: -1, y: 0 },
+    right: { x: 1, y: 0 },
+};
 
-// Function to handle direction changes
+// Queued turns let a fast swipe-then-swipe (right, then down) both land instead
+// of the second overwriting the first before the goose has moved.
 function changeDirection(newDirection) {
-    if (gameState === "playing") {
-        switch (newDirection) {
-            case "up":
-                if (direction.y !== 1) {
-                    nextDirection = { x: 0, y: -1 };
-                }
-                break;
-            case "down":
-                if (direction.y !== -1) {
-                    nextDirection = { x: 0, y: 1 };
-                }
-                break;
-            case "left":
-                if (direction.x !== 1) {
-                    nextDirection = { x: -1, y: 0 };
-                }
-                break;
-            case "right":
-                if (direction.x !== -1) {
-                    nextDirection = { x: 1, y: 0 };
-                }
-                break;
-        }
-    }
+    if (gameState !== "playing") return;
+
+    const vector = DIRECTION_VECTORS[newDirection];
+    if (!vector) return;
+
+    const pending =
+        directionQueue.length > 0
+            ? directionQueue[directionQueue.length - 1]
+            : nextDirection;
+
+    const isSame = pending.x === vector.x && pending.y === vector.y;
+    const isReversal = pending.x === -vector.x && pending.y === -vector.y;
+    if (isSame || isReversal || directionQueue.length >= 2) return;
+
+    directionQueue.push(vector);
 }
 
-function bindControlButton(id, handler) {
-    const btn = document.getElementById(id);
-    btn.addEventListener("touchstart", (e) => {
-        e.preventDefault();
-        handler();
-    });
-    btn.addEventListener("click", handler);
-}
-
-bindControlButton("upBtn", () => changeDirection("up"));
-bindControlButton("downBtn", () => changeDirection("down"));
-bindControlButton("leftBtn", () => changeDirection("left"));
-bindControlButton("rightBtn", () => changeDirection("right"));
-
-bindControlButton("pauseBtn", () => {
+function togglePause() {
     if (gameState === "playing") {
         pauseGame();
     } else if (gameState === "paused") {
         resumeGame();
     }
-});
+}
 
-// Swipe detection on canvas
-canvas.addEventListener("touchstart", (e) => {
-    e.preventDefault();
-    touchStartX = e.changedTouches[0].screenX;
-    touchStartY = e.changedTouches[0].screenY;
-});
+// Touch input: swipe anywhere on the board to steer, tap to pause or resume.
+const gameStage = document.getElementById("gameStage");
+const SWIPE_THRESHOLD = 24;
+const TAP_MAX_DISTANCE = 12;
+const TAP_MAX_DURATION = 350;
 
-canvas.addEventListener("touchend", (e) => {
-    e.preventDefault();
-    touchEndX = e.changedTouches[0].screenX;
-    touchEndY = e.changedTouches[0].screenY;
-    handleSwipe();
-});
+let swipe = null;
 
-function handleSwipe() {
-    const deltaX = touchEndX - touchStartX;
-    const deltaY = touchEndY - touchStartY;
-    const minSwipeDistance = 30;
+function readTouchPoint(event) {
+    const touch = event.changedTouches[0];
+    return { x: touch.clientX, y: touch.clientY };
+}
+
+gameStage.addEventListener(
+    "touchstart",
+    (event) => {
+        if (event.touches.length > 1) {
+            swipe = null;
+            return;
+        }
+
+        const point = readTouchPoint(event);
+        swipe = {
+            originX: point.x,
+            originY: point.y,
+            startX: point.x,
+            startY: point.y,
+            startedAt: performance.now(),
+            steered: false,
+        };
+    },
+    { passive: true },
+);
+
+gameStage.addEventListener(
+    "touchmove",
+    (event) => {
+        if (!swipe) return;
+        event.preventDefault();
+
+        const point = readTouchPoint(event);
+        const deltaX = point.x - swipe.originX;
+        const deltaY = point.y - swipe.originY;
+
+        if (
+            Math.abs(deltaX) < SWIPE_THRESHOLD &&
+            Math.abs(deltaY) < SWIPE_THRESHOLD
+        ) {
+            return;
+        }
+
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            changeDirection(deltaX > 0 ? "right" : "left");
+        } else {
+            changeDirection(deltaY > 0 ? "down" : "up");
+        }
+
+        // Re-anchor so one long drag can steer several times
+        swipe.originX = point.x;
+        swipe.originY = point.y;
+        swipe.steered = true;
+    },
+    { passive: false },
+);
+
+gameStage.addEventListener("touchend", (event) => {
+    if (!swipe) return;
+
+    const point = readTouchPoint(event);
+    const travelled = Math.hypot(
+        point.x - swipe.startX,
+        point.y - swipe.startY,
+    );
+    const elapsed = performance.now() - swipe.startedAt;
 
     if (
-        Math.abs(deltaX) < minSwipeDistance &&
-        Math.abs(deltaY) < minSwipeDistance
+        !swipe.steered &&
+        travelled < TAP_MAX_DISTANCE &&
+        elapsed < TAP_MAX_DURATION
     ) {
-        return; // Too small to be a swipe
+        togglePause();
     }
 
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        // Horizontal swipe
-        if (deltaX > 0) {
-            changeDirection("right");
-        } else {
-            changeDirection("left");
-        }
-    } else {
-        // Vertical swipe
-        if (deltaY > 0) {
-            changeDirection("down");
-        } else {
-            changeDirection("up");
-        }
-    }
-}
+    swipe = null;
+});
 
-// Update pause button text based on game state
-function updatePauseButton() {
-    const pauseBtn = document.getElementById("pauseBtn");
-    if (gameState === "paused") {
-        pauseBtn.textContent = "▶";
-    } else {
-        pauseBtn.textContent = "⏸";
-    }
-}
-
-// Mobile controls visibility management
-function updateMobileControlsVisibility() {
-    const isMobile = window.innerWidth <= 768;
-    const mobileControls =
-        document.getElementById("mobileControls");
-    if (isMobile && (gameState === "playing" || gameState === "paused")) {
-        mobileControls.style.display = "block";
-    } else {
-        mobileControls.style.display = "none";
-    }
-}
+gameStage.addEventListener("touchcancel", () => {
+    swipe = null;
+});
 
 // Game loop
 function gameUpdate(currentTime) {
@@ -1265,6 +1303,9 @@ function gameUpdate(currentTime) {
         goose.length > 0 &&
         currentTime - lastUpdateTime >= updateInterval
     ) {
+        if (directionQueue.length > 0) {
+            nextDirection = directionQueue.shift();
+        }
         direction = { ...nextDirection };
 
         // Move goose
@@ -1654,8 +1695,6 @@ function startGame() {
     if (selectedMode === "timed") {
         timedEndAt = performance.now() + TIME_LIMIT_MS;
     }
-    updatePauseButton();
-    updateMobileControlsVisibility();
     resumeSfxContext();
 
     // Start background music if enabled
@@ -1687,7 +1726,6 @@ function pauseGame() {
         gameState = "paused";
         document.getElementById("pauseOverlay").style.display =
             "block";
-        updatePauseButton();
 
         // Pause background music
         backgroundMusic.pause();
@@ -1703,7 +1741,6 @@ function resumeGame() {
         if (selectedMode === "timed") {
             timedEndAt = lastUpdateTime + timedRemainingMs;
         }
-        updatePauseButton();
 
         // Resume background music if enabled
         if (musicEnabled) {
@@ -1718,7 +1755,6 @@ function gameOver(finalScore, finalNeckLength, reason = "collision") {
     if (gameState === "gameOver") return;
 
     gameState = "gameOver";
-    updateMobileControlsVisibility();
     refreshStoredScores();
     const isNewHighScore = finalScore > highScore;
     const isNewTodayScore = finalScore > todayScore;
@@ -1817,7 +1853,6 @@ function restartGame() {
 
 function showStartScreen() {
     gameState = "start";
-    updateMobileControlsVisibility();
     document.getElementById("gameOverScreen").style.display =
         "none";
     hideGameOverBanners();

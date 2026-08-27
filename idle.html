@@ -61,6 +61,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                overflow-x: hidden;
             }
 
             /* Dark Mode Styles */
@@ -774,16 +775,50 @@
 
             /* Responsive Design */
             @media (max-width: 768px) {
+                body {
+                    display: block;
+                    min-height: 100dvh;
+                    padding:
+                        max(10px, env(safe-area-inset-top))
+                        max(10px, env(safe-area-inset-right))
+                        max(16px, env(safe-area-inset-bottom))
+                        max(10px, env(safe-area-inset-left));
+                }
+
+                .game-container {
+                    width: 100%;
+                    min-height: 0;
+                    padding: 16px 12px;
+                    border-radius: 12px;
+                }
+
+                h1 {
+                    font-size: clamp(1.55rem, 7vw, 2rem);
+                    margin-bottom: 14px;
+                }
+
                 .stats {
                     display: none;
                 }
 
                 .mobile-stats {
                     display: grid;
+                    position: sticky;
+                    top: max(0px, env(safe-area-inset-top));
+                    z-index: 20;
+                    gap: 8px;
+                    margin: 0 -4px 12px;
+                    padding: 6px 4px;
+                    backdrop-filter: blur(8px);
+                }
+
+                .mobile-stats .stat-card {
+                    padding: 10px 6px;
                 }
 
                 .mobile-menu-toggle {
                     display: block;
+                    min-height: 44px;
                 }
 
                 .sidebar.mobile-open #mobileMenuClose {
@@ -792,6 +827,7 @@
 
                 .main-area {
                     flex-direction: column;
+                    gap: 0;
                 }
 
                 .game-content {
@@ -810,7 +846,11 @@
                     z-index: 1000;
                     display: none;
                     overflow-y: auto;
-                    padding: 20px;
+                    padding:
+                        max(12px, env(safe-area-inset-top))
+                        max(10px, env(safe-area-inset-right))
+                        max(16px, env(safe-area-inset-bottom))
+                        max(10px, env(safe-area-inset-left));
                 }
 
                 .sidebar.mobile-open {
@@ -818,7 +858,7 @@
                 }
 
                 .goose-area {
-                    margin: 20px auto;
+                    margin: 8px auto 18px;
                     text-align: center;
                     width: 100%;
                     display: flex;
@@ -832,11 +872,93 @@
                 }
 
                 .main-goose {
-                    font-size: 10em;
+                    font-size: clamp(7rem, 42vw, 10rem);
+                    min-width: 44px;
+                    min-height: 44px;
+                    touch-action: manipulation;
                 }
 
                 .tab-container {
                     display: block;
+                }
+
+                .tabs {
+                    overflow-x: auto;
+                    scrollbar-width: thin;
+                    justify-content: flex-start;
+                }
+
+                .tab-button {
+                    flex: 0 0 auto;
+                    min-width: 92px;
+                    min-height: 44px;
+                    padding: 10px 8px;
+                }
+
+                .tab-content {
+                    max-height: none;
+                    padding: 10px;
+                }
+
+                .upgrade {
+                    align-items: flex-start;
+                    gap: 8px;
+                    padding: 10px 8px;
+                }
+
+                .upgrade-count {
+                    flex: 0 0 25px;
+                    margin-right: 0;
+                }
+
+                .upgrade-info {
+                    min-width: 0;
+                }
+
+                .upgrade-buttons {
+                    flex: 0 0 auto;
+                }
+
+                .upgrade-button {
+                    min-width: 40px;
+                    min-height: 40px;
+                    padding: 6px;
+                }
+
+                .achievement-notification {
+                    width: calc(100vw - 24px);
+                    bottom: max(12px, env(safe-area-inset-bottom));
+                    text-align: center;
+                }
+            }
+
+            @media (max-width: 390px) {
+                .buy-quantity-row {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                }
+
+                .upgrade {
+                    flex-wrap: wrap;
+                }
+
+                .upgrade-info {
+                    flex: 1 1 calc(100% - 40px);
+                }
+
+                .upgrade-buttons {
+                    width: 100%;
+                }
+
+                .upgrade-button {
+                    width: 100%;
+                }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .main-goose,
+                .apple {
+                    animation: none !important;
                 }
             }
         </style>

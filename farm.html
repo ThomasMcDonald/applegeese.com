@@ -28,6 +28,11 @@
     />
     <meta name="twitter:image" content="https://applegeese.com/favicon.svg" />
     <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
       body {
         margin: 0;
         padding: 0;
@@ -43,11 +48,15 @@
       #game-container {
         position: relative;
         box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        width: min(800px, 100vw);
       }
       canvas {
         background-color: #76c753; /* Grass color */
         display: block;
         border-radius: 4px;
+        width: 100%;
+        height: auto;
+        touch-action: none;
       }
       #ui-layer {
         position: absolute;
@@ -230,6 +239,168 @@
         font-weight: bold;
         font-size: 14px;
       }
+      #mobile-controls {
+        display: none;
+      }
+      .mobile-control-btn {
+        min-width: 48px;
+        min-height: 44px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
+        background: rgba(15, 23, 42, 0.9);
+        color: white;
+        font: 700 16px/1 "Segoe UI", sans-serif;
+        touch-action: none;
+      }
+      .mobile-control-btn:active {
+        background: #4caf50;
+        transform: scale(0.96);
+      }
+      @media (max-width: 768px), (pointer: coarse) {
+        body {
+          height: 100dvh;
+          align-items: flex-start;
+          padding-top: env(safe-area-inset-top);
+        }
+        #game-container {
+          width: 100vw;
+          height: calc(100dvh - env(safe-area-inset-top));
+          box-shadow: none;
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+        }
+        canvas {
+          width: min(100vw, calc((100dvh - 150px) * 4 / 3));
+          max-height: calc(100dvh - 150px);
+          object-fit: contain;
+        }
+        #ui-layer {
+          top: 6px;
+          padding: 0 52px 0 6px;
+          gap: 4px;
+          justify-content: flex-start;
+          flex-wrap: wrap;
+        }
+        .stat-box {
+          padding: 4px 6px;
+          gap: 3px;
+          font-size: 12px;
+        }
+        #controls-hint {
+          display: none;
+        }
+        #message-overlay {
+          left: 8px;
+          right: 8px;
+          bottom: 152px;
+          max-width: none;
+        }
+        #settings-btn {
+          top: 6px;
+          right: max(6px, env(safe-area-inset-right));
+          min-width: 44px;
+          min-height: 44px;
+        }
+        #market-modal,
+        #settings-modal {
+          position: fixed;
+          width: calc(100vw - 20px);
+          max-width: 400px;
+          max-height: calc(100dvh - 24px);
+        }
+        #market-modal {
+          height: min(440px, calc(100dvh - 24px));
+        }
+        #market-content {
+          padding: 8px;
+        }
+        th,
+        td {
+          padding: 7px 4px;
+          font-size: 13px;
+        }
+        .action-btn,
+        .tab-btn,
+        .close-btn {
+          min-height: 44px;
+        }
+        #mobile-controls {
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 90;
+          min-height: 142px;
+          padding:
+            6px max(8px, env(safe-area-inset-right))
+            max(6px, env(safe-area-inset-bottom))
+            max(8px, env(safe-area-inset-left));
+          display: grid;
+          grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr);
+          align-items: center;
+          gap: 12px;
+          background: rgba(15, 23, 42, 0.94);
+          backdrop-filter: blur(8px);
+        }
+        .mobile-dpad {
+          display: grid;
+          grid-template-columns: repeat(3, 48px);
+          grid-template-rows: repeat(2, 44px);
+          justify-content: center;
+          gap: 5px;
+        }
+        [data-key="ArrowUp"] {
+          grid-column: 2;
+        }
+        [data-key="ArrowLeft"] {
+          grid-column: 1;
+        }
+        [data-key="ArrowDown"] {
+          grid-column: 2;
+        }
+        [data-key="ArrowRight"] {
+          grid-column: 3;
+        }
+        .mobile-actions {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+      }
+      @media (max-width: 360px) {
+        #mobile-controls {
+          grid-template-columns: 150px 1fr;
+          gap: 4px;
+          padding-left: 4px;
+          padding-right: 4px;
+        }
+        .mobile-control-btn {
+          min-width: 42px;
+          font-size: 13px;
+        }
+      }
+      @media (max-height: 500px) and (orientation: landscape) {
+        canvas {
+          width: min(calc(100vw - 210px), calc(100dvh * 4 / 3));
+          max-height: 100dvh;
+        }
+        #game-container {
+          justify-content: flex-start;
+        }
+        #mobile-controls {
+          top: 0;
+          left: auto;
+          width: 210px;
+          min-height: 100dvh;
+          grid-template-columns: 1fr;
+          align-content: center;
+        }
+        #message-overlay {
+          right: 218px;
+          bottom: 8px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -305,6 +476,21 @@
         >
           Close
         </button>
+      </div>
+    </div>
+
+    <div id="mobile-controls" aria-label="Farm controls">
+      <div class="mobile-dpad">
+        <button class="mobile-control-btn" data-key="ArrowUp" aria-label="Move up">▲</button>
+        <button class="mobile-control-btn" data-key="ArrowLeft" aria-label="Move left">◀</button>
+        <button class="mobile-control-btn" data-key="ArrowDown" aria-label="Move down">▼</button>
+        <button class="mobile-control-btn" data-key="ArrowRight" aria-label="Move right">▶</button>
+      </div>
+      <div class="mobile-actions">
+        <button class="mobile-control-btn" id="mobile-interact">Use</button>
+        <button class="mobile-control-btn" id="mobile-seed">Seed</button>
+        <button class="mobile-control-btn" id="mobile-market">Market</button>
+        <button class="mobile-control-btn" id="mobile-settings">Settings</button>
       </div>
     </div>
 
@@ -569,6 +755,30 @@
         window.addEventListener("keyup", (e) => {
           GAME.keys[e.code] = false;
         });
+
+        document.querySelectorAll("#mobile-controls [data-key]").forEach((btn) => {
+          const code = btn.dataset.key;
+          const press = (e) => {
+            e.preventDefault();
+            GAME.keys[code] = true;
+            if (btn.setPointerCapture && e.pointerId !== undefined) {
+              btn.setPointerCapture(e.pointerId);
+            }
+          };
+          const release = (e) => {
+            e.preventDefault();
+            GAME.keys[code] = false;
+          };
+          btn.addEventListener("pointerdown", press);
+          btn.addEventListener("pointerup", release);
+          btn.addEventListener("pointercancel", release);
+          btn.addEventListener("lostpointercapture", release);
+        });
+
+        document.getElementById("mobile-interact").addEventListener("click", interact);
+        document.getElementById("mobile-seed").addEventListener("click", cycleSeeds);
+        document.getElementById("mobile-market").addEventListener("click", openMarket);
+        document.getElementById("mobile-settings").addEventListener("click", openSettings);
       }
 
       function openSettings() {

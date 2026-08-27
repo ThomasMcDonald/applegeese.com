@@ -11,6 +11,9 @@ body {
     background: #1a1a2e;
     font-family: "Arial", sans-serif;
     color: #e4e4e7;
+    min-height: 100vh;
+    min-height: 100dvh;
+    touch-action: none;
 }
 
 #gameCanvas {
@@ -32,7 +35,7 @@ body {
     display: none;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16px;
+    padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
     z-index: 20;
     backdrop-filter: blur(6px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -353,14 +356,14 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 56px;
+    height: calc(56px + env(safe-area-inset-bottom));
     background: rgba(0, 0, 0, 0.9);
     display: none;
     align-items: center;
     justify-content: space-around;
     z-index: 30;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 0 4px;
+    padding: 0 max(4px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-left));
 }
 
 .mobile-tower-btn {
@@ -391,6 +394,12 @@ body {
     gap: 12px;
     text-align: center;
     padding: 24px;
+    padding:
+        max(24px, env(safe-area-inset-top))
+        max(16px, env(safe-area-inset-right))
+        max(24px, env(safe-area-inset-bottom))
+        max(16px, env(safe-area-inset-left));
+    overflow-y: auto;
 }
 
 .screen-title {
@@ -419,6 +428,7 @@ body {
     text-decoration: none;
     display: inline-block;
     transition: background 0.2s;
+    min-height: 44px;
 }
 
 .menu-btn:hover {
@@ -629,14 +639,37 @@ body {
 }
 
 @media (max-width: 768px) {
+    #hud {
+        height: calc(44px + env(safe-area-inset-top));
+        padding-left: max(8px, env(safe-area-inset-left));
+        padding-right: max(8px, env(safe-area-inset-right));
+    }
+
+    #hud-left,
+    #hud-right {
+        gap: 8px;
+    }
+
     .hud-title {
         display: none;
     }
 
+    .hud-back {
+        display: none;
+    }
+
+    .hud-btn {
+        min-width: 44px;
+        min-height: 36px;
+    }
+
     #shop-bar {
-        bottom: 64px;
+        bottom: calc(64px + env(safe-area-inset-bottom));
         padding: 8px;
         gap: 4px;
+        width: calc(100vw - 16px);
+        max-height: min(42dvh, 250px);
+        overflow-y: auto;
     }
 
     #tower-info {
@@ -647,6 +680,7 @@ body {
 
     .tower-btn {
         min-width: 58px;
+        min-height: 52px;
         padding: 6px;
     }
 
@@ -663,6 +697,63 @@ body {
     }
 
     .screen-title {
-        font-size: 32px;
+        font-size: clamp(1.9rem, 10vw, 2.6rem);
+    }
+
+    #sell-panel {
+        top: calc(52px + env(safe-area-inset-top));
+        right: max(8px, env(safe-area-inset-right));
+        left: max(8px, env(safe-area-inset-left));
+        min-width: 0;
+        max-height: calc(100dvh - 130px - env(safe-area-inset-bottom));
+        overflow-y: auto;
+    }
+
+    #btn-upgrade,
+    #btn-sell,
+    .btn-deselect-tower {
+        min-height: 44px;
+    }
+
+    #tutorial-panel {
+        top: calc(52px + env(safe-area-inset-top));
+        max-height: calc(100dvh - 125px - env(safe-area-inset-bottom));
+        overflow-y: auto;
+    }
+
+    .difficulty-option,
+    .meta-buy-btn {
+        min-height: 44px;
+    }
+
+    .meta-upgrade-list {
+        max-height: 44dvh;
+    }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+    .screen-overlay {
+        justify-content: flex-start;
+        gap: 6px;
+    }
+
+    .screen-title {
+        font-size: 1.8rem;
+    }
+
+    .screen-subtitle {
+        margin-bottom: 4px;
+    }
+
+    .menu-btn {
+        padding: 8px 24px;
+    }
+
+    #shop-bar {
+        left: auto;
+        right: max(8px, env(safe-area-inset-right));
+        bottom: calc(62px + env(safe-area-inset-bottom));
+        width: min(300px, 42vw);
+        transform: none;
     }
 }

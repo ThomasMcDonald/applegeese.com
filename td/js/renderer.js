@@ -12,10 +12,17 @@ class Renderer {
 
     resize() {
         const bar = document.getElementById("mobile-bar");
+        const hud = document.getElementById("hud");
         const barVisible = bar && bar.style.display !== "none";
-        const bottomInset = barVisible ? MOBILE_BAR_H : 0;
+        const bottomInset = barVisible
+            ? bar.getBoundingClientRect().height
+            : 0;
+        const hudHeight =
+            hud && hud.style.display !== "none"
+                ? hud.getBoundingClientRect().height
+                : HUD_H;
         const availW = window.innerWidth;
-        const availH = window.innerHeight - HUD_H - bottomInset;
+        const availH = window.innerHeight - hudHeight - bottomInset;
 
         this.scale = Math.min(availW / CANVAS_W, availH / CANVAS_H);
         const drawW = Math.floor(CANVAS_W * this.scale);
@@ -26,7 +33,7 @@ class Renderer {
         this.canvas.style.width = `${drawW}px`;
         this.canvas.style.height = `${drawH}px`;
         this.offsetX = Math.floor((availW - drawW) / 2);
-        this.offsetY = HUD_H + Math.floor((availH - drawH) / 2);
+        this.offsetY = hudHeight + Math.floor((availH - drawH) / 2);
         this.canvas.style.left = `${this.offsetX}px`;
         this.canvas.style.top = `${this.offsetY}px`;
     }

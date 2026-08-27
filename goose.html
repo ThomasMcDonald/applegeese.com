@@ -4,7 +4,7 @@
         <meta charset="UTF-8" />
         <meta
             name="viewport"
-            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+            content="width=device-width, initial-scale=1.0, viewport-fit=cover"
         />
         <!-- Favicon for different browsers and devices -->
         <link rel="icon" type="image/svg+xml" href="favicon.svg" />
@@ -62,44 +62,61 @@
     </head>
     <body>
         <div class="game-container">
-            <div class="game-header">
-                <div class="header-score">
-                    <a class="home-link" href="index.html" aria-label="AppleGeese home"
-                        >← Home</a
-                    >
-                    <span>Score: <span id="score">0</span></span>
-                </div>
+            <header class="game-header">
+                <a
+                    class="home-link"
+                    href="index.html"
+                    aria-label="AppleGeese home"
+                    >← Home</a
+                >
                 <span class="game-title">🪿 Goose Game 🍎</span>
-                <div class="header-actions">
-                    <span class="score-stack">
-                        <span>High: <span id="highScore">0</span></span>
-                        <span class="today-score"
-                            >Today: <span id="todayScore">0</span></span
-                        >
-                        <span class="streak-score"
-                            >Streak: <span id="streakCount">0</span></span
-                        >
-                    </span>
-                    <button
-                        class="settings-toggle"
-                        onclick="toggleSettings()"
-                        id="settingsToggle"
-                        aria-label="Open settings"
-                    >
-                        ⚙️
-                    </button>
-                </div>
+                <button
+                    class="settings-toggle"
+                    onclick="toggleSettings()"
+                    id="settingsToggle"
+                    aria-label="Open settings"
+                >
+                    ⚙️
+                </button>
+            </header>
+
+            <div class="stat-bar">
+                <span class="stat">
+                    <span class="stat-value" id="score">0</span>
+                    <span class="stat-label">Score</span>
+                </span>
+                <span class="stat">
+                    <span class="stat-value" id="highScore">0</span>
+                    <span class="stat-label">Best</span>
+                </span>
+                <span class="stat">
+                    <span class="stat-value" id="neckLength">1</span>
+                    <span class="stat-label">Neck</span>
+                </span>
+                <span class="stat" id="timerDisplay" hidden>
+                    <span class="stat-value" id="timeLeft">60</span>
+                    <span class="stat-label">Time</span>
+                </span>
+                <span class="stat stat-wide">
+                    <span class="stat-value" id="modeLabel">Classic</span>
+                    <span class="stat-label">Mode</span>
+                </span>
+                <span class="stat stat-extra">
+                    <span class="stat-value" id="speed">1.0</span>
+                    <span class="stat-label">Speed</span>
+                </span>
+                <span class="stat stat-extra">
+                    <span class="stat-value" id="todayScore">0</span>
+                    <span class="stat-label">Today</span>
+                </span>
+                <span class="stat stat-extra">
+                    <span class="stat-value" id="streakCount">0</span>
+                    <span class="stat-label">Streak</span>
+                </span>
             </div>
 
-            <canvas id="gameCanvas" width="600" height="400"></canvas>
-
-            <div class="game-footer">
-                <span>Neck Length: <span id="neckLength">1</span></span>
-                <span id="modeLabel">Classic</span>
-                <span id="timerDisplay" hidden
-                    >Time: <span id="timeLeft">60</span>s</span
-                >
-                <span>Speed: <span id="speed">1.0</span>x</span>
+            <div class="game-stage" id="gameStage">
+                <canvas id="gameCanvas" width="600" height="400"></canvas>
             </div>
 
             <div class="start-screen" id="startScreen">
@@ -148,11 +165,14 @@
                     <span>Replay today’s best as a faint neck</span>
                 </button>
                 <div class="controls">
-                    <p><strong>Controls:</strong></p>
-                    <p>Arrow Keys / WASD, swipe, or D-pad to move</p>
-                    <p>Spacebar or Pause to pause</p>
-                    <p>Enter to start or play again</p>
-                    <p>Settings (gear) for music and theme</p>
+                    <p><strong>Controls</strong></p>
+                    <p class="controls-touch">
+                        Swipe anywhere to steer · tap the board to pause
+                    </p>
+                    <p class="controls-keys">
+                        Arrow Keys / WASD to steer · Space to pause · Enter to
+                        start
+                    </p>
                 </div>
                 <button class="start-button" onclick="startGame()">Start Game</button>
             </div>
@@ -191,33 +211,10 @@
 
             <div class="pause-overlay" id="pauseOverlay">
                 <p>Game Paused</p>
-                <p style="font-size: 16px; margin-top: 10px">
-                    Press Spacebar or Pause button to resume
+                <p class="pause-hint controls-touch">Tap the board to resume</p>
+                <p class="pause-hint controls-keys">
+                    Press Spacebar to resume
                 </p>
-            </div>
-        </div>
-
-        <div class="mobile-controls" id="mobileControls">
-            <div class="dpad">
-                <button class="control-btn" id="upBtn" aria-label="Up">▲</button>
-                <div class="dpad-middle">
-                    <button class="control-btn" id="leftBtn" aria-label="Left">
-                        ◀
-                    </button>
-                    <button
-                        class="control-btn pause"
-                        id="pauseBtn"
-                        aria-label="Pause"
-                    >
-                        ⏸
-                    </button>
-                    <button class="control-btn" id="rightBtn" aria-label="Right">
-                        ▶
-                    </button>
-                </div>
-                <button class="control-btn" id="downBtn" aria-label="Down">
-                    ▼
-                </button>
             </div>
         </div>
 

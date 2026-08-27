@@ -11,14 +11,20 @@ let infoPanelTick = 0;
 function resizeCanvas() {
     const canvas = document.getElementById("gameCanvas");
     const bar = document.getElementById("mobile-bar");
+    const hud = document.getElementById("hud");
     const barVisible =
         bar &&
         input &&
         input.isTouchDevice &&
         bar.style.display !== "none";
-    const bottomInset = barVisible ? MOBILE_BAR_H : 0;
+    const bottomInset = barVisible ? bar.getBoundingClientRect().height : 0;
+    const hudHeight =
+        hud && hud.style.display !== "none"
+            ? hud.getBoundingClientRect().height
+            : HUD_H;
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - HUD_H - bottomInset;
+    canvas.height = window.innerHeight - hudHeight - bottomInset;
+    canvas.style.top = `${hudHeight}px`;
     if (game.camera) {
         game.camera.w = canvas.width;
         game.camera.h = canvas.height;
